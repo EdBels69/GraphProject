@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal React Test</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        console.log('=== Script started ===');
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement('div', { style: { padding: '50px', fontSize: '24px', fontWeight: 'bold' } },
+            React.createElement('h1', { style: { color: 'red', fontSize: '36px' } }, 'React Test Page'),
+            React.createElement('p', { style: { fontSize: '20px', color: 'blue' } }, 'If you see this, React from CDN works!'),
+            React.createElement('p', null, 'Timestamp: ', new Date().toLocaleTimeString())
+        ));
+        console.log('=== React rendered ===');
+    </script>
+</body>
+</html>

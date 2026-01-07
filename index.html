@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Анализ научных статей для DeepResearch данных. Извлечение ссылок, литературных обзоров, поиск пробелов в исследованиях и биохимических взаимодействий." />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="robots" content="index, follow" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Graph Analyser - Scientific Article Analysis</title>
+    <script>
+      console.log('=== HTML loaded ===');
+      console.log('Document ready state:', document.readyState);
+      
+      // Удаляем кеш при загрузке
+      if (window.performance && window.performance.getEntriesByType) {
+        const navigationEntries = performance.getEntriesByType('navigation');
+        console.log('Cache entries:', navigationEntries.length, navigationEntries);
+      }
+      
+      // Проверяем, что root существует перед загрузкой скриптов
+      setTimeout(() => {
+        const root = document.getElementById('root');
+        console.log('Root element check:', root ? 'FOUND' : 'NOT FOUND');
+      }, 100);
+    </script>
+    <script>
+      console.log('=== HTML loaded ===');
+      console.log('Document ready state:', document.readyState);
+    </script>
+  </head>
+  <body style="margin: 0; padding: 0; background: white;">
+    <div id="root" style="background: white; min-height: 100vh;">
+      <h1 style="padding: 20px; color: blue; font-size: 24px;">HTML is loading...</h1>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      console.log('=== Scripts loaded ===');
+      setTimeout(() => {
+        console.log('Root element:', document.getElementById('root'));
+        console.log('Root children:', document.getElementById('root')?.children.length);
+      }, 1000);
+    </script>
+  </body>
+</html>
