@@ -4,7 +4,7 @@ import { GraphAnalyzer } from '../../shared/graphAlgorithms'
 import GraphStorage from '../../shared/graphStorage'
 import { validateGraph, validateFileUpload, validateArticle } from '../../src/utils/validators'
 import { DatabaseManager } from '../../src/core/Database'
-import logger from '../../src/core/Logger'
+import { logger } from '../../src/core/Logger'
 
 const router = express.Router()
 

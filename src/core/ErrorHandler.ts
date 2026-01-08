@@ -59,7 +59,7 @@ export class ExternalServiceError extends AppError {
   }
 }
 
-class ErrorHandler {
+export class ErrorHandler {
   handle(error: Error | AppError, requestId?: string): AppError {
     if (error instanceof AppError) {
       return error;

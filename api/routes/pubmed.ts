@@ -3,7 +3,7 @@ import { pubmedService } from '../services/pubmedService';
 import { validatePubMedQuery } from '../../src/utils/validators';
 import { createGraph } from '../../shared/types';
 import { GraphStorage } from '../../shared/graphStorage';
-import logger from '../../src/core/Logger';
+import { logger } from '../../src/core/Logger';
 
 const router = express.Router();
 

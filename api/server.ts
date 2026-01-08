@@ -15,6 +15,8 @@ import graphAnalysisRouter from './routes/graphAnalysis'
 import searchRouter from './routes/search'
 import systemRouter from './routes/system'
 import documentsRouter from './routes/documents'
+import meshRouter from './routes/mesh'
+import aiRouter from './routes/ai'
 
 dotenv.config()
 
@@ -38,6 +40,8 @@ app.use('/api/documents', documentsRouter)
 app.use('/api/analysis', graphAnalysisRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/system', systemRouter)
+app.use('/api/mesh', meshRouter)
+app.use('/api/ai', aiRouter)
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })

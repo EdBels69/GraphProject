@@ -15,16 +15,16 @@ function App() {
       <div className="relative">
         <ErrorBoundary>
           <AppHealthCheck />
-          <Layout>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/upload" element={<FileUploadPage />} />
-              <Route path="/ai-assistant" element={<AIAssistantPage />} />
-              <Route path="/works" element={<WorkListPage />} />
-              <Route path="/analysis" element={<GraphAnalysisPage />} />
-              <Route path="/report" element={<ReportPage />} />
-            </Routes>
-          </Layout>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<LandingPage />} />
+              <Route path="upload" element={<FileUploadPage />} />
+              <Route path="ai-assistant" element={<AIAssistantPage />} />
+              <Route path="works" element={<WorkListPage />} />
+              <Route path="analysis" element={<GraphAnalysisPage />} />
+              <Route path="report" element={<ReportPage />} />
+            </Route>
+          </Routes>
         </ErrorBoundary>
       </div>
     </BrowserRouter>

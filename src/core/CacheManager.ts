@@ -1,4 +1,4 @@
-import logger from './Logger';
+import { logger } from './Logger';
 
 export interface CacheEntry<T> {
   key: string;

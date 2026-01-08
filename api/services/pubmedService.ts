@@ -1,5 +1,5 @@
 import axios from 'axios';
-import logger from '../../src/core/Logger';
+import { logger } from '../../src/core/Logger';
 
 export interface PubMedArticle {
   uid: string;
@@ -65,7 +65,7 @@ export class PubMedService {
         return response.data;
       } catch (error) {
         const isLastAttempt = i === retries - 1;
-        
+
         if (isLastAttempt) {
           logger.error('PubMedService', `Failed to fetch ${url}`, {
             error: error instanceof Error ? error.message : error,
@@ -78,7 +78,7 @@ export class PubMedService {
         await this.sleep(this.retryDelay * (i + 1));
       }
     }
-    
+
     throw new Error('Max retries exceeded');
   }
 
@@ -142,7 +142,7 @@ export class PubMedService {
       logger.info('PubMedService', `Found ${result.count} articles`, {
         returned: result.idList.length
       });
-      
+
       return result.idList;
     } catch (error) {
       logger.error('PubMedService', 'Failed to search articles', {
@@ -197,7 +197,7 @@ export class PubMedService {
       });
 
       logger.info('PubMedService', `Fetched ${articles.length} article details`);
-      
+
       return articles;
     } catch (error) {
       logger.error('PubMedService', 'Failed to fetch article details', {
@@ -234,23 +234,23 @@ export class PubMedService {
 
     try {
       const pmids = await this.searchArticles(query, { maxResults, year });
-      
+
       if (pmids.length === 0) {
         return { articles: [], total: 0 };
       }
 
       const pubmedArticles = await this.fetchArticleDetails(pmids);
 
-      const articles = pubmedArticles.map(pubmedArticle => {
-        const year = pubmedArticle.journalInfo?.pubDate 
-          ? parseInt(pubmedArticle.journalInfo.pubDate.substring(0, 4)) 
+      const articles = await Promise.all(pubmedArticles.map(async (pubmedArticle) => {
+        const year = pubmedArticle.journalInfo?.pubDate
+          ? parseInt(pubmedArticle.journalInfo.pubDate.substring(0, 4))
           : new Date().getFullYear();
 
         const keywords = pubmedArticle.keywords?.map(k => k.name) || [];
         const authors = pubmedArticle.authors?.map(a => a.name || '') || [];
 
         let citations: string[] = [];
-        
+
         if (fetchCitations) {
           const citationsQuery = `"${pubmedArticle.title}"[ti]`;
           const citationResults = await this.searchArticles(citationsQuery, { maxResults: 10 });
@@ -269,7 +269,7 @@ export class PubMedService {
           url: `https://pubmed.ncbi.nlm.nih.gov/${pubmedArticle.uid}/`,
           published: true
         };
-      });
+      }));
 
       return {
         articles,
@@ -324,10 +324,10 @@ export class PubMedService {
 
       try {
         const details = await this.fetchArticleDetails([pmid]);
-        
+
         if (details.length > 0) {
           const article = details[0];
-          
+
           if (!nodes.has(pmid)) {
             nodes.set(pmid, {
               id: pmid,
@@ -345,10 +345,10 @@ export class PubMedService {
 
           citationIds.forEach((citationId, index) => {
             const edgeId = `${pmid}-${citationId}`;
-            
+
             if (!edges.has(edgeId) && citationId !== pmid) {
               edges.add(edgeId);
-              
+
               processArticle(citationId, currentDepth + 1).catch(error => {
                 logger.warn('PubMedService', `Failed to process citation ${citationId}`, {
                   error: error instanceof Error ? error.message : error
@@ -365,7 +365,7 @@ export class PubMedService {
     };
 
     const initialPmids = await this.searchArticles(query, { maxResults: maxArticles });
-    
+
     await Promise.all(
       initialPmids.slice(0, 5).map(pmid => processArticle(pmid, 1))
     );

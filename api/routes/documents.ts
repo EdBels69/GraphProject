@@ -5,6 +5,8 @@ import { ChunkingEngine } from '../services/chunkingEngine'
 import { EntityExtractor } from '../services/entityExtractor'
 import { RelationExtractor } from '../services/relationExtractor'
 import { KnowledgeGraphBuilder } from '../services/knowledgeGraphBuilder'
+import { summarizeDocument } from '../services/aiService'
+import { isFeatureEnabled } from '../../shared/config/features'
 
 const router = express.Router()
 
@@ -54,8 +56,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 
     const { buffer, originalname, mimetype } = req.file
-    const fileType = mimetype === 'application/pdf' ? 'pdf' : 
-                   mimetype.includes('word') ? 'docx' : 'txt'
+    const fileType = mimetype === 'application/pdf' ? 'pdf' :
+      mimetype.includes('word') ? 'docx' : 'txt'
 
     // Parse document
     let parsedDocument
@@ -89,6 +91,12 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       extractedRelations.relations
     )
 
+    // Generate summary optionally
+    let summary = undefined
+    if (isFeatureEnabled('USE_AI_FEATURES')) {
+      summary = await summarizeDocument(parsedDocument.content, parsedDocument.title)
+    }
+
     res.json({
       document: {
         id: parsedDocument.id,
@@ -96,7 +104,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         fileName: originalname,
         fileType,
         pageCount: parsedDocument.metadata.pageCount,
-        extractedAt: parsedDocument.metadata.extractedAt
+        extractedAt: parsedDocument.metadata.extractedAt,
+        summary: summary?.summary,
+        keyFindings: summary?.keyFindings
       },
       chunks: {
         total: chunks.length,
@@ -153,12 +163,20 @@ router.post('/url', async (req, res) => {
       extractedRelations.relations
     )
 
+    // Generate summary optionally
+    let summary = undefined
+    if (isFeatureEnabled('USE_AI_FEATURES')) {
+      summary = await summarizeDocument(parsedDocument.content, parsedDocument.title)
+    }
+
     res.json({
       document: {
         id: parsedDocument.id,
         title: parsedDocument.title,
         url,
-        extractedAt: parsedDocument.metadata.extractedAt
+        extractedAt: parsedDocument.metadata.extractedAt,
+        summary: summary?.summary,
+        keyFindings: summary?.keyFindings
       },
       chunks: {
         total: chunks.length,
@@ -195,8 +213,8 @@ router.post('/batch', upload.array('files', 10), async (req, res) => {
     for (const file of req.files) {
       try {
         const { buffer, originalname, mimetype } = file
-        const fileType = mimetype === 'application/pdf' ? 'pdf' : 
-                       mimetype.includes('word') ? 'docx' : 'txt'
+        const fileType = mimetype === 'application/pdf' ? 'pdf' :
+          mimetype.includes('word') ? 'docx' : 'txt'
 
         // Parse document
         let parsedDocument

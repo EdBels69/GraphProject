@@ -1,5 +1,5 @@
 import express from 'express'
-import logger from '../../src/core/Logger'
+import { logger } from '../../src/core/Logger'
 import errorHandler from '../../src/core/ErrorHandler'
 import sessionManager from '../../src/core/SessionManager'
 import databaseManager from '../../src/core/Database'

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import logger, { LogLevel } from './Logger';
+import { logger, LogLevel } from './Logger';
 
 export interface User {
   id: string;
@@ -70,7 +70,7 @@ class SessionManager {
     for (const [sessionId, session] of this.sessions.entries()) {
       if (session.expiresAt <= now) {
         this.sessions.delete(sessionId);
-        
+
         const userSessions = this.userSessions.get(session.userId);
         if (userSessions) {
           userSessions.delete(sessionId);
@@ -78,7 +78,7 @@ class SessionManager {
             this.userSessions.delete(session.userId);
           }
         }
-        
+
         cleaned++;
       }
     }
@@ -194,7 +194,7 @@ class SessionManager {
     }
 
     this.sessions.delete(sessionId);
-    
+
     const userSessions = this.userSessions.get(session.userId);
     if (userSessions) {
       userSessions.delete(sessionId);
