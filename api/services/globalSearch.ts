@@ -141,7 +141,7 @@ export class GlobalSearch {
     // Note: Google Scholar doesn't have an official API
     // This is a placeholder that returns mock data
     // In production, you would use a proxy service or alternative
-    
+
     // For now, return mock results
     return [
       {
@@ -231,7 +231,33 @@ export class GlobalSearch {
   }
 
   /**
-   * Search Crossref API
+   * Fetch MeSH terms for a given PubMed ID
+   */
+  async fetchMeshTerms(pmid: string): Promise<string[]> {
+    try {
+      const fetchUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi'
+      const response = await axios.get(fetchUrl, {
+        params: {
+          db: 'pubmed',
+          id: pmid,
+          retmode: 'xml'
+        }
+      })
+
+      // Basic parsing of XML to extracting MeshHeading DescriptorName
+      // Matches <DescriptorName UI="D012345">Term</DescriptorName>
+      const matches = response.data.match(/<DescriptorName UI="D\d+.*?">(.*?)<\/DescriptorName>/g)
+      if (!matches) return []
+
+      return matches.map((m: string) => m.replace(/<.*?>/g, ''))
+    } catch (error) {
+      console.error('Error fetching MeSH terms:', error)
+      return []
+    }
+  }
+
+  /**
+   * Search Crossref API - filtered for biomedical/life sciences
    */
   private async searchCrossref(
     query: string,
@@ -239,34 +265,75 @@ export class GlobalSearch {
   ): Promise<SearchResult[]> {
     try {
       const baseUrl = 'https://api.crossref.org/works'
-      const params: Record<string, string> = {
-        query,
-        rows: options.maxResults.toString(),
-        select: 'title,author,published-online,abstract,DOI,URL,is-referenced-by-count'
-      }
 
+      // Build filter string
+      const filters: string[] = []
       if (options.yearFrom) {
-        params['filter'] = `from-pub-date:${options.yearFrom}`
+        filters.push(`from-pub-date:${options.yearFrom}`)
       }
       if (options.yearTo) {
-        params['filter'] = `to-pub-date:${options.yearTo}`
+        filters.push(`until-pub-date:${options.yearTo}`)
+      }
+      filters.push('has-abstract:true')
+
+      const params: Record<string, string> = {
+        query,
+        rows: (options.maxResults * 3).toString(), // Request more to filter later
+        select: 'title,author,published-online,published-print,abstract,DOI,URL,is-referenced-by-count,subject,container-title',
+        sort: 'relevance'
+      }
+      if (filters.length > 0) {
+        params['filter'] = filters.join(',')
       }
 
-      const response = await axios.get(baseUrl, { params })
+      const response = await axios.get(baseUrl, {
+        params,
+        timeout: 15000,
+        headers: { 'User-Agent': 'GraphAnalyser/1.0 (mailto:graphanalyser@example.com)' }
+      })
       const items = response.data.message?.items || []
 
-      return items.map((item: any) => ({
-        id: `crossref-${item.DOI}`,
-        source: 'crossref',
-        title: item.title?.[0] || '',
-        authors: item.author?.map((a: any) => `${a.given} ${a.family}`) || [],
-        year: item['published-online']?.['date-parts']?.[0],
-        abstract: item.abstract || '',
-        doi: item.DOI,
-        url: item.URL,
-        citations: item['is-referenced-by-count'] || 0,
-        relevanceScore: 0.75
-      }))
+      // Biomedical keywords to filter relevant results
+      const biomedKeywords = [
+        'biology', 'biochem', 'medicine', 'medical', 'health', 'clinical', 'pharma',
+        'drug', 'disease', 'cell', 'molecular', 'gene', 'protein', 'metabol', 'physiol',
+        'pathol', 'neuro', 'cardio', 'immuno', 'oncol', 'nutrition', 'biomed', 'plos',
+        'bmc', 'frontiers', 'nature', 'science', 'lancet', 'jama', 'elsevier',
+        'carnitine', 'enzyme', 'mitochondr', 'lipid', 'amino', 'vitamin'
+      ]
+
+      // Keywords that indicate NON-biomedical content
+      const excludeKeywords = ['law', 'legal', 'court', 'criminal', 'судебн', 'право',
+        'уголовн', 'crm', 'sales', 'marketing', 'management', 'business', 'бизнес']
+
+      const filteredItems = items.filter((item: any) => {
+        const title = (item.title?.[0] || '').toLowerCase()
+        const journal = (item['container-title']?.[0] || '').toLowerCase()
+        const abstract = (item.abstract || '').toLowerCase()
+        const allText = `${title} ${journal} ${abstract}`
+
+        // Exclude if contains non-biomed keywords
+        if (excludeKeywords.some(kw => allText.includes(kw))) return false
+
+        // Include if contains biomed keywords
+        return biomedKeywords.some(kw => allText.includes(kw))
+      })
+
+      return filteredItems.slice(0, options.maxResults).map((item: any) => {
+        const pubDate = item['published-online'] || item['published-print']
+        return {
+          id: `crossref-${item.DOI}`,
+          source: 'crossref' as const,
+          title: item.title?.[0] || '',
+          authors: item.author?.map((a: any) => `${a.given || ''} ${a.family || ''}`.trim()) || [],
+          year: pubDate?.['date-parts']?.[0]?.[0],
+          abstract: item.abstract?.replace(/<[^>]*>/g, '') || '',
+          doi: item.DOI,
+          url: item.URL,
+          citations: item['is-referenced-by-count'] || 0,
+          relevanceScore: 0.75
+        }
+      })
     } catch (error) {
       console.error('Error searching Crossref:', error)
       return []

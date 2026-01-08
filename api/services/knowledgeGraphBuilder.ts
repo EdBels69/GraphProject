@@ -1,6 +1,6 @@
 import { Entity, ExtractedEntities } from './entityExtractor'
 import { Relation, ExtractedRelations } from './relationExtractor'
-import { Graph, GraphNode, GraphEdge } from '../../shared/types'
+import { Graph, GraphNode, GraphEdge, NodeType, RelationType, EvidenceType } from '../../shared/types'
 
 export interface KnowledgeGraph {
   graph: Graph
@@ -29,9 +29,9 @@ export class KnowledgeGraphBuilder {
     options: BuildOptions = {}
   ): Promise<KnowledgeGraph> {
     const {
-      minConfidence = 0.5,
+      minConfidence = 0.3,
       minMentions = 1,
-      includeCooccurrence = false,
+      includeCooccurrence = true,  // CHANGED: Enable by default for better connectivity
       maxNodes = Infinity
     } = options
 
@@ -43,7 +43,7 @@ export class KnowledgeGraphBuilder {
     // Filter relations by confidence and type
     const filteredRelations = relations.filter(
       r => r.confidence >= minConfidence &&
-           (includeCooccurrence || r.type !== 'co_occurs_with')
+        (includeCooccurrence || r.type !== 'cooccurs_with')  // FIXED: match new type name
     )
 
     // Limit number of nodes if specified
@@ -51,10 +51,11 @@ export class KnowledgeGraphBuilder {
       .sort((a, b) => b.mentions - a.mentions)
       .slice(0, maxNodes)
 
-    // Create nodes from entities
+    // Create nodes from entities with proper type
     const nodes: GraphNode[] = sortedEntities.map(entity => ({
       id: entity.id,
       label: entity.name,
+      type: this.mapEntityTypeToNodeType(entity.type),  // NEW: top-level type
       weight: entity.confidence,
       data: {
         type: entity.type,
@@ -65,7 +66,7 @@ export class KnowledgeGraphBuilder {
       }
     }))
 
-    // Create edges from relations
+    // Create edges from relations with proper typing
     const nodeIds = new Set(sortedEntities.map(e => e.id))
     const edges: GraphEdge[] = filteredRelations
       .filter(r => nodeIds.has(r.source) && nodeIds.has(r.target))
@@ -73,6 +74,9 @@ export class KnowledgeGraphBuilder {
         id: relation.id,
         source: relation.source,
         target: relation.target,
+        relation: relation.type as RelationType,  // NEW: top-level relation
+        evidenceType: relation.evidenceType || 'text_mining',  // NEW: evidence type
+        confidence: relation.confidence,  // NEW: top-level confidence
         weight: relation.confidence,
         directed: true,
         data: {
@@ -104,6 +108,30 @@ export class KnowledgeGraphBuilder {
         createdAt: new Date()
       }
     }
+  }
+
+  /**
+   * Map entity type string to NodeType enum
+   */
+  private mapEntityTypeToNodeType(entityType: string): NodeType {
+    const typeMap: Record<string, NodeType> = {
+      'gene': 'Gene',
+      'protein': 'Protein',
+      'metabolite': 'Metabolite',
+      'chemical': 'Metabolite',
+      'compound': 'Metabolite',
+      'disease': 'Disease',
+      'disorder': 'Disease',
+      'pathway': 'Pathway',
+      'drug': 'Drug',
+      'symptom': 'Symptom',
+      'anatomy': 'Anatomy',
+      'tissue': 'Anatomy',
+      'organ': 'Anatomy'
+    }
+
+    const normalized = entityType.toLowerCase()
+    return typeMap[normalized] || 'Concept'
   }
 
   /**
@@ -184,7 +212,7 @@ export class KnowledgeGraphBuilder {
    * Filter graph by entity type
    */
   filterByType(graph: KnowledgeGraph, types: string[]): KnowledgeGraph {
-    const filteredNodes = graph.graph.nodes.filter(n => 
+    const filteredNodes = graph.graph.nodes.filter(n =>
       n.data?.type && types.includes(n.data.type)
     )
     const nodeIds = new Set(filteredNodes.map(n => n.id))
@@ -212,21 +240,21 @@ export class KnowledgeGraphBuilder {
   getEgoNetwork(graph: KnowledgeGraph, nodeId: string, depth: number = 1): KnowledgeGraph {
     const includedNodeIds = new Set<string>()
     const queue: string[] = [nodeId]
-    
+
     // BFS to find nodes within depth
     for (let i = 0; i < depth && queue.length > 0; i++) {
       const levelSize = queue.length
       for (let j = 0; j < levelSize; j++) {
         const currentId = queue.shift()!
         if (includedNodeIds.has(currentId)) continue
-        
+
         includedNodeIds.add(currentId)
-        
+
         // Find neighbors
         const neighbors = graph.graph.edges
           .filter(e => e.source === currentId || e.target === currentId)
           .map(e => e.source === currentId ? e.target : e.source)
-        
+
         for (const neighbor of neighbors) {
           if (!includedNodeIds.has(neighbor)) {
             queue.push(neighbor)
@@ -259,7 +287,7 @@ export class KnowledgeGraphBuilder {
    */
   getShortestPath(graph: KnowledgeGraph, sourceId: string, targetId: string): KnowledgeGraph | null {
     const adjacency = new Map<string, Map<string, GraphEdge>>()
-    
+
     // Build adjacency list
     for (const edge of graph.graph.edges) {
       if (!adjacency.has(edge.source)) {
@@ -280,13 +308,13 @@ export class KnowledgeGraphBuilder {
 
     while (queue.length > 0) {
       const current = queue.shift()!
-      
+
       if (current === targetId) {
         // Reconstruct path
         const pathNodeIds: string[] = []
         const pathEdges: GraphEdge[] = []
         let currentId = targetId
-        
+
         while (currentId !== sourceId) {
           pathNodeIds.push(currentId)
           const prev = previous.get(currentId)!
@@ -298,7 +326,7 @@ export class KnowledgeGraphBuilder {
         pathEdges.reverse()
 
         const pathNodes = graph.graph.nodes.filter(n => pathNodeIds.includes(n.id))
-        
+
         return {
           graph: {
             ...graph.graph,

@@ -22,11 +22,12 @@ const BIBLIOGRAPHIC_PATTERNS = [
 
 export function validateArticleInput(input: string, type: ArticleInput['type']): ValidationResult {
   const trimmed = input.trim()
-  
+
   if (!trimmed) {
     return {
       isValid: false,
-      error: 'Поле не может быть пустым'
+      error: 'Поле не может быть пустым',
+      type
     }
   }
 
@@ -35,7 +36,8 @@ export function validateArticleInput(input: string, type: ArticleInput['type']):
       if (!URL_PATTERN.test(trimmed)) {
         return {
           isValid: false,
-          error: 'Неверный формат URL. Пример: https://example.com/article'
+          error: 'Неверный формат URL. Пример: https://example.com/article',
+          type
         }
       }
       try {
@@ -43,41 +45,45 @@ export function validateArticleInput(input: string, type: ArticleInput['type']):
       } catch {
         return {
           isValid: false,
-          error: 'Неверный формат URL'
+          error: 'Неверный формат URL',
+          type
         }
       }
-      return { isValid: true, error: null }
-    
+      return { isValid: true, error: null, type }
+
     case 'doi':
       if (!DOI_PATTERN.test(trimmed)) {
         return {
           isValid: false,
-          error: 'Неверный формат DOI. Пример: 10.1234/example'
+          error: 'Неверный формат DOI. Пример: 10.1234/example',
+          type
         }
       }
-      return { isValid: true, error: null }
-    
+      return { isValid: true, error: null, type }
+
     case 'pmid':
       if (!PMID_PATTERN.test(trimmed)) {
         return {
           isValid: false,
-          error: 'Неверный формат PMID. Должен содержать только цифры'
+          error: 'Неверный формат PMID. Должен содержать только цифры',
+          type
         }
       }
-      return { isValid: true, error: null }
-    
+      return { isValid: true, error: null, type }
+
     case 'bibliographic':
       const isValid = BIBLIOGRAPHIC_PATTERNS.some(pattern => pattern.test(trimmed))
       if (!isValid) {
         return {
           isValid: false,
-          error: 'Неверный библиографический формат. Пример: Smith J. (2024) Article title'
+          error: 'Неверный библиографический формат. Пример: Smith J. (2024) Article title',
+          type
         }
       }
-      return { isValid: true, error: null }
-    
+      return { isValid: true, error: null, type }
+
     default:
-      return { isValid: true, error: null }
+      return { isValid: true, error: null, type }
   }
 }
 
@@ -87,7 +93,7 @@ export function validateArticleInputs(inputs: ArticleInput[]): ValidationResult[
 
 export function getArticleInputType(input: string): ArticleInput['type'] {
   const trimmed = input.trim()
-  
+
   if (DOI_PATTERN.test(trimmed)) return 'doi'
   if (PMID_PATTERN.test(trimmed)) return 'pmid'
   if (URL_PATTERN.test(trimmed)) return 'url'
@@ -127,12 +133,10 @@ export default function InputValidation({
   const handleChange = (newValue: string) => {
     onChange(newValue)
     setIsTouched(true)
-    
-    const validation = validateArticleInput(newValue, {
-      value: newValue,
-      type: getArticleInputType(newValue)
-    })
-    
+
+    const type = getArticleInputType(newValue)
+    const validation = validateArticleInput(newValue, type)
+
     setInternalError(validation.error)
     onValidate?.(validation.isValid, validation.error)
   }
@@ -152,13 +156,12 @@ export default function InputValidation({
         onChange={(e) => handleChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${
-          internalError && showError
+        className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${internalError && showError
             ? 'border-red-500 focus:ring-red-500'
             : isTouched
-            ? 'border-gray-300'
-            : 'border-gray-200'
-        }`}
+              ? 'border-gray-300'
+              : 'border-gray-200'
+          }`}
       />
       {internalError && showError && isTouched && (
         <p className="text-sm text-red-600 mt-1">

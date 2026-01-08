@@ -1,0 +1,342 @@
+{
+    "version": "1.0",
+    "description": "Column schema for papers table - defines all extractable fields",
+    "sources": {
+        "metadata": "From PubMed/CrossRef API response",
+        "mesh": "From PubMed MeSH terms",
+        "keywords": "From article keywords field",
+        "ai_abstract": "AI extracts from abstract",
+        "ai_fulltext": "AI extracts from full text PDF",
+        "nlp": "NLP/regex pattern matching",
+        "external": "Query to external database (UniProt, GO, KEGG)"
+    },
+    "columns": {
+        "title": {
+            "name": "Title",
+            "name_ru": "Название",
+            "source": "metadata",
+            "required": true,
+            "domains": [
+                "all"
+            ]
+        },
+        "year": {
+            "name": "Year",
+            "name_ru": "Год",
+            "source": "metadata",
+            "required": true,
+            "domains": [
+                "all"
+            ]
+        },
+        "authors": {
+            "name": "Authors",
+            "name_ru": "Авторы",
+            "source": "metadata",
+            "required": true,
+            "domains": [
+                "all"
+            ]
+        },
+        "journal": {
+            "name": "Journal",
+            "name_ru": "Журнал",
+            "source": "metadata",
+            "required": false,
+            "domains": [
+                "all"
+            ]
+        },
+        "doi": {
+            "name": "DOI",
+            "name_ru": "DOI",
+            "source": "metadata",
+            "required": false,
+            "domains": [
+                "all"
+            ]
+        },
+        "abstract": {
+            "name": "Abstract",
+            "name_ru": "Аннотация",
+            "source": "metadata",
+            "required": false,
+            "domains": [
+                "all"
+            ]
+        },
+        "mesh_terms": {
+            "name": "MeSH Terms",
+            "name_ru": "MeSH термины",
+            "source": "mesh",
+            "required": false,
+            "domains": [
+                "clinical",
+                "pharmacology",
+                "all"
+            ],
+            "notes": "Controlled vocabulary from PubMed"
+        },
+        "keywords": {
+            "name": "Keywords",
+            "name_ru": "Ключевые слова",
+            "source": "keywords",
+            "required": false,
+            "domains": [
+                "all"
+            ],
+            "notes": "Author-provided keywords from article"
+        },
+        "study_type": {
+            "name": "Study Type",
+            "name_ru": "Тип исследования",
+            "source": "ai_abstract",
+            "domains": [
+                "clinical",
+                "all"
+            ],
+            "ai_prompt": "Classify the study type. Options: RCT, Cohort, Case-control, Cross-sectional, Case report, Review, Meta-analysis, In vitro, In vivo, Other. Return only the type."
+        },
+        "sample_size": {
+            "name": "Sample Size (N)",
+            "name_ru": "Размер выборки (N)",
+            "source": "ai_abstract",
+            "type": "number",
+            "domains": [
+                "clinical",
+                "all"
+            ],
+            "ai_prompt": "Extract the sample size (N) - total number of participants or subjects. Return only a number, or null if not found."
+        },
+        "population": {
+            "name": "Population",
+            "name_ru": "Популяция",
+            "source": "ai_abstract",
+            "domains": [
+                "clinical"
+            ],
+            "ai_prompt": "Describe the study population briefly: age range, condition, key characteristics. Max 50 words."
+        },
+        "intervention": {
+            "name": "Intervention",
+            "name_ru": "Вмешательство",
+            "source": "ai_abstract",
+            "domains": [
+                "clinical",
+                "pharmacology"
+            ],
+            "ai_prompt": "What intervention/treatment was studied? Include drug name, dose, duration if mentioned."
+        },
+        "comparator": {
+            "name": "Comparator",
+            "name_ru": "Сравнение",
+            "source": "ai_abstract",
+            "domains": [
+                "clinical"
+            ],
+            "ai_prompt": "What was the intervention compared to? (placebo, standard care, other drug, etc.)"
+        },
+        "primary_outcome": {
+            "name": "Primary Outcome",
+            "name_ru": "Первичный исход",
+            "source": "ai_abstract",
+            "domains": [
+                "clinical"
+            ],
+            "ai_prompt": "What was the primary outcome/endpoint measured?"
+        },
+        "key_finding": {
+            "name": "Key Finding",
+            "name_ru": "Ключевой вывод",
+            "source": "ai_abstract",
+            "domains": [
+                "all"
+            ],
+            "ai_prompt": "Summarize the main finding or conclusion in one sentence."
+        },
+        "drug_name": {
+            "name": "Drug/Compound",
+            "name_ru": "Препарат/Соединение",
+            "source": "nlp",
+            "domains": [
+                "pharmacology",
+                "biochemistry"
+            ],
+            "nlp_patterns": [
+                "L-carnitine",
+                "acetyl-L-carnitine",
+                "propionyl-L-carnitine"
+            ],
+            "notes": "Can be extended with drug database lookups"
+        },
+        "dose": {
+            "name": "Dose",
+            "name_ru": "Доза",
+            "source": "ai_abstract",
+            "domains": [
+                "pharmacology",
+                "clinical"
+            ],
+            "ai_prompt": "Extract dosage information (amount, units, frequency). Example: '500mg twice daily'"
+        },
+        "route": {
+            "name": "Route",
+            "name_ru": "Путь введения",
+            "source": "ai_abstract",
+            "domains": [
+                "pharmacology",
+                "clinical"
+            ],
+            "ai_prompt": "Extract route of administration: oral, IV, IM, subcutaneous, topical, other"
+        },
+        "genes": {
+            "name": "Genes",
+            "name_ru": "Гены",
+            "source": "nlp",
+            "domains": [
+                "biochemistry",
+                "all"
+            ],
+            "nlp_patterns": [
+                "regex:CPT[12][AB]?",
+                "regex:OCTN[12]",
+                "regex:SLC[0-9A-Z]+"
+            ],
+            "notes": "Gene symbol patterns, can query NCBI Gene"
+        },
+        "proteins": {
+            "name": "Proteins",
+            "name_ru": "Белки",
+            "source": "nlp",
+            "domains": [
+                "biochemistry"
+            ],
+            "notes": "Can query UniProt for protein names"
+        },
+        "pathways": {
+            "name": "Pathways",
+            "name_ru": "Метаболические пути",
+            "source": "ai_abstract",
+            "domains": [
+                "biochemistry"
+            ],
+            "ai_prompt": "List metabolic or signaling pathways mentioned (e.g., beta-oxidation, TCA cycle, fatty acid metabolism)"
+        },
+        "mechanisms": {
+            "name": "Mechanism",
+            "name_ru": "Механизм",
+            "source": "ai_abstract",
+            "domains": [
+                "biochemistry",
+                "pharmacology"
+            ],
+            "ai_prompt": "Describe the molecular or cellular mechanism discussed. Max 30 words."
+        },
+        "model_organism": {
+            "name": "Model Organism",
+            "name_ru": "Модельный организм",
+            "source": "ai_abstract",
+            "domains": [
+                "biochemistry"
+            ],
+            "ai_prompt": "What organism/cell line was used? (human, mouse, rat, cell line name, etc.)"
+        },
+        "methods": {
+            "name": "Methods",
+            "name_ru": "Методы",
+            "source": "ai_fulltext",
+            "domains": [
+                "biochemistry",
+                "all"
+            ],
+            "ai_prompt": "List main experimental methods used (e.g., Western blot, PCR, HPLC, mass spec)"
+        },
+        "bias_risk": {
+            "name": "Risk of Bias",
+            "name_ru": "Риск предвзятости",
+            "source": "ai_abstract",
+            "domains": [
+                "clinical"
+            ],
+            "ai_prompt": "Assess potential sources of bias: Low/Moderate/High/Unclear. Note any limitations mentioned."
+        }
+    },
+    "domain_filters": {
+        "all": {
+            "name": "All Columns",
+            "name_ru": "Все колонки",
+            "description": "Show all available columns",
+            "default_visible": [
+                "title",
+                "year",
+                "authors",
+                "study_type",
+                "key_finding"
+            ]
+        },
+        "clinical": {
+            "name": "Clinical Research",
+            "name_ru": "Клинические исследования",
+            "description": "PICO framework for clinical trials",
+            "default_visible": [
+                "title",
+                "year",
+                "study_type",
+                "sample_size",
+                "population",
+                "intervention",
+                "comparator",
+                "primary_outcome"
+            ]
+        },
+        "pharmacology": {
+            "name": "Pharmacology",
+            "name_ru": "Фармакология",
+            "description": "Drug-focused columns",
+            "default_visible": [
+                "title",
+                "year",
+                "drug_name",
+                "dose",
+                "route",
+                "mechanisms",
+                "key_finding"
+            ]
+        },
+        "biochemistry": {
+            "name": "Biochemistry",
+            "name_ru": "Биохимия",
+            "description": "Molecular and pathway focus",
+            "default_visible": [
+                "title",
+                "year",
+                "genes",
+                "proteins",
+                "pathways",
+                "mechanisms",
+                "model_organism"
+            ]
+        },
+        "meta_analysis": {
+            "name": "Meta-Analysis",
+            "name_ru": "Мета-анализ",
+            "description": "For systematic review data extraction",
+            "default_visible": [
+                "title",
+                "year",
+                "study_type",
+                "sample_size",
+                "intervention",
+                "comparator",
+                "primary_outcome",
+                "bias_risk"
+            ]
+        }
+    },
+    "notes": {
+        "extending": "To add new columns: add entry to 'columns' object with source, domains, and extraction method",
+        "ai_prompts": "AI prompts can be customized per column for better extraction",
+        "nlp_patterns": "Regex patterns for NLP extraction - prefixed with 'regex:' for actual regex, otherwise literal match",
+        "domains": "Each column belongs to domains - use 'all' for universal columns"
+    }
+}

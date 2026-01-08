@@ -6,31 +6,37 @@
  */
 
 // Entity types and interfaces
-export {
+export type {
     EntityType,
     Entity,
     Relation,
     RelationType,
     ExtractionResult,
+} from './entities'
+
+export {
     ENTITY_TYPE_META,
     isValidEntityType,
     isEntity,
 } from './entities'
 
 // Graph structures
-export {
+export type {
     GraphNode,
     GraphEdge,
     Graph,
     GraphMetrics,
     GraphFilter,
     GraphLayout,
+} from './graph'
+
+export {
     isGraphNode,
     isGraph,
 } from './graph'
 
 // Analysis results
-export {
+export type {
     CentralityResult,
     CentralityAnalysis,
     Community,
@@ -45,16 +51,34 @@ export {
 } from './analysis'
 
 // Storage and migration
-export {
+export type {
     SchemaVersion,
-    CURRENT_SCHEMA_VERSION,
     StoredGraph,
     StoredExtraction,
     Migration,
-    MIGRATIONS,
-    migrateToLatest,
     StorageAdapter,
     ExportFormat,
     ExportOptions,
     ExportResult,
 } from './storage'
+
+export {
+    CURRENT_SCHEMA_VERSION,
+    MIGRATIONS,
+    migrateToLatest,
+} from './storage'
+
+// Research jobs
+export type {
+    ResearchJobStatus,
+    ResearchJob,
+    ResearchJobRequest,
+    ResearchJobResponse,
+    ResearchSource,
+    ArticleSource,
+} from './research'
+
+export {
+    isResearchJob,
+    isValidResearchSource,
+} from './research'

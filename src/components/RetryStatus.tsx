@@ -33,7 +33,7 @@ export default function RetryStatus({ retryHandler, showLogs = false, onClearLog
     }
   }, [retryHandler])
 
-  if (!state) {
+  if (!state || !retryHandler) {
     return null
   }
 
@@ -59,9 +59,10 @@ export default function RetryStatus({ retryHandler, showLogs = false, onClearLog
     })
   }
 
-  const timeUntilNextRetry = retryHandler.getTimeUntilNextRetry()
-  const progressPercentage = state.currentAttempt > 0 
-    ? (state.currentAttempt / retryHandler['config'].maxRetries) * 100 
+  const timeUntilNextRetry = retryHandler?.getTimeUntilNextRetry() ?? null
+  const maxRetries = (retryHandler as any)?.config?.maxRetries ?? 5
+  const progressPercentage = state.currentAttempt > 0
+    ? (state.currentAttempt / maxRetries) * 100
     : 0
 
   return (
@@ -83,7 +84,7 @@ export default function RetryStatus({ retryHandler, showLogs = false, onClearLog
                   {state.isRetrying ? 'Повторная попытка...' : 'Статус: Готов'}
                 </div>
                 <div className="text-sm text-gray-600">
-                  Попытка {state.currentAttempt}/{retryHandler['config'].maxRetries}
+                  Попытка {state.currentAttempt}/{maxRetries}
                 </div>
               </div>
             </div>
@@ -169,8 +170,8 @@ export default function RetryStatus({ retryHandler, showLogs = false, onClearLog
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Оставшиеся попытки:</span>
-                  <span className={`font-medium ${retryHandler.getRemainingRetries() <= 2 ? 'text-red-600' : 'text-gray-900'}`}>
-                    {retryHandler.getRemainingRetries()}
+                  <span className={`font-medium ${(retryHandler?.getRemainingRetries() ?? 0) <= 2 ? 'text-red-600' : 'text-gray-900'}`}>
+                    {retryHandler?.getRemainingRetries() ?? 0}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -188,9 +189,8 @@ export default function RetryStatus({ retryHandler, showLogs = false, onClearLog
                     {logs.slice(-10).reverse().map((log, index) => (
                       <div
                         key={index}
-                        className={`p-2 rounded border ${
-                          log.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-                        }`}
+                        className={`p-2 rounded border ${log.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">

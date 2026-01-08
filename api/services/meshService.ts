@@ -13,7 +13,7 @@ import { logger } from '../../src/core/Logger'
 const meshCache = new Map<string, MeSHDescriptor | null>()
 const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
 
-interface MeSHDescriptor {
+export interface MeSHDescriptor {
     descriptorUI: string          // e.g., "D004194"
     descriptorName: string        // Official name
     treeNumbers: string[]         // MeSH tree hierarchy
@@ -41,7 +41,7 @@ type MeSHCategory =
     | 'geographic'   // Z - Geographicals
     | 'unknown'
 
-interface MeSHSearchResult {
+export interface MeSHSearchResult {
     found: boolean
     descriptor?: MeSHDescriptor
     confidence: number

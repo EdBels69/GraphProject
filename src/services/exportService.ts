@@ -154,11 +154,11 @@ export async function exportToWord(
                 rows: [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ text: '№', bold: true })] }),
-                            new TableCell({ children: [new Paragraph({ text: 'ID', bold: true })] }),
-                            new TableCell({ children: [new Paragraph({ text: 'Название', bold: true })] }),
-                            new TableCell({ children: [new Paragraph({ text: 'Вес', bold: true })] }),
-                            new TableCell({ children: [new Paragraph({ text: 'Степень', bold: true })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '№', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'ID', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Название', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Вес', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Степень', bold: true })] })] }),
                         ],
                     }),
                     ...topNodes.map((node, i) =>
@@ -191,9 +191,9 @@ export async function exportToWord(
                 rows: [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ text: 'Источник', bold: true })] }),
-                            new TableCell({ children: [new Paragraph({ text: 'Цель', bold: true })] }),
-                            new TableCell({ children: [new Paragraph({ text: 'Вес', bold: true })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Источник', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Цель', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Вес', bold: true })] })] }),
                         ],
                     }),
                     ...graph.edges.slice(0, 50).map(edge =>
@@ -212,8 +212,7 @@ export async function exportToWord(
         if (graph.edges.length > 50) {
             children.push(
                 new Paragraph({
-                    text: `... и ещё ${graph.edges.length - 50} связей`,
-                    italics: true,
+                    children: [new TextRun({ text: `... и ещё ${graph.edges.length - 50} связей`, italics: true })],
                 })
             )
         }
@@ -313,4 +312,147 @@ export function downloadBlob(blob: Blob, filename: string) {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+}
+
+/**
+ * Export graph to GEXF format (for Gephi)
+ */
+export function exportToGEXF(graph: Graph): string {
+    const escapeXML = (str: string) => str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;')
+
+    const now = new Date().toISOString()
+
+    let gexf = `<?xml version="1.0" encoding="UTF-8"?>
+<gexf xmlns="http://www.gexf.net/1.3" version="1.3">
+  <meta lastmodifieddate="${now.split('T')[0]}">
+    <creator>Graph Analyser</creator>
+    <description>${escapeXML(graph.name)}</description>
+  </meta>
+  <graph mode="static" defaultedgetype="${graph.directed ? 'directed' : 'undirected'}">
+    <attributes class="node">
+      <attribute id="0" title="weight" type="float"/>
+      <attribute id="1" title="group" type="string"/>
+    </attributes>
+    <nodes>
+`
+
+    graph.nodes.forEach(node => {
+        gexf += `      <node id="${escapeXML(node.id)}" label="${escapeXML(node.label)}">
+        <attvalues>
+          <attvalue for="0" value="${node.weight || 0}"/>
+          <attvalue for="1" value="${escapeXML((node.data?.group as string) || '')}"/>
+        </attvalues>
+      </node>\n`
+    })
+
+    gexf += `    </nodes>
+    <edges>
+`
+
+    graph.edges.forEach((edge, i) => {
+        gexf += `      <edge id="${i}" source="${escapeXML(edge.source)}" target="${escapeXML(edge.target)}" weight="${edge.weight || 1}"/>\n`
+    })
+
+    gexf += `    </edges>
+  </graph>
+</gexf>`
+
+    return gexf
+}
+
+/**
+ * Export graph to GraphML format
+ */
+export function exportToGraphML(graph: Graph): string {
+    const escapeXML = (str: string) => str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+
+    let graphml = `<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns">
+  <key id="label" for="node" attr.name="label" attr.type="string"/>
+  <key id="weight" for="node" attr.name="weight" attr.type="double"/>
+  <key id="group" for="node" attr.name="group" attr.type="string"/>
+  <key id="edgeweight" for="edge" attr.name="weight" attr.type="double"/>
+  <graph id="${escapeXML(graph.id)}" edgedefault="${graph.directed ? 'directed' : 'undirected'}">
+`
+
+    graph.nodes.forEach(node => {
+        graphml += `    <node id="${escapeXML(node.id)}">
+      <data key="label">${escapeXML(node.label)}</data>
+      <data key="weight">${node.weight || 0}</data>
+      <data key="group">${escapeXML((node.data?.group as string) || '')}</data>
+    </node>\n`
+    })
+
+    graph.edges.forEach((edge, i) => {
+        graphml += `    <edge id="e${i}" source="${escapeXML(edge.source)}" target="${escapeXML(edge.target)}">
+      <data key="edgeweight">${edge.weight || 1}</data>
+    </edge>\n`
+    })
+
+    graphml += `  </graph>
+</graphml>`
+
+    return graphml
+}
+
+/**
+ * Export SVG element to PNG
+ */
+export async function exportSVGtoPNG(svgElement: SVGSVGElement, width = 1920, height = 1080): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const svgData = new XMLSerializer().serializeToString(svgElement)
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+        const url = URL.createObjectURL(svgBlob)
+
+        const img = new Image()
+        img.onload = () => {
+            const canvas = document.createElement('canvas')
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d')
+
+            if (!ctx) {
+                reject(new Error('Could not get canvas context'))
+                return
+            }
+
+            // White background
+            ctx.fillStyle = 'white'
+            ctx.fillRect(0, 0, width, height)
+
+            // Draw SVG
+            ctx.drawImage(img, 0, 0, width, height)
+
+            canvas.toBlob(blob => {
+                URL.revokeObjectURL(url)
+                if (blob) {
+                    resolve(blob)
+                } else {
+                    reject(new Error('Failed to create PNG blob'))
+                }
+            }, 'image/png')
+        }
+        img.onerror = () => {
+            URL.revokeObjectURL(url)
+            reject(new Error('Failed to load SVG'))
+        }
+        img.src = url
+    })
+}
+
+/**
+ * Export SVG element to SVG file
+ */
+export function exportToSVGFile(svgElement: SVGSVGElement): Blob {
+    const svgData = new XMLSerializer().serializeToString(svgElement)
+    return new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
 }

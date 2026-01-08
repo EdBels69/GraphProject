@@ -50,6 +50,37 @@ router.post('/chat', async (req, res) => {
 })
 
 /**
+ * POST /api/ai/chat-stream
+ * Send a streaming chat message
+ */
+router.post('/chat-stream', async (req, res) => {
+    try {
+        const { messages, options } = req.body
+
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({ error: 'Messages array is required' })
+        }
+
+        // Set headers for SSE
+        res.setHeader('Content-Type', 'text/event-stream')
+        res.setHeader('Cache-Control', 'no-cache')
+        res.setHeader('Connection', 'keep-alive')
+
+        const { chatCompletionStream } = await import('../services/aiService')
+
+        await chatCompletionStream(messages, options, (chunk) => {
+            res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`)
+        })
+
+        res.write('data: [DONE]\n\n')
+        res.end()
+    } catch (error) {
+        logger.error('AIRoute', 'Streaming chat failed', { error })
+        res.status(500).json({ error: 'Streaming chat request failed' })
+    }
+})
+
+/**
  * POST /api/ai/extract-entities
  * Extract entities from text using AI
  */
@@ -125,7 +156,7 @@ router.post('/recommendations', async (req, res) => {
             return res.status(400).json({ error: 'Gaps data is required' })
         }
 
-        const labelMap = new Map(Object.entries(nodeLabels || {}))
+        const labelMap = new Map<string, string>(Object.entries(nodeLabels || {}) as [string, string][])
         const recommendations = await generateResearchRecommendations(gaps, labelMap)
         res.json({ recommendations })
     } catch (error) {

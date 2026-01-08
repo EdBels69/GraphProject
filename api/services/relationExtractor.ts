@@ -1,10 +1,12 @@
 import { Entity } from './entityExtractor'
+import { RelationType, EvidenceType } from '../../shared/types'
 
 export interface Relation {
   id: string
   source: string
   target: string
-  type: string
+  type: RelationType | string  // Allow both typed and custom relations
+  evidenceType: EvidenceType   // NEW: How was this discovered?
   confidence: number
   evidence: string[]
   sourceText: string
@@ -70,13 +72,13 @@ export class RelationExtractor {
     source: string
   ): Promise<ExtractedRelations> {
     const relations: Relation[] = []
-    
+
     // Extract relations based on patterns
     for (let i = 0; i < entities.length; i++) {
       for (let j = i + 1; j < entities.length; j++) {
         const entity1 = entities[i]
         const entity2 = entities[j]
-        
+
         // Find relations between these entities in the text
         const entityRelations = this.findRelationsBetweenEntities(
           text,
@@ -87,7 +89,7 @@ export class RelationExtractor {
         relations.push(...entityRelations)
       }
     }
-    
+
     // Calculate statistics
     const byType: Record<string, number> = {}
     let totalConfidence = 0
@@ -95,7 +97,7 @@ export class RelationExtractor {
       byType[relation.type] = (byType[relation.type] || 0) + 1
       totalConfidence += relation.confidence
     }
-    
+
     return {
       relations,
       statistics: {
@@ -116,7 +118,7 @@ export class RelationExtractor {
     source: string
   ): Relation[] {
     const relations: Relation[] = []
-    
+
     // Check each relation pattern
     for (const [relationType, pattern] of this.relationPatterns) {
       // Look for pattern between entities
@@ -128,33 +130,34 @@ export class RelationExtractor {
         `${entity2.name}[^.]*?${pattern.source}[^.]*?${entity1.name}`,
         'gi'
       )
-      
+
       const matches1 = text.match(regex1)
       const matches2 = text.match(regex2)
-      
+
       if (matches1) {
         for (const match of matches1) {
           relations.push({
             id: `${entity1.id}_${entity2.id}_${relationType}_${Date.now()}`,
             source: entity1.id,
             target: entity2.id,
-            type: relationType,
-            confidence: 0.7, // Base confidence from pattern match
+            type: relationType as RelationType,
+            evidenceType: 'text_mining',
+            confidence: 0.7,
             evidence: [source],
             sourceText: match
           })
         }
       }
-      
+
       if (matches2) {
         for (const match of matches2) {
-          // Reverse the relation type if needed
           const reversedType = this.reverseRelation(relationType)
           relations.push({
             id: `${entity2.id}_${entity1.id}_${reversedType}_${Date.now()}`,
             source: entity2.id,
             target: entity1.id,
             type: reversedType,
+            evidenceType: 'text_mining',
             confidence: 0.7,
             evidence: [source],
             sourceText: match
@@ -162,7 +165,7 @@ export class RelationExtractor {
         }
       }
     }
-    
+
     // Also check for co-occurrence within same sentence as weak relation
     const cooccurrenceRelations = this.findCooccurrenceRelations(
       text,
@@ -171,7 +174,7 @@ export class RelationExtractor {
       source
     )
     relations.push(...cooccurrenceRelations)
-    
+
     return relations
   }
 
@@ -186,24 +189,25 @@ export class RelationExtractor {
   ): Relation[] {
     const relations: Relation[] = []
     const sentences = text.split(/[.!?]+/)
-    
+
     for (const sentence of sentences) {
       const hasEntity1 = sentence.toLowerCase().includes(entity1.name.toLowerCase())
       const hasEntity2 = sentence.toLowerCase().includes(entity2.name.toLowerCase())
-      
+
       if (hasEntity1 && hasEntity2) {
         relations.push({
           id: `${entity1.id}_${entity2.id}_cooccurs_${Date.now()}`,
           source: entity1.id,
           target: entity2.id,
-          type: 'co_occurs_with',
-          confidence: 0.3, // Low confidence for co-occurrence
+          type: 'cooccurs_with',
+          evidenceType: 'cooccurrence',
+          confidence: 0.4, // Increased slightly for visibility
           evidence: [source],
           sourceText: sentence.trim()
         })
       }
     }
-    
+
     return relations
   }
 
@@ -233,7 +237,7 @@ export class RelationExtractor {
       'participates_in': 'has_participant',
       'regulates_pathway': 'regulated_by_pathway'
     }
-    
+
     return reversals[relationType] || `${relationType}_by`
   }
 
@@ -242,11 +246,11 @@ export class RelationExtractor {
    */
   mergeRelations(relations: Relation[]): Relation[] {
     const merged: Map<string, Relation> = new Map()
-    
+
     for (const relation of relations) {
       const key = `${relation.source}_${relation.target}_${relation.type}`
       const existing = merged.get(key)
-      
+
       if (existing) {
         existing.confidence = Math.max(existing.confidence, relation.confidence)
         existing.evidence.push(...relation.evidence)
@@ -255,7 +259,7 @@ export class RelationExtractor {
         merged.set(key, relation)
       }
     }
-    
+
     return Array.from(merged.values())
   }
 

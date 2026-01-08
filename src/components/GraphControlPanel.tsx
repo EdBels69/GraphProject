@@ -8,7 +8,7 @@ interface GraphControlPanelProps {
   loading?: boolean
 }
 
-type AlgorithmType = 
+type AlgorithmType =
   | 'shortest-path'
   | 'centrality'
   | 'connectivity'
@@ -98,13 +98,12 @@ export default function GraphControlPanel({
               return (
                 <button
                   key={algo.id}
-                  onClick={() => handleAlgorithmSelect(algo.id)}
+                  onClick={() => handleAlgorithmSelect(algo.id as AlgorithmType)}
                   disabled={loading}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    isSelected
+                  className={`p-4 rounded-lg border-2 transition-all ${isSelected
                       ? 'border-primary-500 bg-primary-50'
                       : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50'
-                  } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    } ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">{algo.icon}</span>

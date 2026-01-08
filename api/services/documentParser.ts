@@ -25,21 +25,22 @@ export interface ParsedTable {
 }
 
 export class DocumentParser {
-  async parsePDF(buffer: Buffer): Promise<ParsedDocument> {
+  async parsePDF(buffer: Buffer, originalname: string = ''): Promise<ParsedDocument> {
     try {
       const data = await pdf(buffer)
       const text = data.text || ''
       const pageCount = data.numpages || 0
-      
+
       const tables = this.extractTables(text)
-      
+
+      const info = data.info as any;
       return {
         id: `doc-${Date.now()}`,
-        title: data.info?.Title || `Document ${Date.now()}`,
+        title: info?.Title || originalname || `Document ${Date.now()}`,
         content: text,
         tables,
         metadata: {
-          fileName: '',
+          fileName: originalname,
           fileType: 'pdf',
           pageCount,
           extractedAt: new Date()
@@ -50,22 +51,22 @@ export class DocumentParser {
     }
   }
 
-  async parseDOCX(buffer: Buffer): Promise<ParsedDocument> {
+  async parseDOCX(buffer: Buffer, originalname: string = ''): Promise<ParsedDocument> {
     try {
       const result = await mammoth.extractRawText({ buffer })
       const text = result.value || ''
-      
+
       const tables = this.extractTables(text)
-      
+
       return {
         id: `doc-${Date.now()}`,
-        title: result.value?.Title || `Document ${Date.now()}`,
+        title: originalname || `Document ${Date.now()}`,
         content: text,
         tables,
         metadata: {
-          fileName: '',
+          fileName: originalname,
           fileType: 'docx',
-          pageCount: Math.ceil((result.value?.length || 0) / 2000), // Estimate pages
+          pageCount: Math.ceil((text.length || 0) / 2000), // Estimate pages
           extractedAt: new Date()
         }
       }
@@ -77,11 +78,11 @@ export class DocumentParser {
   async parseText(text: string, fileName: string): Promise<ParsedDocument> {
     try {
       const tables = this.extractTables(text)
-      
+
       // Extract title from first line if available
       const lines = text.split('\n')
       const title = lines[0]?.trim() || fileName || `Document ${Date.now()}`
-      
+
       return {
         id: `doc-${Date.now()}`,
         title,
@@ -106,10 +107,10 @@ export class DocumentParser {
     let currentHeaders: string[] = []
     let currentRows: string[][] = []
     let rowCount = 0
-    
+
     for (const line of lines) {
       const trimmedLine = line.trim()
-      
+
       // Check for table headers (cells with | separator)
       if (trimmedLine.includes('|') && !trimmedLine.startsWith('-')) {
         const headers = trimmedLine.split('|').map(h => h.trim()).filter(h => h)
@@ -127,7 +128,7 @@ export class DocumentParser {
           continue
         }
       }
-      
+
       // Check for table row separator (cells with |)
       if (currentTable && trimmedLine.includes('|') && !trimmedLine.startsWith('-')) {
         const cells = trimmedLine.split('|').map(c => c.trim()).filter(c => c)
@@ -138,7 +139,7 @@ export class DocumentParser {
           currentTable.metadata.rowCount = rowCount
         }
       }
-      
+
       // Check for horizontal rule (---)
       if (trimmedLine === '---' || trimmedLine.startsWith('---')) {
         if (currentTable) {
@@ -149,7 +150,7 @@ export class DocumentParser {
         }
       }
     }
-    
+
     return tables
   }
 
@@ -159,18 +160,19 @@ export class DocumentParser {
       if (!response.ok) {
         throw new Error(`Failed to fetch document: ${response.status}`)
       }
-      
+
       const contentType = response.headers.get('content-type') || ''
       const arrayBuffer = await response.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
-      
+
+      const fileName = url.split('/').pop() || 'document'
       if (contentType.includes('pdf')) {
-        return this.parsePDF(buffer)
+        return this.parsePDF(buffer, fileName)
       } else if (contentType.includes('officedocument') || contentType.includes('wordprocessingml')) {
-        return this.parseDOCX(buffer)
+        return this.parseDOCX(buffer, fileName)
       } else if (contentType.includes('text/plain')) {
         const text = await response.text()
-        return this.parseText(text, url.split('/').pop() || 'document.txt')
+        return this.parseText(text, fileName)
       } else {
         throw new Error(`Unsupported content type: ${contentType}`)
       }

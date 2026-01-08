@@ -4,7 +4,7 @@ const router = express.Router()
 
 router.post('/generate', (req, res) => {
   const { format, dataType, includeMetadata } = req.body
-  
+
   const mockData = {
     metadata: includeMetadata ? {
       exportDate: new Date().toISOString(),
@@ -102,6 +102,23 @@ router.get('/data-types', (req, res) => {
     { value: 'statistics', label: 'Статистика', description: 'Сводная статистика и метрики' }
   ]
   res.json(dataTypes)
+})
+
+router.get('/analysis', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      metadata: {
+        exportDate: new Date().toISOString(),
+        analysisVersion: '1.0.0'
+      },
+      statistics: {
+        totalArticles: 47,
+        totalEntities: 2513,
+        totalInteractions: 4582
+      }
+    }
+  })
 })
 
 export default router

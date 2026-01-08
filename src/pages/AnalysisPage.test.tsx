@@ -1,4 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import * as RTL from '@testing-library/react'
+const { render, fireEvent, waitFor } = RTL as any
+import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { toast } from 'sonner'
 import axios from 'axios'
@@ -17,48 +19,48 @@ describe('AnalysisPage', () => {
   })
 
   it('should render analysis steps', () => {
-    render(<AnalysisPage />)
-    
-    expect(screen.getByText('Извлечение сущностей')).toBeInTheDocument()
-    expect(screen.getByText('Выявление взаимодействий')).toBeInTheDocument()
-    expect(screen.getByText('Графовый анализ')).toBeInTheDocument()
+    const { getByText } = render(<AnalysisPage />)
+
+    expect(getByText('Извлечение сущностей')).toBeInTheDocument()
+    expect(getByText('Выявление взаимодействий')).toBeInTheDocument()
+    expect(getByText('Графовый анализ')).toBeInTheDocument()
   })
 
   it('should start analysis when clicking start button', async () => {
-    render(<AnalysisPage />)
-    
-    const startButton = screen.getByText('🚀 Начать анализ')
+    const { getByText } = render(<AnalysisPage />)
+
+    const startButton = getByText('🚀 Начать анализ')
     fireEvent.click(startButton)
-    
+
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('Анализ запущен')
     })
   })
 
   it('should pause analysis when clicking pause button', () => {
-    render(<AnalysisPage />)
-    
-    const startButton = screen.getByText('🚀 Начать анализ')
+    const { getByText } = render(<AnalysisPage />)
+
+    const startButton = getByText('🚀 Начать анализ')
     fireEvent.click(startButton)
-    
-    const pauseButton = screen.getByText('⏸️ Пауза')
+
+    const pauseButton = getByText('⏸️ Пауза')
     fireEvent.click(pauseButton)
-    
+
     expect(toast.info).toHaveBeenCalledWith('Анализ приостановлен')
   })
 
   it('should resume analysis when clicking continue button', () => {
-    render(<AnalysisPage />)
-    
-    const startButton = screen.getByText('🚀 Начать анализ')
+    const { getByText } = render(<AnalysisPage />)
+
+    const startButton = getByText('🚀 Начать анализ')
     fireEvent.click(startButton)
-    
-    const pauseButton = screen.getByText('⏸️ Пауза')
+
+    const pauseButton = getByText('⏸️ Пауза')
     fireEvent.click(pauseButton)
-    
-    const continueButton = screen.getByText('▶️ Продолжить')
+
+    const continueButton = getByText('▶️ Продолжить')
     fireEvent.click(continueButton)
-    
+
     expect(toast.info).toHaveBeenCalledWith('Анализ продолжен')
   })
 
@@ -66,12 +68,12 @@ describe('AnalysisPage', () => {
     vi.mocked(axios.get).mockResolvedValue({
       data: { success: true, data: { test: 'data' } }
     })
-    
-    render(<AnalysisPage />)
-    
-    const exportButton = screen.getByText('📥 Экспорт')
+
+    const { getByText } = render(<AnalysisPage />)
+
+    const exportButton = getByText('📥 Экспорт')
     fireEvent.click(exportButton)
-    
+
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('Результаты успешно экспортированы')
     })

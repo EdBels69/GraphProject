@@ -9,7 +9,7 @@ describe('Logger', () => {
 
   describe('log levels', () => {
     it('should log debug messages', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       logger.debug('TestModule', 'Test message');
@@ -24,7 +24,7 @@ describe('Logger', () => {
     });
 
     it('should log info messages', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       logger.info('TestModule', 'Test message');
@@ -39,7 +39,7 @@ describe('Logger', () => {
     });
 
     it('should log warning messages', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       logger.warn('TestModule', 'Test message');
@@ -54,7 +54,7 @@ describe('Logger', () => {
     });
 
     it('should log error messages', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       logger.error('TestModule', 'Test message');
@@ -69,7 +69,7 @@ describe('Logger', () => {
     });
 
     it('should log fatal messages', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       logger.fatal('TestModule', 'Test message');
@@ -87,7 +87,7 @@ describe('Logger', () => {
   describe('log filtering', () => {
     it('should respect log level configuration', () => {
       const infoLogger = new Logger({ level: LogLevel.INFO, enableConsole: false, enableFile: false });
-      const callback = jest.fn();
+      const callback = vi.fn();
       infoLogger.subscribe('test', callback);
 
       infoLogger.debug('TestModule', 'Debug message');
@@ -120,7 +120,7 @@ describe('Logger', () => {
 
   describe('log data', () => {
     it('should include data in log entry', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       const testData = { key1: 'value1', key2: 123 };
@@ -136,8 +136,8 @@ describe('Logger', () => {
 
   describe('subscriptions', () => {
     it('should allow multiple subscriptions', () => {
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
 
       logger.subscribe('sub1', callback1);
       logger.subscribe('sub2', callback2);
@@ -149,7 +149,7 @@ describe('Logger', () => {
     });
 
     it('should allow unsubscribing', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
       const unsubscribe = logger.subscribe('test', callback);
 
       logger.info('TestModule', 'Message 1');
@@ -160,10 +160,10 @@ describe('Logger', () => {
     });
 
     it('should handle errors in callbacks gracefully', () => {
-      const errorCallback = jest.fn(() => {
+      const errorCallback = vi.fn(() => {
         throw new Error('Callback error');
       });
-      const successCallback = jest.fn();
+      const successCallback = vi.fn();
 
       logger.subscribe('error', errorCallback);
       logger.subscribe('success', successCallback);
@@ -188,7 +188,7 @@ describe('Logger', () => {
 
   describe('context logger', () => {
     it('should add context to log entries', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       const contextLogger = logger.withContext('user123', 'session456', 'req789');
@@ -208,7 +208,7 @@ describe('Logger', () => {
     it('should allow updating configuration', () => {
       logger.setConfig({ level: LogLevel.WARN });
 
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       logger.info('TestModule', 'Info message');

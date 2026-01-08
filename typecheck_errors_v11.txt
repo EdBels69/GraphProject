@@ -1,0 +1,48 @@
+
+> graph-analyser@1.0.0 typecheck
+> tsc --noEmit
+
+api/routes/documents.ts(18,7): error TS2717: Subsequent property declarations must have the same type.  Property 'files' must be of type '{ [fieldname: string]: File[]; } | File[] | undefined', but here has type 'File[] | undefined'.
+api/routes/graphs.ts(547,9): error TS7034: Variable 'articles' implicitly has type 'any[]' in some locations where its type cannot be determined.
+api/routes/graphs.ts(572,12): error TS7005: Variable 'articles' implicitly has an 'any[]' type.
+src/core/integration.test.ts(148,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(158,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(159,11): error TS2552: Cannot find name 'sessionManager'. Did you mean 'SessionManager'?
+src/core/integration.test.ts(161,33): error TS2552: Cannot find name 'sessionManager'. Did you mean 'SessionManager'?
+src/core/integration.test.ts(166,33): error TS2552: Cannot find name 'sessionManager'. Did you mean 'SessionManager'?
+src/core/integration.test.ts(173,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(176,5): error TS2552: Cannot find name 'logger'. Did you mean 'Logger'?
+src/core/integration.test.ts(186,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(195,34): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(197,27): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(199,33): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(202,36): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(206,11): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(208,29): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(215,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(218,5): error TS2552: Cannot find name 'errorHandler'. Did you mean 'ErrorHandler'?
+src/core/integration.test.ts(221,26): error TS2304: Cannot find name 'errorHandler'.
+src/core/integration.test.ts(224,18): error TS2304: Cannot find name 'logger'.
+src/core/integration.test.ts(231,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(241,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(244,7): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(250,12): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(253,31): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(259,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(269,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(272,7): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(287,29): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(294,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(304,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(306,27): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(313,24): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(323,25): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(329,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(339,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(341,27): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(349,7): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(357,32): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(359,26): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/utils/fileParser.ts(260,5): error TS2322: Type 'string' is not assignable to type 'Date'.
+src/utils/fileParser.ts(261,5): error TS2322: Type 'string' is not assignable to type 'Date'.
+src/utils/retryHandler.ts(159,58): error TS2304: Cannot find name 'duration'.

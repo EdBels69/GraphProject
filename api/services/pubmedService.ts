@@ -191,7 +191,7 @@ export class PubMedService {
 
       pmids.forEach(pmid => {
         const article = result.result[pmid];
-        if (article) {
+        if (article && typeof article === 'object' && !Array.isArray(article)) {
           articles.push(article);
         }
       });
@@ -294,6 +294,7 @@ export class PubMedService {
   ): Promise<{
     nodes: Array<{
       id: string;
+      label: string;
       data: any;
     }>;
     edges: Array<{
@@ -331,8 +332,8 @@ export class PubMedService {
           if (!nodes.has(pmid)) {
             nodes.set(pmid, {
               id: pmid,
+              label: article.title.substring(0, 50),
               data: {
-                label: article.title.substring(0, 50),
                 title: article.title,
                 authors: article.authors?.map(a => a.name) || [],
                 year: article.journalInfo?.pubDate?.substring(0, 4) || new Date().getFullYear()

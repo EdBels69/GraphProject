@@ -112,34 +112,83 @@ export default function GraphViewer({
     onEdgeSelect?.(edge)
   }, [onEdgeSelect])
 
-  const handlePanStart = useCallback((e: React.MouseEvent) => {
-    if (e.target === svgRef.current) {
-      const svg = svgRef.current
-      if (!svg) return
-      const rect = svg.getBoundingClientRect()
-      setDragStart({
-        x: e.clientX - rect.left - offset.x,
-        y: e.clientY - rect.top - offset.y
-      })
-    }
-  }, [offset])
+  const [isPanning, setIsPanning] = useState(false)
+  const lastPanPosition = useRef({ x: 0, y: 0 })
 
-  const handlePanMove = useCallback((e: React.MouseEvent) => {
+  const handlePanStart = useCallback((e: React.MouseEvent) => {
+    // Start panning if clicking on background (svg) or edges, but not nodes
+    // Using simple tag check or ensuring node drag didn't start
     if (draggingNode) return
 
-    const svg = svgRef.current
-    if (!svg) return
+    setIsPanning(true)
+    lastPanPosition.current = { x: e.clientX, y: e.clientY }
+  }, [draggingNode])
 
-    const rect = svg.getBoundingClientRect()
-    setOffset({
-      x: e.clientX - rect.left - dragStart.x,
-      y: e.clientY - rect.top - dragStart.y
-    })
-  }, [dragStart, draggingNode])
+  const handlePanMove = useCallback((e: React.MouseEvent) => {
+    if (!isPanning) return
+
+    const dx = e.clientX - lastPanPosition.current.x
+    const dy = e.clientY - lastPanPosition.current.y
+
+    setOffset(prev => ({
+      x: prev.x + dx,
+      y: prev.y + dy
+    }))
+
+    lastPanPosition.current = { x: e.clientX, y: e.clientY }
+  }, [isPanning])
 
   const handlePanEnd = useCallback(() => {
-    setDragStart({ x: 0, y: 0 })
+    setIsPanning(false)
   }, [])
+
+  const handleCenterView = useCallback(() => {
+    // Reset to center
+    setOffset({ x: 0, y: 0 })
+    setScale(1)
+  }, [])
+
+  const handleFitView = useCallback(() => {
+    // Calculate bounding box of nodes
+    if (graph.nodes.length === 0) return
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    nodePositions.forEach(pos => {
+      minX = Math.min(minX, pos.x)
+      minY = Math.min(minY, pos.y)
+      maxX = Math.max(maxX, pos.x)
+      maxY = Math.max(maxY, pos.y)
+    })
+
+    const width = maxX - minX
+    const height = maxY - minY
+    const padding = 100
+
+    // Available space
+    const containerWidth = svgRef.current?.clientWidth || 800
+    const containerHeight = svgRef.current?.clientHeight || 600
+
+    const scaleX = (containerWidth - padding) / width
+    const scaleY = (containerHeight - padding) / height
+    const newScale = Math.min(Math.min(scaleX, scaleY), 1) // Don't zoom in too much
+
+    // Center point of graph
+    const graphCenterX = (minX + maxX) / 2
+    const graphCenterY = (minY + maxY) / 2
+
+    // Center point of container
+    const containerCenterX = containerWidth / 2
+    const containerCenterY = containerHeight / 2
+
+    // Calculate offset to move graph center to container center
+    // newPos = (pos * scale) + offset
+    // offset = newPos - (pos * scale)
+    const newOffsetX = containerCenterX - (graphCenterX * newScale)
+    const newOffsetY = containerCenterY - (graphCenterY * newScale)
+
+    setScale(newScale)
+    setOffset({ x: newOffsetX, y: newOffsetY })
+  }, [graph.nodes, nodePositions])
 
   const getArrowMarker = (color: string) => {
     return (
@@ -162,8 +211,8 @@ export default function GraphViewer({
 
   const getNodeColor = (node: GraphNode, isSelected: boolean) => {
     if (isSelected) return '#4f46e5'
-    return node.weight ? 
-      `hsl(${(node.weight / 10) * 240}, 70%, 50%)` : 
+    return node.weight ?
+      `hsl(${(node.weight / 10) * 240}, 70%, 50%)` :
       '#8b5cf6'
   }
 
@@ -202,24 +251,29 @@ export default function GraphViewer({
               <span className="text-sm text-gray-900">{(scale * 100).toFixed(0)}%</span>
             </div>
             <button
-              onClick={() => setScale(1)}
+              onClick={handleCenterView}
               className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
             >
               Сбросить
             </button>
             <button
+              onClick={handleFitView}
+              className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors"
+            >
+              Вписать
+            </button>
+            <button
               onClick={() => setShowLabels(!showLabels)}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                showLabels ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
+              className={`px-4 py-2 rounded-md transition-colors ${showLabels ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                }`}
             >
               {showLabels ? 'Скрыть метки' : 'Показать метки'}
             </button>
           </div>
           <div className="text-xs text-gray-600">
-            Колесо: прокрутка
+            ЛКМ + Драг: панорамирование
             <br />
-            Shift + колесо: быстрый зум
+            Колесо: прокрутка
             <br />
             Перетаскивание узлов
           </div>
@@ -230,14 +284,17 @@ export default function GraphViewer({
         ref={svgRef}
         width="100%"
         height="100%"
-        className="cursor-grab"
-        onMouseMove={handleMouseMove}
+        className="cursor-default"
+        onMouseMove={(e) => {
+          handleMouseMove(e)
+          handlePanMove(e)
+        }}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
         onMouseDown={handlePanStart}
-        onMouseMoveCapture={handlePanMove}
+        onMouseLeave={handlePanEnd}
         onMouseUpCapture={handlePanEnd}
-        style={{ cursor: draggingNode ? 'grabbing' : 'grab' }}
+        style={{ cursor: isPanning ? 'grabbing' : draggingNode ? 'grabbing' : 'grab' }}
       >
         <defs>
           {getArrowMarker('#9ca3af')}
@@ -271,7 +328,7 @@ export default function GraphViewer({
                     opacity: isSelected ? 1 : 0.6
                   }}
                 />
-                {(edge.weight !== undefined || edge.weight > 0) && showLabels && (
+                {edge.weight !== undefined && edge.weight > 0 && showLabels && (
                   <text
                     x={(sourcePos.x + targetPos.x) / 2}
                     y={(sourcePos.y + targetPos.y) / 2 - 10}

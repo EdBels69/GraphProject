@@ -31,15 +31,15 @@ export class RetryHandler {
   private logs: RetryLogEntry[] = []
   private abortController: AbortController | null = null
 
-  constructor(config: RetryConfig) {
-    this.config = {
+  constructor(config: Partial<RetryConfig> = {}) {
+    const defaults: Required<RetryConfig> = {
       maxRetries: 20,
       retryDelay: 15000,
-      onRetry: () => {},
-      onMaxRetriesReached: () => {},
+      onRetry: () => { },
+      onMaxRetriesReached: () => { },
       persistContext: true,
-      ...config
     }
+    this.config = { ...defaults, ...config }
 
     this.state = this.loadState()
     this.logs = this.loadLogs()
@@ -106,7 +106,7 @@ export class RetryHandler {
     }
   }
 
-  private logAttempt(attempt: number, success: boolean, error?: Error, duration: number): void {
+  private logAttempt(attempt: number, success: boolean, duration: number, error?: Error): void {
     const logEntry: RetryLogEntry = {
       timestamp: new Date(),
       attempt,
@@ -157,7 +157,7 @@ export class RetryHandler {
         const result = await task()
 
         const duration = Date.now() - attemptStartTime
-        this.logAttempt(this.state.currentAttempt, true, undefined, duration)
+        this.logAttempt(this.state.currentAttempt, true, duration)
 
         this.resetState()
         return result
@@ -165,12 +165,12 @@ export class RetryHandler {
       } catch (error) {
         const duration = Date.now() - attemptStartTime
         const errorObj = error instanceof Error ? error : new Error(String(error))
-        
+
         this.state.lastError = errorObj
         this.state.totalRetries++
         this.saveState()
-        
-        this.logAttempt(this.state.currentAttempt, false, errorObj, duration)
+
+        this.logAttempt(this.state.currentAttempt, false, duration, errorObj)
 
         if (this.state.currentAttempt >= this.config.maxRetries) {
           console.error(`[Retry Handler] Max retries (${this.config.maxRetries}) reached for task: ${taskId}`)
@@ -260,7 +260,7 @@ export class RetryHandler {
   }
 }
 
-export function createRetryHandler(config: RetryConfig): RetryHandler {
+export function createRetryHandler(config: Partial<RetryConfig> = {}): RetryHandler {
   return new RetryHandler(config)
 }
 

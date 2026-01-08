@@ -1,0 +1,55 @@
+
+> graph-analyser@1.0.0 typecheck
+> tsc --noEmit
+
+api/routes/documents.ts(18,7): error TS2717: Subsequent property declarations must have the same type.  Property 'files' must be of type '{ [fieldname: string]: File[]; } | File[] | undefined', but here has type 'File[] | undefined'.
+api/routes/graphs.ts(43,3): error TS2322: Type 'GraphAnalyzer | undefined' is not assignable to type 'GraphAnalyzer'.
+  Type 'undefined' is not assignable to type 'GraphAnalyzer'.
+api/routes/graphs.ts(537,7): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.
+  No index signature with a parameter of type 'string' was found on type '{}'.
+api/routes/graphs.ts(547,9): error TS7034: Variable 'articles' implicitly has type 'any[]' in some locations where its type cannot be determined.
+api/routes/graphs.ts(572,12): error TS7005: Variable 'articles' implicitly has an 'any[]' type.
+src/components/StatCard.test.tsx(1,18): error TS2305: Module '"@testing-library/react"' has no exported member 'screen'.
+src/core/integration.test.ts(26,34): error TS2304: Cannot find name 'LogLevel'.
+src/core/integration.test.ts(114,37): error TS2322: Type '"ERROR"' is not assignable to type 'LogLevel | undefined'.
+src/core/integration.test.ts(121,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/integration.test.ts(177,32): error TS2304: Cannot find name 'callback'.
+src/core/integration.test.ts(212,14): error TS2304: Cannot find name 'callback'.
+src/core/integration.test.ts(225,37): error TS2322: Type '"ERROR"' is not assignable to type 'LogLevel | undefined'.
+src/core/Logger.test.ts(139,25): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(140,25): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(163,29): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(166,31): error TS2708: Cannot use namespace 'jest' as a value.
+src/pages/AnalysisPage.test.tsx(1,18): error TS2305: Module '"@testing-library/react"' has no exported member 'screen'.
+src/pages/AnalysisPage.test.tsx(1,26): error TS2305: Module '"@testing-library/react"' has no exported member 'fireEvent'.
+src/pages/AnalysisPage.test.tsx(1,37): error TS2305: Module '"@testing-library/react"' has no exported member 'waitFor'.
+src/pages/ExportDataPage.tsx(93,44): error TS2345: Argument of type '{ graph: any; articles: any[]; entities: any[]; interactions: any[]; }' is not assignable to parameter of type 'ExportData'.
+  Property 'metadata' is missing in type '{ graph: any; articles: any[]; entities: any[]; interactions: any[]; }' but required in type 'ExportData'.
+src/services/exportService.ts(157,83): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(158,84): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(159,90): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(160,85): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(161,89): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(194,90): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(195,86): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(196,85): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(216,21): error TS2353: Object literal may only specify known properties, and 'italics' does not exist in type 'IParagraphOptions'.
+src/services/externalApi.ts(61,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(85,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(106,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(118,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(142,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(166,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/utils/errorHandler.ts(44,26): error TS2693: 'AppError' only refers to a type, but is being used as a value here.
+src/utils/errorHandler.ts(45,7): error TS2322: Type 'unknown' is not assignable to type 'AppError'.
+src/utils/fileParser.ts(59,9): error TS18048: 'article.citations' is possibly 'undefined'.
+src/utils/fileParser.ts(243,18): error TS18048: 'article.citations' is possibly 'undefined'.
+src/utils/fileParser.ts(256,5): error TS2322: Type '{ id: string; data: { label: string; title: string; authors: string[]; year: number; citations: number; }; }[]' is not assignable to type 'GraphNode[]'.
+  Property 'label' is missing in type '{ id: string; data: { label: string; title: string; authors: string[]; year: number; citations: number; }; }' but required in type 'GraphNode'.
+src/utils/retryHandler.ts(36,7): error TS2783: 'maxRetries' is specified more than once, so this usage will be overwritten.
+src/utils/retryHandler.ts(37,7): error TS2783: 'retryDelay' is specified more than once, so this usage will be overwritten.
+src/utils/retryHandler.ts(109,72): error TS1016: A required parameter cannot follow an optional parameter.
+src/utils/retryHandler.ts(272,38): error TS2345: Argument of type 'Partial<RetryConfig>' is not assignable to parameter of type 'RetryConfig'.
+  Types of property 'maxRetries' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.

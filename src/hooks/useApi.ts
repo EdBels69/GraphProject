@@ -11,7 +11,7 @@ export function useApi<T>(endpoint: string, initialData: T | null = null, enable
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
-    
+
     try {
       const fetchWithRetry = async () => {
         const response = await fetch(`${API_BASE}${endpoint}`)
@@ -21,10 +21,10 @@ export function useApi<T>(endpoint: string, initialData: T | null = null, enable
         return await response.json()
       }
 
-      const result = enableRetry 
-        ? await withRetry(fetchWithRetry, { maxRetries: 3, initialDelay: 1000 }, `api-${endpoint}`)
+      const result = enableRetry
+        ? await withRetry(fetchWithRetry, { maxRetries: 3, retryDelay: 1000 }, `api-${endpoint}`)
         : await fetchWithRetry()
-      
+
       setData(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -52,7 +52,7 @@ export function useApiPost<T>(endpoint: string, enableRetry: boolean = true) {
   const postData = useCallback(async (body: any) => {
     setLoading(true)
     setError(null)
-    
+
     try {
       const postWithRetry = async () => {
         const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -71,9 +71,9 @@ export function useApiPost<T>(endpoint: string, enableRetry: boolean = true) {
       }
 
       const result = enableRetry
-        ? await withRetry(() => postWithRetry(), { maxRetries: 3, initialDelay: 1000 }, `post-${endpoint}`)
+        ? await withRetry(() => postWithRetry(), { maxRetries: 3, retryDelay: 1000 }, `post-${endpoint}`)
         : await postWithRetry()
-      
+
       setData(result)
       return result
     } catch (err) {

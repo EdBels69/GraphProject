@@ -1,0 +1,673 @@
+
+> graph-analyser@1.0.0 typecheck
+> tsc --noEmit
+
+api/routes/admin.ts(12,32): error TS2339: Property 'getSessionMetrics' does not exist on type 'typeof SessionManager'.
+api/routes/admin.ts(13,33): error TS2339: Property 'getMetrics' does not exist on type 'typeof DatabaseManager'.
+api/routes/admin.ts(14,28): error TS2339: Property 'getMetrics' does not exist on type 'ErrorHandler'.
+api/routes/admin.ts(20,105): error TS2339: Property 'id' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+api/routes/admin.ts(30,105): error TS2339: Property 'id' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+api/routes/admin.ts(37,18): error TS2339: Property 'clearMetrics' does not exist on type 'ErrorHandler'.
+api/routes/admin.ts(40,105): error TS2339: Property 'id' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'.
+api/routes/ai.ts(23,30): error TS6133: 'req' is declared but its value is never read.
+api/routes/ai.ts(129,77): error TS2345: Argument of type 'Map<string, unknown>' is not assignable to parameter of type 'Map<string, string>'.
+  Type 'unknown' is not assignable to type 'string'.
+api/routes/analysis.ts(5,11): error TS6196: 'AnalysisProgress' is declared but never used.
+api/routes/analysis.ts(28,18): error TS6133: 'req' is declared but its value is never read.
+api/routes/analysis.ts(36,26): error TS6133: 'req' is declared but its value is never read.
+api/routes/analysis.ts(42,24): error TS6133: 'req' is declared but its value is never read.
+api/routes/analysis.ts(49,26): error TS6133: 'req' is declared but its value is never read.
+api/routes/analysis.ts(76,30): error TS6133: 'req' is declared but its value is never read.
+api/routes/articles.ts(48,18): error TS6133: 'req' is declared but its value is never read.
+api/routes/documents.ts(2,20): error TS7016: Could not find a declaration file for module 'multer'. '/Users/eduardbelskih/Проекты Github/GraphProject/node_modules/multer/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/multer` if it exists or add a new declaration (.d.ts) file containing `declare module 'multer';`
+api/routes/documents.ts(17,23): error TS2694: Namespace 'global.Express' has no exported member 'Multer'.
+api/routes/documents.ts(28,16): error TS6133: 'req' is declared but its value is never read.
+api/routes/documents.ts(28,16): error TS7006: Parameter 'req' implicitly has an 'any' type.
+api/routes/documents.ts(28,21): error TS7006: Parameter 'file' implicitly has an 'any' type.
+api/routes/documents.ts(28,27): error TS7006: Parameter 'cb' implicitly has an 'any' type.
+api/routes/documents.ts(54,14): error TS2551: Property 'file' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'. Did you mean 'files'?
+api/routes/documents.ts(58,52): error TS2551: Property 'file' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'. Did you mean 'files'?
+api/routes/export.ts(6,11): error TS6133: 'format' is declared but its value is never read.
+api/routes/export.ts(86,25): error TS6133: 'req' is declared but its value is never read.
+api/routes/export.ts(96,28): error TS6133: 'req' is declared but its value is never read.
+api/routes/gaps.ts(191,33): error TS6133: 'req' is declared but its value is never read.
+api/routes/graph.ts(24,18): error TS6133: 'req' is declared but its value is never read.
+api/routes/graph.ts(32,23): error TS6133: 'req' is declared but its value is never read.
+api/routes/graph.ts(48,23): error TS6133: 'req' is declared but its value is never read.
+api/routes/graph.ts(62,28): error TS6133: 'req' is declared but its value is never read.
+api/routes/graphAnalysis.ts(8,7): error TS6133: 'graphCentrality' is declared but its value is never read.
+api/routes/graphAnalysis.ts(9,7): error TS6133: 'pathAnalysis' is declared but its value is never read.
+api/routes/graphAnalysis.ts(10,7): error TS6133: 'researchGapDetection' is declared but its value is never read.
+api/routes/graphs.ts(1,19): error TS6133: 'Request' is declared but its value is never read.
+api/routes/graphs.ts(1,28): error TS6133: 'Response' is declared but its value is never read.
+api/routes/graphs.ts(2,17): error TS6133: 'GraphNode' is declared but its value is never read.
+api/routes/graphs.ts(2,28): error TS6133: 'GraphEdge' is declared but its value is never read.
+api/routes/graphs.ts(5,45): error TS6133: 'validateArticle' is declared but its value is never read.
+api/routes/graphs.ts(43,3): error TS2322: Type 'GraphAnalyzer | undefined' is not assignable to type 'GraphAnalyzer'.
+  Type 'undefined' is not assignable to type 'GraphAnalyzer'.
+api/routes/graphs.ts(46,18): error TS6133: 'req' is declared but its value is never read.
+api/routes/graphs.ts(262,35): error TS6133: 'directed' is declared but its value is never read.
+api/routes/graphs.ts(537,7): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.
+  No index signature with a parameter of type 'string' was found on type '{}'.
+api/routes/graphs.ts(547,9): error TS7034: Variable 'articles' implicitly has type 'any[]' in some locations where its type cannot be determined.
+api/routes/graphs.ts(572,12): error TS7005: Variable 'articles' implicitly has an 'any[]' type.
+api/routes/graphs.ts(590,35): error TS6133: 'index' is declared but its value is never read.
+api/routes/mesh.ts(92,29): error TS6133: 'req' is declared but its value is never read.
+api/routes/mesh.ts(101,30): error TS6133: 'req' is declared but its value is never read.
+api/routes/patterns.ts(51,18): error TS6133: 'req' is declared but its value is never read.
+api/routes/patterns.ts(55,22): error TS6133: 'req' is declared but its value is never read.
+api/routes/pubmed.ts(14,34): error TS6133: 'publicationType' is declared but its value is never read.
+api/routes/pubmed.ts(72,58): error TS2345: Argument of type '{ id: string; data: any; }[]' is not assignable to parameter of type 'GraphNode[]'.
+  Property 'label' is missing in type '{ id: string; data: any; }' but required in type 'GraphNode'.
+api/routes/search.ts(203,28): error TS6133: 'req' is declared but its value is never read.
+api/routes/statistics.ts(5,26): error TS6133: 'req' is declared but its value is never read.
+api/routes/statistics.ts(32,39): error TS6133: 'req' is declared but its value is never read.
+api/routes/statistics.ts(43,43): error TS6133: 'req' is declared but its value is never read.
+api/routes/statistics.ts(53,35): error TS6133: 'req' is declared but its value is never read.
+api/routes/statistics.ts(66,30): error TS6133: 'req' is declared but its value is never read.
+api/routes/statistics.ts(93,31): error TS6133: 'req' is declared but its value is never read.
+api/routes/statistics.ts(154,30): error TS6133: 'req' is declared but its value is never read.
+api/routes/statistics.ts(178,33): error TS6133: 'req' is declared but its value is never read.
+api/routes/system.ts(14,30): error TS6133: 'req' is declared but its value is never read.
+api/routes/system.ts(60,35): error TS6133: 'req' is declared but its value is never read.
+api/routes/system.ts(118,34): error TS6133: 'req' is declared but its value is never read.
+api/routes/system.ts(179,28): error TS6133: 'req' is declared but its value is never read.
+api/routes/system.ts(197,38): error TS6133: 'req' is declared but its value is never read.
+api/routes/system.ts(215,28): error TS6133: 'req' is declared but its value is never read.
+api/server-simple.ts(3,20): error TS7016: Could not find a declaration file for module 'multer'. '/Users/eduardbelskih/Проекты Github/GraphProject/node_modules/multer/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/multer` if it exists or add a new declaration (.d.ts) file containing `declare module 'multer';`
+api/server-simple.ts(26,15): error TS6133: 'req' is declared but its value is never read.
+api/server-simple.ts(40,21): error TS6133: 'req' is declared but its value is never read.
+api/server-simple.ts(50,14): error TS2551: Property 'file' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'. Did you mean 'files'?
+api/server-simple.ts(61,27): error TS2551: Property 'file' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'. Did you mean 'files'?
+api/server-simple.ts(62,23): error TS2551: Property 'file' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'. Did you mean 'files'?
+api/server-simple.ts(63,19): error TS2551: Property 'file' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'. Did you mean 'files'?
+api/server-simple.ts(64,23): error TS2551: Property 'file' does not exist on type 'Request<{}, any, any, ParsedQs, Record<string, any>>'. Did you mean 'files'?
+api/server-simple.ts(76,27): error TS6133: 'req' is declared but its value is never read.
+api/server-simple.ts(83,25): error TS6133: 'req' is declared but its value is never read.
+api/server.ts(46,21): error TS6133: 'req' is declared but its value is never read.
+api/server.ts(50,10): error TS6133: 'req' is declared but its value is never read.
+api/services/chunkingEngine.ts(42,9): error TS6133: 'currentSection' is declared but its value is never read.
+api/services/chunkingEngine.ts(120,11): error TS2454: Variable 'table' is used before being assigned.
+api/services/chunkingEngine.ts(120,11): error TS2322: Type 'string[]' is not assignable to type '[]'.
+  Target allows only 0 element(s) but source may have more.
+api/services/chunkingEngine.ts(121,11): error TS2454: Variable 'table' is used before being assigned.
+api/services/chunkingEngine.ts(121,11): error TS2322: Type '"Table 0"' is not assignable to type '""'.
+api/services/chunkingEngine.ts(121,33): error TS2454: Variable 'table' is used before being assigned.
+api/services/chunkingEngine.ts(127,11): error TS2454: Variable 'table' is used before being assigned.
+api/services/chunkingEngine.ts(127,27): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'never'.
+api/services/chunkingEngine.ts(134,30): error TS2454: Variable 'table' is used before being assigned.
+api/services/chunkingEngine.ts(135,27): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'string'.
+api/services/chunkingEngine.ts(141,7): error TS2454: Variable 'table' is used before being assigned.
+api/services/chunkingEngine.ts(141,23): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'never'.
+api/services/chunkingEngine.ts(144,12): error TS2454: Variable 'table' is used before being assigned.
+api/services/documentParser.ts(2,17): error TS7016: Could not find a declaration file for module 'pdf-parse'. '/Users/eduardbelskih/Проекты Github/GraphProject/node_modules/pdf-parse/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/pdf-parse` if it exists or add a new declaration (.d.ts) file containing `declare module 'pdf-parse';`
+api/services/documentParser.ts(62,30): error TS2339: Property 'Title' does not exist on type 'string'.
+api/services/entityExtractor.ts(8,22): error TS6133: 'normalizeTerm' is declared but its value is never read.
+api/services/entityExtractor.ts(8,37): error TS2459: Module '"./meshService"' declares 'MeSHSearchResult' locally, but it is not exported.
+api/services/entityExtractor.ts(8,37): error TS6133: 'MeSHSearchResult' is declared but its value is never read.
+api/services/entityExtractor.ts(199,5): error TS6133: 'chunk' is declared but its value is never read.
+api/services/globalSearch.ts(139,5): error TS6133: 'options' is declared but its value is never read.
+api/services/globalSearch.ts(332,11): error TS6133: 'calculateRelevanceScore' is declared but its value is never read.
+api/services/graphCentrality.ts(1,17): error TS6133: 'GraphNode' is declared but its value is never read.
+api/services/graphCentrality.ts(1,28): error TS6133: 'GraphEdge' is declared but its value is never read.
+api/services/graphCentrality.ts(186,19): error TS6133: 'nodeId' is declared but its value is never read.
+api/services/knowledgeGraphBuilder.ts(1,18): error TS6133: 'ExtractedEntities' is declared but its value is never read.
+api/services/knowledgeGraphBuilder.ts(2,20): error TS6133: 'ExtractedRelations' is declared but its value is never read.
+api/services/meshService.ts(14,7): error TS6133: 'CACHE_TTL' is declared but its value is never read.
+api/services/meshService.ts(101,15): error TS6133: 'query' is declared but its value is never read.
+api/services/pathAnalysis.ts(107,11): error TS6133: 'adjacency' is declared but its value is never read.
+api/services/pathAnalysis.ts(109,11): error TS6133: 'visited' is declared but its value is never read.
+api/services/pathAnalysis.ts(182,19): error TS6133: 'nodeId' is declared but its value is never read.
+api/services/performanceMonitor.ts(314,13): error TS6133: 'delay' is declared but its value is never read.
+api/services/pubmedService.ts(195,25): error TS2345: Argument of type 'string[] | PubMedArticle' is not assignable to parameter of type 'PubMedArticle'.
+  Type 'string[]' is missing the following properties from type 'PubMedArticle': uid, title
+api/services/pubmedService.ts(346,44): error TS6133: 'index' is declared but its value is never read.
+api/services/relationExtractor.ts(24,11): error TS6133: 'verbPatterns' is declared but its value is never read.
+api/services/researchGapDetection.ts(1,28): error TS6133: 'GraphEdge' is declared but its value is never read.
+api/services/sourceDownload.ts(234,20): error TS2345: Argument of type 'Promise<DownloadResult | { url: string; fileName: string; filePath: string; status: string; error: string; }>' is not assignable to parameter of type 'Promise<DownloadResult>'.
+  Type 'DownloadResult | { url: string; fileName: string; filePath: string; status: string; error: string; }' is not assignable to type 'DownloadResult'.
+    Type '{ url: string; fileName: string; filePath: string; status: string; error: string; }' is not assignable to type 'DownloadResult'.
+      Types of property 'status' are incompatible.
+        Type 'string' is not assignable to type '"success" | "failed"'.
+shared/contracts/index.ts(10,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(11,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(12,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(13,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(14,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(22,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(23,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(24,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(25,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(26,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(27,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(34,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(35,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(36,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(37,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(38,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(39,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(40,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(41,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(42,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(43,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(44,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(49,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(51,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(52,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(53,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(56,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(57,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(58,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/contracts/index.ts(59,5): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+shared/graphAlgorithms.test.ts(3,17): error TS6133: 'GraphNode' is declared but its value is never read.
+shared/graphAlgorithms.test.ts(3,28): error TS6133: 'GraphEdge' is declared but its value is never read.
+shared/graphAlgorithms.ts(26,11): error TS6133: 'invalidateCache' is declared but its value is never read.
+shared/graphAlgorithms.ts(100,46): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+shared/graphStorage.ts(49,21): error TS6133: 'graphId' is declared but its value is never read.
+shared/graphStorage.ts(57,21): error TS6133: 'graphId' is declared but its value is never read.
+src/components/AnalyticsPanel.tsx(7,10): error TS6133: 'BarChart3' is declared but its value is never read.
+src/components/AnalyticsPanel.tsx(9,1): error TS6133: 'Button' is declared but its value is never read.
+src/components/AnalyticsPanel.tsx(55,21): error TS2322: Type '{ children: Element; className: string; onClick: () => void; }' is not assignable to type 'IntrinsicAttributes & CardHeaderProps'.
+  Property 'onClick' does not exist on type 'IntrinsicAttributes & CardHeaderProps'.
+src/components/AnalyticsPanel.tsx(97,21): error TS2322: Type '{ children: Element; className: string; onClick: () => void; }' is not assignable to type 'IntrinsicAttributes & CardHeaderProps'.
+  Property 'onClick' does not exist on type 'IntrinsicAttributes & CardHeaderProps'.
+src/components/AnalyticsPanel.tsx(144,21): error TS2322: Type '{ children: Element; className: string; onClick: () => void; }' is not assignable to type 'IntrinsicAttributes & CardHeaderProps'.
+  Property 'onClick' does not exist on type 'IntrinsicAttributes & CardHeaderProps'.
+src/components/GraphControlPanel.tsx(2,17): error TS6133: 'GraphStatistics' is declared but its value is never read.
+src/components/GraphControlPanel.tsx(2,34): error TS6133: 'CentralityResult' is declared but its value is never read.
+src/components/GraphControlPanel.tsx(2,52): error TS6133: 'PathResult' is declared but its value is never read.
+src/components/GraphControlPanel.tsx(2,64): error TS6133: 'ConnectivityResult' is declared but its value is never read.
+src/components/GraphControlPanel.tsx(101,56): error TS2345: Argument of type 'string' is not assignable to parameter of type 'AlgorithmType'.
+src/components/GraphViewer.tsx(17,3): error TS6133: 'onNodeDrag' is declared but its value is never read.
+src/components/GraphViewer.tsx(83,38): error TS6133: 'e' is declared but its value is never read.
+src/components/GraphViewer.tsx(274,48): error TS18048: 'edge.weight' is possibly 'undefined'.
+src/components/InputValidation.tsx(27,5): error TS2741: Property 'type' is missing in type '{ isValid: false; error: string; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(36,9): error TS2741: Property 'type' is missing in type '{ isValid: false; error: string; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(44,9): error TS2741: Property 'type' is missing in type '{ isValid: false; error: string; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(49,7): error TS2741: Property 'type' is missing in type '{ isValid: true; error: null; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(53,9): error TS2741: Property 'type' is missing in type '{ isValid: false; error: string; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(58,7): error TS2741: Property 'type' is missing in type '{ isValid: true; error: null; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(62,9): error TS2741: Property 'type' is missing in type '{ isValid: false; error: string; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(67,7): error TS2741: Property 'type' is missing in type '{ isValid: true; error: null; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(72,9): error TS2741: Property 'type' is missing in type '{ isValid: false; error: string; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(77,7): error TS2741: Property 'type' is missing in type '{ isValid: true; error: null; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(80,7): error TS2741: Property 'type' is missing in type '{ isValid: true; error: null; }' but required in type 'ValidationResult'.
+src/components/InputValidation.tsx(131,55): error TS2345: Argument of type '{ value: string; type: "url" | "doi" | "pmid" | "bibliographic"; }' is not assignable to parameter of type '"url" | "doi" | "pmid" | "bibliographic"'.
+src/components/RetryStatus.tsx(62,30): error TS18047: 'retryHandler' is possibly 'null'.
+src/components/RetryStatus.tsx(64,31): error TS18047: 'retryHandler' is possibly 'null'.
+src/components/RetryStatus.tsx(86,51): error TS18047: 'retryHandler' is possibly 'null'.
+src/components/RetryStatus.tsx(172,51): error TS18047: 'retryHandler' is possibly 'null'.
+src/components/RetryStatus.tsx(173,22): error TS18047: 'retryHandler' is possibly 'null'.
+src/components/StatCard.test.tsx(1,18): error TS2305: Module '"@testing-library/react"' has no exported member 'screen'.
+src/core/CacheManager.test.ts(1,55): error TS6133: 'vi' is declared but its value is never read.
+src/core/CacheManager.ts(92,25): error TS6133: 'entry' is declared but its value is never read.
+src/core/Database.ts(61,15): error TS6133: 'config' is declared but its value is never read.
+src/core/ErrorHandler.test.ts(7,3): error TS2614: Module '"./ErrorHandler"' has no exported member 'ConflictError'. Did you mean to use 'import ConflictError from "./ErrorHandler"' instead?
+src/core/ErrorHandler.test.ts(8,3): error TS2614: Module '"./ErrorHandler"' has no exported member 'InternalError'. Did you mean to use 'import InternalError from "./ErrorHandler"' instead?
+src/core/ErrorHandler.test.ts(9,3): error TS2614: Module '"./ErrorHandler"' has no exported member 'ExternalApiError'. Did you mean to use 'import ExternalApiError from "./ErrorHandler"' instead?
+src/core/ErrorHandler.test.ts(11,3): error TS2614: Module '"./ErrorHandler"' has no exported member 'NetworkError'. Did you mean to use 'import NetworkError from "./ErrorHandler"' instead?
+src/core/ErrorHandler.test.ts(13,3): error TS2614: Module '"./ErrorHandler"' has no exported member 'ErrorType'. Did you mean to use 'import ErrorType from "./ErrorHandler"' instead?
+src/core/ErrorHandler.test.ts(16,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(19,3): error TS2304: Cannot find name 'beforeEach'.
+src/core/ErrorHandler.test.ts(23,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(24,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(25,60): error TS2554: Expected 1 arguments, but got 3.
+src/core/ErrorHandler.test.ts(27,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(27,20): error TS2339: Property 'type' does not exist on type 'ValidationError'.
+src/core/ErrorHandler.test.ts(28,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(29,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(30,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(31,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(32,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(35,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(36,58): error TS2554: Expected 0-1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(38,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(38,20): error TS2339: Property 'type' does not exist on type 'AuthenticationError'.
+src/core/ErrorHandler.test.ts(39,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(40,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(43,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(44,58): error TS2554: Expected 0-1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(46,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(46,20): error TS2339: Property 'type' does not exist on type 'AuthorizationError'.
+src/core/ErrorHandler.test.ts(47,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(48,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(51,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(54,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(54,20): error TS2339: Property 'type' does not exist on type 'NotFoundError'.
+src/core/ErrorHandler.test.ts(55,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(56,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(59,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(62,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(63,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(64,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(67,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(70,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(71,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(72,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(75,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(78,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(79,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(80,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(83,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(86,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(86,20): error TS2339: Property 'type' does not exist on type 'DatabaseError'.
+src/core/ErrorHandler.test.ts(87,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(88,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(91,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(94,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(95,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(96,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(99,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(100,40): error TS2554: Expected 0 arguments, but got 2.
+src/core/ErrorHandler.test.ts(102,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(102,20): error TS2339: Property 'type' does not exist on type 'RateLimitError'.
+src/core/ErrorHandler.test.ts(103,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(104,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(108,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(109,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(110,49): error TS2554: Expected 1 arguments, but got 4.
+src/core/ErrorHandler.test.ts(111,26): error TS2339: Property 'toJSON' does not exist on type 'ValidationError'.
+src/core/ErrorHandler.test.ts(113,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(114,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(115,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(116,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(117,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(118,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(119,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(122,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(129,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(134,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(141,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(147,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(148,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(149,52): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(152,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(152,21): error TS2339: Property 'type' does not exist on type 'AppError'.
+src/core/ErrorHandler.test.ts(153,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(154,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(157,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(161,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(161,21): error TS2339: Property 'type' does not exist on type 'AppError'.
+src/core/ErrorHandler.test.ts(162,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(163,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(164,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(164,21): error TS2339: Property 'requestId' does not exist on type 'AppError'.
+src/core/ErrorHandler.test.ts(165,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(171,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(172,49): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(175,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(175,21): error TS2339: Property 'requestId' does not exist on type 'AppError'.
+src/core/ErrorHandler.test.ts(179,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(180,5): error TS2304: Cannot find name 'beforeEach'.
+src/core/ErrorHandler.test.ts(184,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(185,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(186,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(188,36): error TS2339: Property 'getMetrics' does not exist on type 'ErrorHandler'.
+src/core/ErrorHandler.test.ts(189,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(192,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(193,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(194,60): error TS2554: Expected 0-1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(195,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(197,36): error TS2339: Property 'getMetrics' does not exist on type 'ErrorHandler'.
+src/core/ErrorHandler.test.ts(198,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(199,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(202,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(203,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(204,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(205,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(207,36): error TS2339: Property 'getMetrics' does not exist on type 'ErrorHandler'.
+src/core/ErrorHandler.test.ts(208,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(209,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(212,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(213,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(214,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(216,36): error TS2339: Property 'getMetrics' does not exist on type 'ErrorHandler'.
+src/core/ErrorHandler.test.ts(217,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(218,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(219,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(222,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(224,61): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(227,36): error TS2339: Property 'getMetrics' does not exist on type 'ErrorHandler'.
+src/core/ErrorHandler.test.ts(228,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(231,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(232,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/ErrorHandler.test.ts(233,20): error TS2339: Property 'clearMetrics' does not exist on type 'ErrorHandler'.
+src/core/ErrorHandler.test.ts(235,36): error TS2339: Property 'getMetrics' does not exist on type 'ErrorHandler'.
+src/core/ErrorHandler.test.ts(236,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(237,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(238,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(239,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(243,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(244,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/ErrorHandler.test.ts(245,49): error TS2554: Expected 1 arguments, but got 4.
+src/core/ErrorHandler.test.ts(246,63): error TS2339: Property 'toJSON' does not exist on type 'ValidationError'.
+src/core/ErrorHandler.test.ts(248,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(249,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(250,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(251,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(252,7): error TS2304: Cannot find name 'expect'.
+src/core/ErrorHandler.test.ts(253,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(6,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(12,3): error TS2304: Cannot find name 'beforeEach'.
+src/core/integration.test.ts(26,27): error TS2322: Type '"DEBUG"' is not assignable to type 'LogLevel'.
+src/core/integration.test.ts(30,3): error TS2304: Cannot find name 'afterEach'.
+src/core/integration.test.ts(35,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(36,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(48,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(49,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(52,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(53,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(56,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(57,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(60,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(75,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(80,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(84,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(85,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(88,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/integration.test.ts(100,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(103,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(106,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/integration.test.ts(114,37): error TS2322: Type '"ERROR"' is not assignable to type 'LogLevel | undefined'.
+src/core/integration.test.ts(115,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(119,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(120,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(121,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/integration.test.ts(124,60): error TS2554: Expected 1 arguments, but got 2.
+src/core/integration.test.ts(127,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(128,9): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(135,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(136,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/integration.test.ts(137,56): error TS2554: Expected 1 arguments, but got 2.
+src/core/integration.test.ts(140,36): error TS2339: Property 'getMetrics' does not exist on type 'ErrorHandler'.
+src/core/integration.test.ts(141,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(142,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(143,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(147,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(148,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(163,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(166,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(168,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(172,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(173,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(176,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/integration.test.ts(201,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(204,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(205,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(210,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(212,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(215,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(218,29): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/integration.test.ts(222,41): error TS2339: Property 'getMetrics' does not exist on type 'ErrorHandler'.
+src/core/integration.test.ts(223,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(225,37): error TS2322: Type '"ERROR"' is not assignable to type 'LogLevel | undefined'.
+src/core/integration.test.ts(226,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(230,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(231,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(250,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(251,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(255,9): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(259,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(285,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(286,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(289,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(293,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(294,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(321,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(322,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(325,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(326,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(329,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/integration.test.ts(360,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(361,7): error TS2304: Cannot find name 'expect'.
+src/core/integration.test.ts(362,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(6,3): error TS2304: Cannot find name 'beforeEach'.
+src/core/Logger.test.ts(10,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(11,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(12,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(17,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(18,9): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(26,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(27,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(32,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(33,9): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(41,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(42,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(47,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(48,9): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(56,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(57,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(62,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(63,9): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(71,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(72,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(77,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(78,9): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(87,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(88,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(90,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(97,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(100,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(106,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(107,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(110,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(116,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(117,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(121,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(122,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(123,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(129,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(130,9): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(137,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(138,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(139,25): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(140,25): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(147,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(148,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(151,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(152,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(159,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(162,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(163,29): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(166,31): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(171,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(172,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(176,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(177,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(181,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(185,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(189,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(190,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(191,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(197,7): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(198,9): error TS2304: Cannot find name 'expect'.
+src/core/Logger.test.ts(207,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(208,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/Logger.test.ts(211,24): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(217,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(3,1): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(7,3): error TS2304: Cannot find name 'beforeEach'.
+src/core/SessionManager.test.ts(25,3): error TS2304: Cannot find name 'afterEach'.
+src/core/SessionManager.test.ts(29,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(30,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(33,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(34,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(35,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(36,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(37,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(38,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(39,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(42,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(49,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(50,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(53,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(57,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(58,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(59,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(62,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(69,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(72,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(76,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(80,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(81,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(85,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(86,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(87,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(90,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(93,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(96,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(108,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(113,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(122,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(126,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(127,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(135,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(136,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(137,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(140,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(143,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(146,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(159,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(164,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(172,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(176,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(177,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(181,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(184,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(187,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(190,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(193,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(198,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(202,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(203,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(210,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(213,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(216,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(219,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(223,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(224,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(225,13): error TS6133: 'session' is declared but its value is never read.
+src/core/SessionManager.test.ts(228,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(231,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(232,13): error TS6133: 'session' is declared but its value is never read.
+src/core/SessionManager.test.ts(235,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(238,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(249,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(252,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(255,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(259,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(260,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(264,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(265,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(268,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(271,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(275,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(276,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(282,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(283,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(284,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(287,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(290,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(294,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(295,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(301,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(304,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(307,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(311,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(312,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(320,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(323,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(329,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(333,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(334,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(343,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(344,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(345,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(346,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(350,3): error TS2582: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(351,5): error TS2582: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+src/core/SessionManager.test.ts(359,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.test.ts(363,7): error TS2304: Cannot find name 'expect'.
+src/core/SessionManager.ts(2,18): error TS6133: 'LogLevel' is declared but its value is never read.
+src/hooks/useApi.ts(25,60): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/hooks/useApi.ts(74,67): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/pages/AdminPage.tsx(30,10): error TS6133: 'selectedLogLevel' is declared but its value is never read.
+src/pages/AdminPage.tsx(30,28): error TS6133: 'setSelectedLogLevel' is declared but its value is never read.
+src/pages/AIAssistantPage.tsx(5,26): error TS6133: 'CardHeader' is declared but its value is never read.
+src/pages/AnalysisPage.test.tsx(1,18): error TS2305: Module '"@testing-library/react"' has no exported member 'screen'.
+src/pages/AnalysisPage.test.tsx(1,26): error TS2305: Module '"@testing-library/react"' has no exported member 'fireEvent'.
+src/pages/AnalysisPage.test.tsx(1,37): error TS2305: Module '"@testing-library/react"' has no exported member 'waitFor'.
+src/pages/AnalysisPage.tsx(15,10): error TS6133: 'currentStep' is declared but its value is never read.
+src/pages/AnalysisPage.tsx(17,9): error TS6133: 'steps' is declared but its value is never read.
+src/pages/ExportDataPage.tsx(12,36): error TS6133: 'loadingArticles' is declared but its value is never read.
+src/pages/ExportDataPage.tsx(13,36): error TS6133: 'loadingEntities' is declared but its value is never read.
+src/pages/ExportDataPage.tsx(14,40): error TS6133: 'loadingInteractions' is declared but its value is never read.
+src/pages/ExportDataPage.tsx(15,33): error TS6133: 'loadingGraph' is declared but its value is never read.
+src/pages/ExportDataPage.tsx(16,38): error TS6133: 'loadingStatistics' is declared but its value is never read.
+src/pages/ExportDataPage.tsx(46,15): error TS2322: Type 'null' is not assignable to type '{ nodes: GraphNode[]; edges: GraphEdge[]; } | undefined'.
+src/pages/ExportDataPage.tsx(47,15): error TS2322: Type 'null' is not assignable to type 'Record<string, any> | undefined'.
+src/pages/ExportDataPage.tsx(58,15): error TS2740: Type '{}' is missing the following properties from type 'any[]': length, pop, push, concat, and 28 more.
+src/pages/ExportDataPage.tsx(89,15): error TS2322: Type 'null' is not assignable to type '{ nodes: GraphNode[]; edges: GraphEdge[]; } | undefined'.
+src/pages/ExportDataPage.tsx(112,48): error TS2740: Type '{}' is missing the following properties from type 'any[]': length, pop, push, concat, and 28 more.
+src/pages/GraphVisualizationPage.tsx(25,10): error TS6133: 'zoom' is declared but its value is never read.
+src/pages/GraphVisualizationPage.tsx(26,10): error TS6133: 'pan' is declared but its value is never read.
+src/pages/HomePage.tsx(48,41): error TS6133: 'loadingArticles' is declared but its value is never read.
+src/pages/HomePage.tsx(48,65): error TS6133: 'articlesError' is declared but its value is never read.
+src/pages/HomePage.tsx(49,38): error TS6133: 'loadingEdges' is declared but its value is never read.
+src/pages/HomePage.tsx(49,59): error TS6133: 'edgesError' is declared but its value is never read.
+src/pages/HomePage.tsx(50,41): error TS6133: 'loadingPatterns' is declared but its value is never read.
+src/pages/HomePage.tsx(50,65): error TS6133: 'patternsError' is declared but its value is never read.
+src/pages/HomePage.tsx(52,9): error TS2322: Type 'ArticleNode[] | null' is not assignable to type 'ArticleNode[]'.
+  Type 'null' is not assignable to type 'ArticleNode[]'.
+src/pages/HomePage.tsx(52,36): error TS18047: 'articles' is possibly 'null'.
+src/pages/HomePage.tsx(63,9): error TS2322: Type 'ArticleEdge[] | null' is not assignable to type 'ArticleEdge[]'.
+  Type 'null' is not assignable to type 'ArticleEdge[]'.
+src/pages/HomePage.tsx(63,36): error TS18047: 'edges' is possibly 'null'.
+src/pages/HomePage.tsx(111,13): error TS6133: 'graph' is declared but its value is never read.
+src/pages/HomePage.tsx(125,13): error TS6133: 'result' is declared but its value is never read.
+src/pages/HomePage.tsx(353,16): error TS18047: 'patterns' is possibly 'null'.
+src/pages/HomePage.tsx(399,21): error TS6133: 'isSelected' is declared but its value is never read.
+src/pages/ResearchGapsPage.tsx(3,1): error TS6133: 'axios' is declared but its value is never read.
+src/pages/ResearchGapsPage.tsx(16,16): error TS6133: 'setGaps' is declared but its value is never read.
+src/services/exportService.ts(6,17): error TS6133: 'GraphNode' is declared but its value is never read.
+src/services/exportService.ts(6,28): error TS6133: 'GraphEdge' is declared but its value is never read.
+src/services/exportService.ts(157,83): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(158,84): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(159,90): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(160,85): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(161,89): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(194,90): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(195,86): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(196,85): error TS2353: Object literal may only specify known properties, and 'bold' does not exist in type 'IParagraphOptions'.
+src/services/exportService.ts(216,21): error TS2353: Object literal may only specify known properties, and 'italics' does not exist in type 'IParagraphOptions'.
+src/services/externalApi.ts(18,11): error TS6196: 'PubMedResponse' is declared but never used.
+src/services/externalApi.ts(61,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(85,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(106,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(118,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(142,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(166,26): error TS2353: Object literal may only specify known properties, and 'initialDelay' does not exist in type 'Partial<RetryConfig>'.
+src/services/externalApi.ts(225,32): error TS6133: 'html' is declared but its value is never read.
+src/test/setup.ts(2,10): error TS6133: 'expect' is declared but its value is never read.
+src/utils/errorHandler.ts(44,26): error TS2693: 'AppError' only refers to a type, but is being used as a value here.
+src/utils/errorHandler.ts(45,7): error TS2322: Type 'unknown' is not assignable to type 'AppError'.
+src/utils/fileParser.ts(34,23): error TS6133: 'e' is declared but its value is never read.
+src/utils/fileParser.ts(59,9): error TS18048: 'article.citations' is possibly 'undefined'.
+src/utils/fileParser.ts(172,27): error TS6133: 'index' is declared but its value is never read.
+src/utils/fileParser.ts(176,14): error TS6133: 'type' is declared but its value is never read.
+src/utils/fileParser.ts(243,18): error TS18048: 'article.citations' is possibly 'undefined'.
+src/utils/fileParser.ts(256,5): error TS2322: Type '{ id: string; data: { label: string; title: string; authors: string[]; year: number; citations: number; }; }[]' is not assignable to type 'GraphNode[]'.
+  Property 'label' is missing in type '{ id: string; data: { label: string; title: string; authors: string[]; year: number; citations: number; }; }' but required in type 'GraphNode'.
+src/utils/graphUtils.ts(35,9): error TS6133: 'k' is declared but its value is never read.
+src/utils/retryHandler.ts(36,7): error TS2783: 'maxRetries' is specified more than once, so this usage will be overwritten.
+src/utils/retryHandler.ts(37,7): error TS2783: 'retryDelay' is specified more than once, so this usage will be overwritten.
+src/utils/retryHandler.ts(109,72): error TS1016: A required parameter cannot follow an optional parameter.
+src/utils/retryHandler.ts(272,38): error TS2345: Argument of type 'Partial<RetryConfig>' is not assignable to parameter of type 'RetryConfig'.
+  Types of property 'maxRetries' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.

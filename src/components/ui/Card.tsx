@@ -29,11 +29,15 @@ export function Card({ children, className, hover = false, onClick }: CardProps)
 interface CardHeaderProps {
   children: React.ReactNode
   className?: string
+  onClick?: () => void
 }
 
-export function CardHeader({ children, className }: CardHeaderProps) {
+export function CardHeader({ children, className, onClick }: CardHeaderProps) {
   return (
-    <div className={twMerge(clsx('p-6 border-b border-gray-200', className))}>
+    <div
+      className={twMerge(clsx('p-6 border-b border-gray-200', className))}
+      onClick={onClick}
+    >
       {children}
     </div>
   )

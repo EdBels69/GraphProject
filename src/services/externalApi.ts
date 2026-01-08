@@ -58,7 +58,7 @@ class ExternalApiService {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           return res.json()
         },
-        { maxRetries: 3, initialDelay: 2000 },
+        { maxRetries: 3, retryDelay: 2000 },
         `fetch-url-${url}`
       )
 
@@ -82,7 +82,7 @@ class ExternalApiService {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           return res.json()
         },
-        { maxRetries: 3, initialDelay: 2000 },
+        { maxRetries: 3, retryDelay: 2000 },
         `fetch-doi-${doi}`
       )
 
@@ -103,7 +103,7 @@ class ExternalApiService {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           return res.json()
         },
-        { maxRetries: 3, initialDelay: 2000 },
+        { maxRetries: 3, retryDelay: 2000 },
         `fetch-pmid-${pmid}`
       )
 
@@ -115,7 +115,7 @@ class ExternalApiService {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           return res.json()
         },
-        { maxRetries: 3, initialDelay: 2000 },
+        { maxRetries: 3, retryDelay: 2000 },
         `fetch-pmid-abstract-${pmid}`
       )
 
@@ -139,7 +139,7 @@ class ExternalApiService {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           return res.json()
         },
-        { maxRetries: 3, initialDelay: 2000 },
+        { maxRetries: 3, retryDelay: 2000 },
         `fetch-s2-${paperId}`
       )
 
@@ -163,7 +163,7 @@ class ExternalApiService {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           return res.json()
         },
-        { maxRetries: 3, initialDelay: 2000 },
+        { maxRetries: 3, retryDelay: 2000 },
         `search-${query}`
       )
 

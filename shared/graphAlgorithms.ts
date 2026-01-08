@@ -97,10 +97,10 @@ export class GraphAnalyzer {
       const neighbors = adjacency.get(currentNode)
       if (neighbors) {
         neighbors.forEach((weight, neighborId) => {
-          const newDistance = (distances.get(currentNode) || 0) + weight
+          const newDistance = (distances.get(currentNode!) || 0) + weight
           if (newDistance < (distances.get(neighborId) || Infinity)) {
             distances.set(neighborId, newDistance)
-            previous.set(neighborId, currentNode)
+            previous.set(neighborId, currentNode!)
           }
         })
       }

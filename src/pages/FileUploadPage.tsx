@@ -108,7 +108,7 @@ export default function FileUploadPage() {
 
       setStatus('processing')
 
-      const response = await fetch('http://localhost:3001/api/documents/upload', {
+      const response = await fetch('/api/documents/upload', {
         method: 'POST',
         body: formData
       })

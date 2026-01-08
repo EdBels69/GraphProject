@@ -1,27 +1,29 @@
 import { useState, useEffect } from 'react'
-import { useLocation, Link } from 'react-router-dom'
-import { ArrowLeft, BarChart3, Share2, Download, Filter, RefreshCw, FileText, FileDown } from 'lucide-react'
+import { useLocation, Link, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, BarChart3, Share2, Download, RefreshCw, FileText, FileDown, MessageCircle, Database, Info } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody, CardHeader } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
 import GraphViewer from '@/components/GraphViewer'
 import AnalyticsPanel from '@/components/AnalyticsPanel'
+import GraphAssistant from '@/components/GraphAssistant'
+import GraphDataTable from '@/components/GraphDataTable'
 import { Graph, GraphNode, GraphEdge, createGraph } from '../../shared/types'
 import { exportToWord, exportToPDF, downloadBlob } from '@/services/exportService'
 
 // Demo graph data for testing
 const DEMO_GRAPH: Graph = createGraph('Демонстрационный граф', false, [
-  { id: 'p53', label: 'TP53 (p53)', weight: 10 },
-  { id: 'mdm2', label: 'MDM2', weight: 8 },
-  { id: 'bax', label: 'BAX', weight: 6 },
-  { id: 'bcl2', label: 'BCL-2', weight: 5 },
-  { id: 'casp3', label: 'Caspase-3', weight: 7 },
-  { id: 'casp9', label: 'Caspase-9', weight: 5 },
-  { id: 'cyto_c', label: 'Cytochrome C', weight: 6 },
-  { id: 'apaf1', label: 'APAF-1', weight: 4 },
-  { id: 'p21', label: 'p21 (CDKN1A)', weight: 6 },
-  { id: 'cdk2', label: 'CDK2', weight: 5 },
-  { id: 'cycline', label: 'Cyclin E', weight: 4 },
-  { id: 'rb', label: 'RB1', weight: 5 },
+  { id: 'p53', label: 'TP53 (p53)', weight: 10, type: 'protein' },
+  { id: 'mdm2', label: 'MDM2', weight: 8, type: 'protein' },
+  { id: 'bax', label: 'BAX', weight: 6, type: 'protein' },
+  { id: 'bcl2', label: 'BCL-2', weight: 5, type: 'protein' },
+  { id: 'casp3', label: 'Caspase-3', weight: 7, type: 'protein' },
+  { id: 'casp9', label: 'Caspase-9', weight: 5, type: 'protein' },
+  { id: 'cyto_c', label: 'Cytochrome C', weight: 6, type: 'protein' },
+  { id: 'apaf1', label: 'APAF-1', weight: 4, type: 'protein' },
+  { id: 'p21', label: 'p21 (CDKN1A)', weight: 6, type: 'protein' },
+  { id: 'cdk2', label: 'CDK2', weight: 5, type: 'protein' },
+  { id: 'cycline', label: 'Cyclin E', weight: 4, type: 'protein' },
+  { id: 'rb', label: 'RB1', weight: 5, type: 'protein' },
 ], [
   { id: 'e1', source: 'p53', target: 'mdm2', weight: 9 },
   { id: 'e2', source: 'mdm2', target: 'p53', weight: 8 },
@@ -40,42 +42,81 @@ const DEMO_GRAPH: Graph = createGraph('Демонстрационный граф
 
 export default function GraphAnalysisPage() {
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [graph, setGraph] = useState<Graph | null>(null)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Load graph from navigation state or use demo
+  // Right panel state
+  const [activeTab, setActiveTab] = useState<'chat' | 'stats' | 'data'>('stats')
+  const [isPanelOpen, setIsPanelOpen] = useState(true)
+
+  // Load graph from navigation state, URL params, or use demo
   useEffect(() => {
-    const stateGraph = location.state?.graph
-    if (stateGraph) {
-      // Convert knowledge graph from upload to Graph type
-      const nodes: GraphNode[] = stateGraph.graph?.nodes?.map((n: any) => ({
-        id: n.id,
-        label: n.data?.label || n.label || n.id,
-        weight: n.data?.mentions || 1
-      })) || []
+    const loadGraph = async () => {
+      // 1. Try location state (from upload)
+      const stateGraph = location.state?.graph
+      if (stateGraph) {
+        // Convert knowledge graph from upload to Graph type
+        const nodes: GraphNode[] = stateGraph.graph?.nodes?.map((n: any) => ({
+          id: n.id,
+          label: n.data?.label || n.label || n.id,
+          weight: n.data?.mentions || 1,
+          type: n.data?.type || 'entity'
+        })) || []
 
-      const edges: GraphEdge[] = stateGraph.graph?.edges?.map((e: any) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        weight: e.data?.confidence || 1
-      })) || []
+        const edges: GraphEdge[] = stateGraph.graph?.edges?.map((e: any) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          weight: e.data?.confidence || 1
+        })) || []
 
-      if (nodes.length > 0) {
-        setGraph(createGraph('Загруженный граф', false, nodes, edges))
-        return
+        if (nodes.length > 0) {
+          setGraph(createGraph('Загруженный граф', false, nodes, edges))
+          return
+        }
+      }
+
+      // 2. Try URL query param
+      const graphId = searchParams.get('graphId')
+      if (graphId) {
+        setLoading(true)
+        try {
+          const response = await fetch(`/api/graphs/${graphId}`)
+          if (response.ok) {
+            const result = await response.json()
+            if (result.success && result.data) {
+              setGraph(result.data)
+              setLoading(false)
+              return
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load graph:', error)
+        }
+        setLoading(false)
+      }
+
+      // 3. Fallback to demo
+      if (!graph) {
+        setGraph(DEMO_GRAPH)
       }
     }
 
-    // Use demo graph if no data
-    setGraph(DEMO_GRAPH)
-  }, [location.state])
+    loadGraph()
+  }, [location.state, searchParams])
 
   const handleNodeSelect = (node: GraphNode) => {
     setSelectedNode(node)
     setSelectedEdge(null)
+    // Auto-open chat if closed, or switch to stats/chat if appropriate
+    if (!isPanelOpen) setIsPanelOpen(true)
+    // Optional: Switch to chat to ask about the node? 
+    // Users preferred keeping context, so we won't force switch tab, but ensure sidebar is open.
+    // If user wants AI insights, they click Chat.
+    setActiveTab('chat')
   }
 
   const handleEdgeSelect = (edge: GraphEdge) => {
@@ -114,9 +155,9 @@ export default function GraphAnalysisPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 relative h-[calc(100vh-80px)] flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4 py-2 bg-white border-b shrink-0">
         <div className="flex items-center gap-4">
           <Link to="/upload">
             <Button variant="ghost" size="sm">
@@ -125,18 +166,56 @@ export default function GraphAnalysisPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{graph.name}</h1>
-            <p className="text-sm text-gray-500">
-              {graph.nodes.length} узлов • {graph.edges.length} связей
+            <h1 className="text-xl font-bold text-gray-900">{graph.name}</h1>
+            <p className="text-xs text-gray-500">
+              {graph.nodes.length} узлов • {graph.edges.length} связей • Плотность: {(2 * graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1)) * 100).toFixed(1)}%
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Tab Controls */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1 mr-4">
+            <button
+              onClick={() => { setActiveTab('chat'); setIsPanelOpen(true) }}
+              className={`px-3 py-1.4 text-sm font-medium rounded-md transition-all ${activeTab === 'chat' && isPanelOpen ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                <span>AI Аналитик</span>
+              </div>
+            </button>
+            <button
+              onClick={() => { setActiveTab('stats'); setIsPanelOpen(true) }}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'stats' && isPanelOpen ? 'bg-white shadow text-purple-600' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                <span>Инфо</span>
+              </div>
+            </button>
+            <button
+              onClick={() => { setActiveTab('data'); setIsPanelOpen(true) }}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'data' && isPanelOpen ? 'bg-white shadow text-green-600' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                <span>Таблица</span>
+              </div>
+            </button>
+          </div>
+
           <Button variant="secondary" size="sm" onClick={loadDemoGraph} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Демо-граф
+            Демо
           </Button>
+
+          <Link to={graph.id ? `/analysis/data/${graph.id}` : '#'} state={{ graph }}>
+            <Button variant="outline" size="sm" className="mr-2">
+              <Database className="w-4 h-4 mr-2" />
+              Все данные
+            </Button>
+          </Link>
           <Button variant="secondary" size="sm" onClick={handleExportJSON}>
             <Download className="w-4 h-4 mr-2" />
             JSON
@@ -147,24 +226,27 @@ export default function GraphAnalysisPage() {
             downloadBlob(blob, `${graph.name}.docx`)
           }}>
             <FileText className="w-4 h-4 mr-2" />
-            Word
-          </Button>
-          <Button variant="secondary" size="sm" onClick={async () => {
-            if (!graph) return
-            const blob = await exportToPDF(graph)
-            downloadBlob(blob, `${graph.name}.pdf`)
-          }}>
-            <FileDown className="w-4 h-4 mr-2" />
-            PDF
+            Docx
           </Button>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Graph visualization */}
-        <div className="lg:col-span-3">
-          <Card className="h-[600px]">
+      {/* Main Content Layout */}
+      <div className="flex flex-1 overflow-hidden relative">
+
+        {/* Left: Graph Visualization (Flexible Width) */}
+        <div className={`transition-all duration-300 ${isPanelOpen ? 'w-2/3 pr-2' : 'w-full'} h-full flex flex-col`}>
+          <Card className="flex-1 h-full shadow-md border overflow-hidden relative">
+            <div className="absolute top-4 left-4 z-10 bg-white/80 p-2 rounded-lg backdrop-blur text-xs">
+              {selectedNode ? (
+                <div>
+                  <span className="font-bold">{selectedNode.label}</span>
+                  <div className="text-gray-500">ID: {selectedNode.id}</div>
+                </div>
+              ) : (
+                <span className="text-gray-500">Выберите узел для деталей</span>
+              )}
+            </div>
             <GraphViewer
               graph={graph}
               onNodeSelect={handleNodeSelect}
@@ -174,128 +256,53 @@ export default function GraphAnalysisPage() {
           </Card>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Statistics */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold">Статистика</h3>
-              </div>
-            </CardHeader>
-            <CardBody className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Узлов:</span>
-                <span className="font-medium">{graph.nodes.length}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Связей:</span>
-                <span className="font-medium">{graph.edges.length}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Плотность:</span>
-                <span className="font-medium">
-                  {(2 * graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1)) * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Ср. степень:</span>
-                <span className="font-medium">
-                  {(2 * graph.edges.length / graph.nodes.length).toFixed(2)}
-                </span>
-              </div>
-            </CardBody>
-          </Card>
+        {/* Right: Tabbed Panel (Fixed Width when open) */}
+        <div className={`transition-all duration-300 ${isPanelOpen ? 'w-1/3 translate-x-0' : 'w-0 translate-x-full absolute right-0'} h-full border-l bg-white flex flex-col shadow-xl z-20`}>
+          {isPanelOpen && (
+            <>
+              {/* Tab Content */}
+              <div className="flex-1 overflow-hidden bg-gray-50/50">
+                {activeTab === 'chat' && (
+                  <GraphAssistant
+                    selectedNode={selectedNode}
+                    graphId={graph.id}
+                    graph={graph}
+                    onClose={() => setIsPanelOpen(false)}
+                  />
+                )}
 
-          {/* Selected element info */}
-          {(selectedNode || selectedEdge) && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Share2 className="w-5 h-5 text-purple-600" />
-                  <h3 className="font-semibold">
-                    {selectedNode ? 'Выбранный узел' : 'Выбранная связь'}
-                  </h3>
-                </div>
-              </CardHeader>
-              <CardBody className="space-y-2">
-                {selectedNode && (
-                  <>
-                    <p className="font-medium text-gray-900">{selectedNode.label}</p>
-                    <div className="text-sm space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">ID:</span>
-                        <span className="font-mono">{selectedNode.id}</span>
-                      </div>
-                      {selectedNode.weight !== undefined && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Вес:</span>
-                          <span>{selectedNode.weight}</span>
-                        </div>
-                      )}
+                {activeTab === 'stats' && (
+                  <div className="h-full overflow-y-auto p-4 space-y-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h2 className="font-bold text-lg flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-purple-600" />
+                        Метрики Графа
+                      </h2>
+                      <Button size="sm" variant="ghost" onClick={() => setIsPanelOpen(false)}>×</Button>
                     </div>
-                  </>
+                    <AnalyticsPanel graph={graph} />
+                  </div>
                 )}
-                {selectedEdge && (
-                  <>
-                    <p className="font-medium text-gray-900">
-                      {selectedEdge.source} → {selectedEdge.target}
-                    </p>
-                    <div className="text-sm space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">ID:</span>
-                        <span className="font-mono">{selectedEdge.id}</span>
-                      </div>
-                      {selectedEdge.weight !== undefined && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Вес:</span>
-                          <span>{selectedEdge.weight}</span>
-                        </div>
-                      )}
+
+                {activeTab === 'data' && (
+                  <div className="h-full flex flex-col">
+                    <div className="flex justify-between items-center p-4 border-b bg-white">
+                      <h2 className="font-bold text-lg flex items-center gap-2">
+                        <Database className="w-5 h-5 text-green-600" />
+                        Данные Графа
+                      </h2>
+                      <Button size="sm" variant="ghost" onClick={() => setIsPanelOpen(false)}>×</Button>
                     </div>
-                  </>
+                    <div className="flex-1 overflow-hidden">
+                      <GraphDataTable graph={graph} onNodeSelect={handleNodeSelect} />
+                    </div>
+                  </div>
                 )}
-              </CardBody>
-            </Card>
+              </div>
+            </>
           )}
-
-          {/* Top nodes */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Filter className="w-5 h-5 text-green-600" />
-                <h3 className="font-semibold">Топ узлы</h3>
-              </div>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-2">
-                {graph.nodes
-                  .slice()
-                  .sort((a, b) => (b.weight || 0) - (a.weight || 0))
-                  .slice(0, 5)
-                  .map((node, i) => (
-                    <div
-                      key={node.id}
-                      className="flex items-center justify-between text-sm p-2 rounded hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleNodeSelect(node)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">
-                          {i + 1}
-                        </span>
-                        <span className="truncate max-w-[120px]">{node.label}</span>
-                      </div>
-                      <span className="text-gray-500">{node.weight || 0}</span>
-                    </div>
-                  ))}
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Advanced Analytics */}
-          <AnalyticsPanel graph={graph} />
         </div>
+
       </div>
     </div>
   )

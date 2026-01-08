@@ -1,6 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import swaggerUi from 'swagger-ui-express'
+import { swaggerSpec } from './config/swagger'
 import articlesRouter from './routes/articles'
 import analysisRouter from './routes/analysis'
 import graphRouter from './routes/graph'
@@ -17,6 +19,7 @@ import systemRouter from './routes/system'
 import documentsRouter from './routes/documents'
 import meshRouter from './routes/mesh'
 import aiRouter from './routes/ai'
+import researchRouter from './routes/research'
 
 dotenv.config()
 
@@ -26,24 +29,32 @@ const PORT = process.env.PORT || 3001
 app.use(cors())
 app.use(express.json())
 
-app.use('/articles', articlesRouter)
-app.use('/analysis', analysisRouter)
-app.use('/graph', graphRouter)
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Graph Analyser API'
+}))
+app.get('/api-docs.json', (req, res) => res.json(swaggerSpec))
+
+app.use('/api/articles', articlesRouter)
+app.use('/api/analysis', analysisRouter)
+app.use('/api/graph', graphRouter)
 app.use('/api/graphs', graphsRouter)
-app.use('/gaps', gapsRouter)
-app.use('/patterns', patternsRouter)
-app.use('/statistics', statisticsRouter)
-app.use('/export', exportRouter)
+app.use('/api/gaps', gapsRouter)
+app.use('/api/patterns', patternsRouter)
+app.use('/api/statistics', statisticsRouter)
+app.use('/api/export', exportRouter)
 app.use('/api/admin', adminRouter)
-app.use('/pubmed', pubmedRouter)
+app.use('/api/pubmed', pubmedRouter)
 app.use('/api/documents', documentsRouter)
-app.use('/api/analysis', graphAnalysisRouter)
+app.use('/api/graph-analysis', graphAnalysisRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/system', systemRouter)
 app.use('/api/mesh', meshRouter)
 app.use('/api/ai', aiRouter)
+app.use('/api/research', researchRouter)
 
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 

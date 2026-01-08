@@ -1,0 +1,59 @@
+
+> graph-analyser@1.0.0 typecheck
+> tsc --noEmit
+
+api/routes/documents.ts(18,7): error TS2717: Subsequent property declarations must have the same type.  Property 'files' must be of type '{ [fieldname: string]: File[]; } | File[] | undefined', but here has type 'File[] | undefined'.
+api/routes/graphs.ts(547,9): error TS7034: Variable 'articles' implicitly has type 'any[]' in some locations where its type cannot be determined.
+api/routes/graphs.ts(572,12): error TS7005: Variable 'articles' implicitly has an 'any[]' type.
+src/components/StatCard.test.tsx(2,17): error TS2339: Property 'screen' does not exist on type 'typeof import("/Users/eduardbelskih/\u041F\u0440\u043E\u0435\u043A\u0442\u044B Github/GraphProject/node_modules/@testing-library/react/types/index")'.
+src/core/integration.test.ts(150,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(160,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(161,11): error TS2552: Cannot find name 'sessionManager'. Did you mean 'SessionManager'?
+src/core/integration.test.ts(163,33): error TS2552: Cannot find name 'sessionManager'. Did you mean 'SessionManager'?
+src/core/integration.test.ts(168,33): error TS2552: Cannot find name 'sessionManager'. Did you mean 'SessionManager'?
+src/core/integration.test.ts(175,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(178,5): error TS2552: Cannot find name 'logger'. Did you mean 'Logger'?
+src/core/integration.test.ts(188,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(197,34): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(199,27): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(201,33): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(204,36): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(208,11): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(210,29): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(217,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(220,5): error TS2552: Cannot find name 'errorHandler'. Did you mean 'ErrorHandler'?
+src/core/integration.test.ts(223,26): error TS2304: Cannot find name 'errorHandler'.
+src/core/integration.test.ts(226,18): error TS2304: Cannot find name 'logger'.
+src/core/integration.test.ts(233,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(243,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(246,7): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(252,12): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(255,31): error TS2304: Cannot find name 'sessionManager'.
+src/core/integration.test.ts(261,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(271,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(274,7): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(289,29): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(296,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(306,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(308,27): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(315,24): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(325,25): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(331,11): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(341,31): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(343,27): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(351,7): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(359,32): error TS2304: Cannot find name 'database'.
+src/core/integration.test.ts(361,26): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/core/Logger.test.ts(139,25): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(140,25): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(163,29): error TS2708: Cannot use namespace 'jest' as a value.
+src/core/Logger.test.ts(166,31): error TS2708: Cannot use namespace 'jest' as a value.
+src/pages/AnalysisPage.test.tsx(2,17): error TS2339: Property 'screen' does not exist on type 'typeof import("/Users/eduardbelskih/\u041F\u0440\u043E\u0435\u043A\u0442\u044B Github/GraphProject/node_modules/@testing-library/react/types/index")'.
+src/pages/AnalysisPage.test.tsx(2,25): error TS2339: Property 'fireEvent' does not exist on type 'typeof import("/Users/eduardbelskih/\u041F\u0440\u043E\u0435\u043A\u0442\u044B Github/GraphProject/node_modules/@testing-library/react/types/index")'.
+src/pages/AnalysisPage.test.tsx(2,36): error TS2339: Property 'waitFor' does not exist on type 'typeof import("/Users/eduardbelskih/\u041F\u0440\u043E\u0435\u043A\u0442\u044B Github/GraphProject/node_modules/@testing-library/react/types/index")'.
+src/utils/fileParser.ts(259,5): error TS2353: Object literal may only specify known properties, and 'metadata' does not exist in type 'Graph'.
+src/utils/retryHandler.ts(109,72): error TS1016: A required parameter cannot follow an optional parameter.
+src/utils/retryHandler.ts(272,38): error TS2345: Argument of type 'Partial<RetryConfig>' is not assignable to parameter of type 'RetryConfig'.
+  Types of property 'maxRetries' are incompatible.
+    Type 'number | undefined' is not assignable to type 'number'.
+      Type 'undefined' is not assignable to type 'number'.

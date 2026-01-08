@@ -55,7 +55,7 @@ export class EntityExtractor {
     this.patterns.set('gene', /\b[A-Z][A-Z0-9]{1,5}(?:\d)?(?:-[A-Z0-9]+)?\b/g)
 
     // Metabolite patterns
-    this.patterns.set('metabolite', /\b(?:glucose|pyruvate|lactate|ATP|ADP|AMP|NAD|NADH|NADP|NADPH|FAD|FADH2|CoA|acetyl-CoA|citrate|succinate|fumarate|malate|oxaloacetate|alpha-ketoglutarate|glutamate|glutamine|aspartate|asparagine)\b/gi)
+    this.patterns.set('metabolite', /\b(?:carnitine|glucose|pyruvate|lactate|ATP|ADP|AMP|NAD|NADH|NADP|NADPH|FAD|FADH2|CoA|acetyl-CoA|citrate|succinate|fumarate|malate|oxaloacetate|alpha-ketoglutarate|glutamate|glutamine|aspartate|asparagine)\b/gi)
 
     // Pathway patterns
     this.patterns.set('pathway', /\b(?:glycolysis|TCA cycle|Krebs cycle|citric acid cycle|pentose phosphate|beta-?oxidation|fatty acid (?:synthesis|oxidation)|amino acid metabolism|nucleotide metabolism|urea cycle|gluconeogenesis|glycogenolysis|glycogenesis|oxidative phosphorylation|electron transport chain|cellular respiration|apoptosis|autophagy|cell cycle|DNA repair|signaling pathway|signal transduction)\b/gi)
@@ -121,6 +121,16 @@ export class EntityExtractor {
       }
     }
 
+    // HEURISTIC FALLBACK (Universal Mode)
+    // If no specific entities found, try to extract generic "Concepts"
+    if (entities.length === 0 && chunk.content.length > 20) {
+      const genericEntities = this.extractHeuristicEntities(chunk)
+      entities.push(...genericEntities)
+      if (genericEntities.length > 0) {
+        logger.info('EntityExtractor', `Used heuristic fallback to find ${genericEntities.length} generic concepts`)
+      }
+    }
+
     // Extract relations based on co-occurrence
     relations.push(...this.extractRelations(entities, chunk))
 
@@ -158,13 +168,19 @@ export class EntityExtractor {
     }
 
     // NEW: Use AI extraction for the first chunk (usually abstract/intro) if enabled
+    // Always use AI for short abstracts as regex might miss context
     if (this.useAI && chunks.length > 0) {
       try {
-        // Use AI for the first 1-2 chunks to capture context-dependent entities
+        // Use AI for the first chunk (abstract)
+        // If content is short (< 2000 chars), proceed 
         const textForAI = chunks.slice(0, 2).map(c => c.content).join('\n\n')
-        const aiEntities = await this.extractWithAI(textForAI, chunks[0])
+
+        // Ensure we don't send too much text to AI
+        const truncatedText = textForAI.slice(0, 4000)
+
+        const aiEntities = await this.extractWithAI(truncatedText, chunks[0])
         allEntities.push(...aiEntities)
-        logger.info('EntityExtractor', `Extracted ${aiEntities.length} entities using AI`)
+        logger.info('EntityExtractor', `Extracted ${aiEntities.length} entities using AI from abstract`)
       } catch (error) {
         logger.error('EntityExtractor', 'AI extraction failed', { error })
       }
@@ -240,7 +256,7 @@ export class EntityExtractor {
   /**
    * Merge duplicate entities based on name
    */
-  private mergeEntities(entities: Entity[]): Entity[] {
+  public mergeEntities(entities: Entity[]): Entity[] {
     const merged: Map<string, Entity> = new Map()
 
     for (const entity of entities) {
@@ -309,5 +325,52 @@ export class EntityExtractor {
 
   getFrequentEntities(entities: Entity[], minMentions: number = 3): Entity[] {
     return entities.filter(e => e.mentions >= minMentions)
+  }
+
+  /**
+   * Universal Fallback: Extracts Capitalized Phrases as "Concepts"
+   */
+  private extractHeuristicEntities(chunk: Chunk): Entity[] {
+    const results: Entity[] = []
+    // Find capitalized phrases (2-3 words) or single capitalized technical terms (longer than 4 chars)
+    const phrasePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})\b/g
+    const termPattern = /\b([A-Z][a-z]{4,})\b/g
+
+    const content = chunk.content
+    const seen = new Set<string>()
+
+    // Extract phrases "Chronic Kidney Disease"
+    let match
+    while ((match = phrasePattern.exec(content)) !== null) {
+      const name = match[1]
+      if (!seen.has(name)) {
+        seen.add(name)
+        results.push(this.createGenericEntity(name, 'complex', chunk)) // Mapping to 'complex' as placeholder
+      }
+    }
+
+    // Extract single terms "Metabolism"
+    while ((match = termPattern.exec(content)) !== null) {
+      const name = match[1]
+      if (!seen.has(name) && !['Thus', 'However', 'Therefore', 'Although', 'Abstract', 'Introduction', 'Title', 'Author'].includes(name)) {
+        seen.add(name)
+        results.push(this.createGenericEntity(name, 'pathway', chunk)) // Mapping to 'pathway' as placeholder
+      }
+    }
+
+    return results
+  }
+
+  private createGenericEntity(name: string, type: any, chunk: Chunk): Entity {
+    return {
+      id: `concept_${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`,
+      name: name,
+      type: type,
+      confidence: 0.4, // Lower confidence for heuristics
+      evidence: [chunk.id],
+      mentions: 1,
+      source: 'Heuristic_Fallback',
+      position: chunk.metadata.position
+    }
   }
 }

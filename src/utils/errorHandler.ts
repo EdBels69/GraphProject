@@ -22,7 +22,7 @@ export interface AppError {
 class ErrorHandler {
   private static instance: ErrorHandler
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): ErrorHandler {
     if (!ErrorHandler.instance) {
@@ -41,8 +41,8 @@ class ErrorHandler {
   private parseError(error: unknown, context?: Record<string, any>): AppError {
     const timestamp = new Date()
 
-    if (error instanceof AppError) {
-      return error
+    if (error && typeof error === 'object' && 'type' in error && 'message' in error && 'timestamp' in error) {
+      return error as AppError
     }
 
     if (error instanceof Error) {

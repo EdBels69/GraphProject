@@ -3,7 +3,7 @@ import { Graph, GraphNode, GraphEdge, createGraph, createNode, createEdge } from
 import { GraphAnalyzer } from '../../shared/graphAlgorithms'
 import GraphStorage from '../../shared/graphStorage'
 import { validateGraph, validateFileUpload, validateArticle } from '../../src/utils/validators'
-import { DatabaseManager } from '../../src/core/Database'
+import { databaseManager } from '../../src/core/Database'
 import { logger } from '../../src/core/Logger'
 
 const router = express.Router()
@@ -12,12 +12,13 @@ GraphStorage.initialize()
 
 const graphsStore = new Map<string, Graph>()
 const analyzers = new Map<string, GraphAnalyzer>()
-const db = new DatabaseManager()
-db.initialize()
+
+// Initialize DB if not already
+databaseManager.initialize()
 
 async function loadGraphsFromDb() {
   try {
-    const graphs = await db.getAllGraphs()
+    const graphs = await databaseManager.getAllGraphs()
     graphs.forEach(graph => {
       graphsStore.set(graph.id, graph)
       const analyzer = new GraphAnalyzer(graph)
@@ -31,7 +32,7 @@ async function loadGraphsFromDb() {
 
 loadGraphsFromDb()
 
-function getAnalyzer(graphId: string): GraphAnalyzer {
+function getAnalyzer(graphId: string): GraphAnalyzer | undefined {
   let analyzer = analyzers.get(graphId)
   if (!analyzer) {
     const graph = graphsStore.get(graphId)
@@ -43,18 +44,43 @@ function getAnalyzer(graphId: string): GraphAnalyzer {
   return analyzer
 }
 
-router.get('/', (req, res) => {
-  const graphs = Array.from(graphsStore.values())
-  res.json({
-    success: true,
-    data: graphs,
-    count: graphs.length
-  })
+router.get('/', async (req, res) => {
+  try {
+    const graphs = await databaseManager.getAllGraphs()
+    // Update cache
+    graphs.forEach(graph => {
+      if (!graphsStore.has(graph.id)) {
+        graphsStore.set(graph.id, graph)
+        const analyzer = new GraphAnalyzer(graph)
+        analyzers.set(graph.id, analyzer)
+      }
+    })
+
+    res.json({
+      success: true,
+      data: graphs,
+      count: graphs.length
+    })
+  } catch (error) {
+    logger.error('GraphsRoute', 'Failed to fetch graphs', { error })
+    res.status(500).json({ success: false, error: 'Failed to fetch graphs' })
+  }
 })
 
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const { id } = req.params
-  const graph = graphsStore.get(id)
+  let graph = graphsStore.get(id)
+
+  if (!graph) {
+    // Try to load from DB
+    const fromDb = await databaseManager.getGraphFromDb(id)
+    if (fromDb) {
+      graph = fromDb
+      graphsStore.set(graph.id, graph)
+      const analyzer = new GraphAnalyzer(graph)
+      analyzers.set(graph.id, analyzer)
+    }
+  }
 
   if (!graph) {
     return res.status(404).json({
@@ -446,7 +472,7 @@ router.post('/upload', async (req: any, res) => {
 
     const file = req.file
     const validation = validateFileUpload(file)
-    
+
     if (!validation.valid) {
       return res.status(400).json({
         success: false,
@@ -459,7 +485,7 @@ router.post('/upload', async (req: any, res) => {
 
     try {
       const extension = file.originalname.split('.').pop()?.toLowerCase()
-      
+
       switch (extension) {
         case 'json':
           parsedData = JSON.parse(fileContent)
@@ -499,7 +525,7 @@ router.post('/upload', async (req: any, res) => {
     analyzers.set(graph.id, analyzer)
 
     try {
-      await db.saveGraphToDb(graph)
+      await databaseManager.saveGraphToDb(graph)
     } catch (error) {
       logger.error('GraphsRoute', 'Failed to save graph to database', { error })
     }
@@ -528,36 +554,36 @@ router.post('/upload', async (req: any, res) => {
 function parseCSV(content: string) {
   const lines = content.split('\n').filter(line => line.trim())
   const headers = lines[0].split(',').map(h => h.trim())
-  
-  const articles = []
+
+  const articles: any[] = []
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].split(',')
-    const article = {}
+    const article: any = {}
     headers.forEach((header, index) => {
       article[header] = values[index] || ''
     })
     articles.push(article)
   }
-  
+
   return { articles }
 }
 
 function parseBibTeX(content: string) {
   const entries = content.split(/@/g).filter(e => e.trim())
-  const articles = []
-  
+  const articles: any[] = []
+
   entries.forEach(entry => {
     const match = entry.match(/(\w+)\s*\{([^,]+),/i)
     if (!match) return
-    
+
     const fields: any = {}
     const fieldRegex = /(\w+)\s*=\s*(?:\{([^}]*)\}|\"([^\"]*)\")/g
     let fieldMatch
-    
+
     while ((fieldMatch = fieldRegex.exec(entry)) !== null) {
       fields[fieldMatch[1].toLowerCase()] = fieldMatch[2] || fieldMatch[3] || ''
     }
-    
+
     articles.push({
       id: match[2],
       title: fields.title || '',
@@ -568,17 +594,18 @@ function parseBibTeX(content: string) {
       citations: []
     })
   })
-  
+
   return { articles }
 }
 
 function buildGraphFromData(data: any, filename: string): Graph {
   const articles = data.articles || []
-  
-  const nodes = articles.map((article: any) => ({
+
+  const nodes: GraphNode[] = articles.map((article: any) => ({
     id: article.id || `node-${Date.now()}-${Math.random()}`,
-    data: {
-      label: article.title || 'Untitled',
+    label: article.title || 'Untitled',
+    group: 'Imported',
+    attributes: {
       title: article.title || '',
       authors: article.authors || [],
       year: article.year || new Date().getFullYear(),
@@ -586,22 +613,25 @@ function buildGraphFromData(data: any, filename: string): Graph {
     }
   }))
 
-  const edges: any[] = []
-  articles.forEach((article: any, index: number) => {
+  const edges: GraphEdge[] = []
+  articles.forEach((article: any) => {
     if (article.citations && Array.isArray(article.citations)) {
       article.citations.forEach((citationId: string) => {
         if (citationId && citationId !== article.id) {
-          edges.push({
-            id: `edge-${Date.now()}-${Math.random()}`,
-            source: article.id,
-            target: citationId
-          })
+          edges.push(createEdge(
+            `edge-${Date.now()}-${Math.random()}`,
+            article.id || '',
+            citationId
+          ))
         }
       })
     }
   })
 
-  return createGraph(filename.replace(/\.[^/.]+$/, ''), false, nodes, edges)
+  const graph = createGraph(filename.replace(/\.[^/.]+$/, ''), false)
+  graph.nodes = nodes
+  graph.edges = edges
+  return graph
 }
 
 export default router

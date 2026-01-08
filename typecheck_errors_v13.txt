@@ -1,0 +1,8 @@
+
+> graph-analyser@1.0.0 typecheck
+> tsc --noEmit
+
+api/routes/documents.ts(18,7): error TS2717: Subsequent property declarations must have the same type.  Property 'files' must be of type '{ [fieldname: string]: File[]; } | File[] | undefined', but here has type 'File[] | undefined'.
+api/routes/graphs.ts(547,9): error TS7034: Variable 'articles' implicitly has type 'any[]' in some locations where its type cannot be determined.
+api/routes/graphs.ts(572,12): error TS7005: Variable 'articles' implicitly has an 'any[]' type.
+src/core/integration.test.ts(223,37): error TS2322: Type '"ERROR"' is not assignable to type 'LogLevel | undefined'.

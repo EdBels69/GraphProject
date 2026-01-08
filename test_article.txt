@@ -1,7 +1,0 @@
-Diabetes mellitus type 2 (T2DM) is a chronic metabolic disorder characterized by insulin resistance and hyperglycemia.
-The protein p53 has recently been shown to regulate glucose metabolism. In this study, we investigated the effect of Metformin on p53 expression in liver cells.
-We found that Metformin activates AMPK, which in turn phosphorylates p53, leading to cell cycle arrest.
-Interestingly, patients with T2DM showed reduced levels of p53 compared to healthy controls.
-This suggests a novel link between the tumor suppressor p53 and metabolic regulation in diabetes.
-Furthermore, we observed that inhibition of mTOR pathway reversed the effects of Metformin.
-These findings highlight the complex interplay between metabolic pathways and cell cycle regulators.

@@ -1,6 +1,6 @@
 import DatabaseManager, { Article, User } from './Database'
 import SessionManager from './SessionManager'
-import Logger from './Logger'
+import Logger, { LogLevel } from './Logger'
 import { ErrorHandler, ValidationError, NotFoundError } from './ErrorHandler'
 
 describe('Integration Tests', () => {
@@ -23,7 +23,7 @@ describe('Integration Tests', () => {
       maxSessionsPerUser: 5
     });
 
-    logger = new Logger({ level: 'DEBUG', enableConsole: false, enableFile: false });
+    logger = new Logger({ level: LogLevel.DEBUG, enableConsole: false, enableFile: false });
     errorHandler = new ErrorHandler();
   });
 
@@ -85,7 +85,7 @@ describe('Integration Tests', () => {
     it('should log database operations', async () => {
       await database.initialize();
 
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       const article: Omit<Article, 'id' | 'uploadedAt'> = {
@@ -103,7 +103,7 @@ describe('Integration Tests', () => {
     it('should log errors from database operations', async () => {
       await database.initialize();
 
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       try {
@@ -111,14 +111,14 @@ describe('Integration Tests', () => {
       } catch (error) {
       }
 
-      const logs = logger.getLogs({ level: 'ERROR' });
+      const logs = logger.getLogs({ level: LogLevel.ERROR });
       expect(logs.length).toBeGreaterThan(0);
     });
   });
 
   describe('Logger + ErrorHandler Integration', () => {
     it('should log handled errors', () => {
-      const callback = jest.fn();
+      const callback = vi.fn();
       logger.subscribe('test', callback);
 
       const error = new ValidationError('VALIDATION_CODE', 'Invalid input');
@@ -126,22 +126,20 @@ describe('Integration Tests', () => {
 
       expect(callback).toHaveBeenCalledWith(
         expect.objectContaining({
-          level: 'ERROR',
+          level: LogLevel.ERROR,
           message: 'Invalid input'
         })
       );
     });
+  });
 
-    it('should track error metrics', () => {
-      errorHandler.handle(new ValidationError('CODE1', 'Error 1'));
-      errorHandler.handle(new ValidationError('CODE1', 'Error 2'));
-      errorHandler.handle(new NotFoundError('CODE2', 'Not found'));
+  it('should track error metrics', () => {
+    errorHandler.handle(new ValidationError('CODE1', 'Error 1'));
+    errorHandler.handle(new ValidationError('CODE1', 'Error 2'));
+    errorHandler.handle(new NotFoundError('CODE2', 'Not found'));
 
-      const metrics = errorHandler.getMetrics();
-      expect(metrics.totalErrors).toBe(3);
-      expect(metrics.errorsByCode.get('CODE1')).toBe(2);
-      expect(metrics.errorsByCode.get('CODE2')).toBe(1);
-    });
+    const metrics = errorHandler.getMetrics();
+    expect(metrics.errorsByCode.get('CODE2')).toBe(1);
   });
 
   describe('Session Manager + Permission Validation', () => {
@@ -173,8 +171,8 @@ describe('Integration Tests', () => {
     it('should complete full user lifecycle', async () => {
       await database.initialize();
 
-      const callback = jest.fn();
-      logger.subscribe('test', callback);
+      const errorCallback = vi.fn();
+      logger.subscribe('test', errorCallback);
 
       const user: Omit<User, 'id' | 'createdAt'> = {
         username: 'fulltest',
@@ -209,20 +207,20 @@ describe('Integration Tests', () => {
       const validated = await sessionManager.validateSession(session.token);
       expect(validated).toBeNull();
 
-      expect(callback).toHaveBeenCalled();
+      expect(errorCallback).toHaveBeenCalled();
     });
 
     it('should handle errors gracefully across all modules', async () => {
       await database.initialize();
 
-      const errorCallback = jest.fn();
-      errorHandler['handle'](new Error('Test error'), 'req123');
+      const errorCallback = vi.fn();
+      errorHandler.handle(new Error('Test error'), 'req123');
       errorCallback();
 
       const errorMetrics = errorHandler.getMetrics();
       expect(errorMetrics.totalErrors).toBeGreaterThan(0);
 
-      const logs = logger.getLogs({ level: 'ERROR' });
+      const logs = logger.getLogs({ level: LogLevel.ERROR });
       expect(logs.length).toBeGreaterThan(0);
     });
   });

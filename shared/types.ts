@@ -11,9 +11,46 @@ export interface Article {
   published?: boolean
 }
 
+// Entity types for heterogeneous biomedical knowledge graph
+export type NodeType =
+  | 'Gene'
+  | 'Protein'
+  | 'Metabolite'
+  | 'Disease'
+  | 'Pathway'
+  | 'Drug'
+  | 'Symptom'
+  | 'Anatomy'
+  | 'Concept'  // Fallback for unclassified entities
+
+// Relation types following Biolink model
+export type RelationType =
+  | 'encodes'           // Gene -> Protein
+  | 'interacts_with'    // Protein <-> Protein
+  | 'participates_in'   // Entity -> Pathway
+  | 'associated_with'   // Gene/Protein <-> Disease
+  | 'inhibits'          // Drug -> Protein/Gene
+  | 'activates'         // Drug -> Protein/Gene
+  | 'treats'            // Drug -> Disease
+  | 'causes'            // Entity -> Disease/Symptom
+  | 'regulates'         // Gene -> Gene
+  | 'transports'        // Protein -> Metabolite
+  | 'metabolizes'       // Enzyme -> Metabolite
+  | 'cooccurs_with'     // Fallback: co-occurrence in text
+  | 'related_to'        // Fallback: unspecified relation
+
+// Evidence types (STRING-style)
+export type EvidenceType =
+  | 'experimental'      // Lab-validated
+  | 'database'          // Curated database (KEGG, Reactome)
+  | 'text_mining'       // NLP from literature
+  | 'cooccurrence'      // Same paragraph/sentence
+  | 'ai_extraction'     // LLM-extracted
+
 export interface GraphNode {
   id: string
   label: string
+  type?: NodeType           // NEW: Entity type
   weight?: number
   data?: Record<string, any>
 }
@@ -22,6 +59,9 @@ export interface GraphEdge {
   id: string
   source: string
   target: string
+  relation?: RelationType   // NEW: Typed relation
+  evidenceType?: EvidenceType  // NEW: How was this edge discovered
+  confidence?: number       // NEW: 0-1 confidence score
   weight?: number
   directed?: boolean
   data?: Record<string, any>

@@ -14,7 +14,8 @@ const router = express.Router()
 declare global {
   namespace Express {
     interface Request {
-      files?: Express.Multer.File[]
+      file?: Multer.File
+      files?: Multer.File[] | { [fieldname: string]: Multer.File[] }
     }
   }
 }

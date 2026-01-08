@@ -162,7 +162,7 @@ export class SourceDownloader {
         }
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error)
-        
+
         // Wait before retry
         if (attempt < retryAttempts - 1) {
           await this.sleep(1000 * (attempt + 1))
@@ -214,21 +214,16 @@ export class SourceDownloader {
           })
           .catch(error => {
             this.activeDownloads.delete(url)
-            job.results.push({
-              url,
-              fileName: '',
-              filePath: '',
-              status: 'failed' as const,
-              error: error instanceof Error ? error.message : String(error)
-            })
-            job.failed++
-            return {
+            const failedResult: DownloadResult = {
               url,
               fileName: '',
               filePath: '',
               status: 'failed',
               error: error instanceof Error ? error.message : String(error)
             }
+            job.results.push(failedResult)
+            job.failed++
+            return failedResult
           })
 
         active.add(downloadPromise)

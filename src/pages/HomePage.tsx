@@ -1,605 +1,495 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { toast } from 'sonner'
-import { useApi } from '@/hooks/useApi'
-import { FileUploader } from '@/components/FileUploader'
-import { parseFile, buildGraphFromParsedData } from '@/utils/fileParser'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-interface ArticleNode {
-  id: string;
-  title: string;
-  year: number;
-  citations: number;
-  category: string;
-  author: string;
-  abstract: string;
-  keywords: string[];
+interface ResearchJob {
+  id: string
+  topic: string
+  status: string
+  articlesFound: number
+  graphId?: string
+  createdAt: string
 }
 
-interface ArticleEdge {
-  id: string;
-  source: string;
-  target: string;
-  strength: number;
-  type: 'citation' | 'reference' | 'collaboration';
+interface SearchOptions {
+  mode: 'quick' | 'research'
+  maxArticles: number
+  yearFrom: number
+  yearTo: number
+  sources: {
+    pubmed: boolean
+    crossref: boolean
+  }
 }
 
-interface Pattern {
-  id: string;
-  name: string;
-  description: string;
-  nodes: string[];
-  type: 'cluster' | 'trend' | 'gap';
-}
+const currentYear = new Date().getFullYear()
 
 export default function HomePage() {
-  const [selectedNode, setSelectedNode] = useState<ArticleNode | null>(null)
-  const [filterYear, setFilterYear] = useState<string>('all')
-  const [filterCategory, setFilterCategory] = useState<string>('all')
-  const [filterCitations, setFilterCitations] = useState<string>('all')
-  const [scale, setScale] = useState(1)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showPatterns, setShowPatterns] = useState(false)
-  const [highlightedPattern, setHighlightedPattern] = useState<Pattern | null>(null)
-  const [currentStep, setCurrentStep] = useState(0)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
-
-  const { data: articles = [], loading: loadingArticles, error: articlesError, refetch: refetchArticles } = useApi<ArticleNode[]>('/articles', [])
-  const { data: edges = [], loading: loadingEdges, error: edgesError, refetch: refetchEdges } = useApi<ArticleEdge[]>('/graph/edges', [])
-  const { data: patterns = [], loading: loadingPatterns, error: patternsError } = useApi<Pattern[]>('/patterns', [])
-
-  const mockNodes: ArticleNode[] = articles.length > 0 ? articles : [
-    { id: 'a1', title: 'P53 signaling pathway in cancer', year: 2023, citations: 145, category: 'Oncology', author: 'Smith et al.', abstract: 'This study investigates...', keywords: ['P53', 'cancer', 'signaling'] },
-    { id: 'a2', title: 'MDM2 regulation mechanisms', year: 2022, citations: 98, category: 'Oncology', author: 'Johnson et al.', abstract: 'MDM2 is a key regulator...', keywords: ['MDM2', 'P53', 'regulation'] },
-    { id: 'a3', title: 'AKT1 network analysis', year: 2024, citations: 87, category: 'Bioinformatics', author: 'Williams et al.', abstract: 'Network analysis of AKT1...', keywords: ['AKT1', 'network', 'bioinformatics'] },
-    { id: 'a4', title: 'EGFR inhibition strategies', year: 2023, citations: 112, category: 'Oncology', author: 'Brown et al.', abstract: 'Novel EGFR inhibitors...', keywords: ['EGFR', 'inhibition', 'cancer'] },
-    { id: 'a5', title: 'PTEN tumor suppressor', year: 2021, citations: 234, category: 'Oncology', author: 'Davis et al.', abstract: 'PTEN role in tumor...', keywords: ['PTEN', 'tumor', 'suppressor'] },
-    { id: 'a6', title: 'ATP metabolism in cancer', year: 2024, citations: 76, category: 'Metabolism', author: 'Garcia et al.', abstract: 'Metabolic changes in cancer...', keywords: ['ATP', 'metabolism', 'cancer'] },
-    { id: 'a7', title: 'Glucose transport mechanisms', year: 2022, citations: 89, category: 'Metabolism', author: 'Martinez et al.', abstract: 'Glucose transport pathways...', keywords: ['glucose', 'transport', 'metabolism'] },
-    { id: 'a8', title: 'BAX apoptosis pathway', year: 2023, citations: 67, category: 'Oncology', author: 'Lee et al.', abstract: 'BAX-mediated apoptosis...', keywords: ['BAX', 'apoptosis', 'cancer'] },
-  ]
-
-  const mockEdges: ArticleEdge[] = edges.length > 0 ? edges : [
-    { id: 'e1', source: 'a1', target: 'a2', strength: 0.85, type: 'citation' },
-    { id: 'e2', source: 'a1', target: 'a4', strength: 0.72, type: 'collaboration' },
-    { id: 'e3', source: 'a3', target: 'a4', strength: 0.68, type: 'reference' },
-    { id: 'e4', source: 'a2', target: 'a5', strength: 0.91, type: 'citation' },
-    { id: 'e5', source: 'a6', target: 'a7', strength: 0.63, type: 'collaboration' },
-    { id: 'e6', source: 'a7', target: 'a8', strength: 0.57, type: 'reference' },
-    { id: 'e7', source: 'a3', target: 'a8', strength: 0.74, type: 'citation' },
-    { id: 'e8', source: 'a1', target: 'a8', strength: 0.81, type: 'reference' },
-  ]
-
-  const tutorialSteps = [
-    { title: 'Фильтрация', description: 'Используйте фильтры для сужения результатов' },
-    { title: 'Поиск', description: 'Введите ключевые слова для поиска статей' },
-    { title: 'Выбор', description: 'Кликните на узел для просмотра деталей' },
-    { title: 'Анализ', description: 'Исследуйте паттерны и связи между статьями' },
-    { title: 'Экспорт', description: 'Сохраните или экспортируйте результаты' },
-  ]
-
-  const filteredNodes = mockNodes.filter(node => {
-    if (filterYear !== 'all' && node.year !== parseInt(filterYear)) return false
-    if (filterCategory !== 'all' && node.category !== filterCategory) return false
-    if (filterCitations === 'high' && node.citations < 100) return false
-    if (filterCitations === 'medium' && (node.citations < 50 || node.citations >= 100)) return false
-    if (filterCitations === 'low' && node.citations >= 50) return false
-    if (searchQuery && !node.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
-        !node.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase()))) return false
-    return true
+  const navigate = useNavigate()
+  const [topic, setTopic] = useState('')
+  const [recentJobs, setRecentJobs] = useState<ResearchJob[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [options, setOptions] = useState<SearchOptions>({
+    mode: 'research',  // Default to research mode for methodological rigor
+    maxArticles: 50,
+    yearFrom: currentYear - 5,
+    yearTo: currentYear,
+    sources: { pubmed: true, crossref: true }
   })
 
-  const categories = ['all', ...Array.from(new Set(mockNodes.map(n => n.category)))]
-  const years = ['all', ...Array.from(new Set(mockNodes.map(n => n.year.toString())))]
+  useEffect(() => {
+    fetchRecentJobs()
+  }, [])
 
-  const getNodePosition = (index: number, total: number) => {
-    const angle = (index / total) * 2 * Math.PI
-    const radius = 200 * scale
-    return {
-      x: Math.cos(angle) * radius + 400,
-      y: Math.sin(angle) * radius + 300
+  const fetchRecentJobs = async () => {
+    try {
+      const response = await fetch('/api/research/jobs')
+      if (response.ok) {
+        const data = await response.json()
+        setRecentJobs(data.jobs || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error)
     }
   }
 
-  const handleFileUpload = async (file: File) => {
-    setIsUploading(true)
-    setUploadError('')
-    
+  const handleStartResearch = async () => {
+    if (!topic.trim()) return
+    setIsLoading(true)
+
+    const sources: string[] = []
+    if (options.sources.pubmed) sources.push('pubmed')
+    if (options.sources.crossref) sources.push('crossref')
+
     try {
-      const parsedData = await parseFile(file)
-      const graph = buildGraphFromParsedData(parsedData)
-      
-      const formData = new FormData()
-      formData.append('file', file)
-      
-      const response = await fetch('/api/graphs/upload', {
+      const response = await fetch('/api/research/jobs', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic,
+          mode: options.mode,
+          maxArticles: options.maxArticles,
+          yearFrom: options.yearFrom,
+          yearTo: options.yearTo,
+          sources
+        })
       })
-      
-      if (!response.ok) {
-        throw new Error('Ошибка при загрузке файла на сервер')
+      const data = await response.json()
+      if (data.job?.id) {
+        navigate(`/research/${data.job.id}/papers`)
       }
-      
-      const result = await response.json()
-      
-      toast.success(`Файл загружен успешно! Обработано ${parsedData.articles.length} статей`)
-      
-      refetchArticles()
-      refetchEdges()
-      
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка'
-      setUploadError(errorMessage)
-      toast.error(`Ошибка: ${errorMessage}`)
+      console.error('Failed to start research:', error)
     } finally {
-      setIsUploading(false)
+      setIsLoading(false)
     }
   }
 
-  const isNodeHighlighted = (nodeId: string) => {
-    return highlightedPattern?.nodes.includes(nodeId)
+  const handleFileUpload = () => {
+    navigate('/upload')
   }
 
-  const handleSaveResults = () => {
-    const dataToSave = {
-      nodes: filteredNodes,
-      edges: mockEdges.filter(edge => 
-        filteredNodes.some(n => n.id === edge.source) && 
-        filteredNodes.some(n => n.id === edge.target)
-      ),
-      filters: {
-        year: filterYear,
-        category: filterCategory,
-        citations: filterCitations,
-        searchQuery
-      },
-      timestamp: new Date().toISOString()
-    }
-
-    try {
-      const blob = new Blob([JSON.stringify(dataToSave, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `graph-analyser-results-${new Date().toISOString().slice(0, 10)}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      toast.success('Результаты успешно сохранены')
-    } catch (error) {
-      toast.error('Ошибка при сохранении результатов')
-      console.error('Save error:', error)
+  const openJob = (job: ResearchJob) => {
+    if (job.graphId) {
+      navigate(`/research/${job.id}/graph`)
+    } else if (job.status === 'completed') {
+      navigate(`/research/${job.id}/config`)
+    } else {
+      navigate(`/research/${job.id}/papers`)
     }
   }
 
-  const handleExportGraph = () => {
-    const graphData = {
-      nodes: filteredNodes.map(node => ({
-        id: node.id,
-        label: node.title,
-        group: node.category,
-        attributes: {
-          year: node.year,
-          citations: node.citations,
-          author: node.author,
-          keywords: node.keywords
-        }
-      })),
-      edges: mockEdges.filter(edge => 
-        filteredNodes.some(n => n.id === edge.source) && 
-        filteredNodes.some(n => n.id === edge.target)
-      ).map(edge => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        weight: edge.strength,
-        type: edge.type
-      })),
-      metadata: {
-        exportDate: new Date().toISOString(),
-        totalNodes: filteredNodes.length,
-        totalEdges: mockEdges.filter(edge => 
-          filteredNodes.some(n => n.id === edge.source) && 
-          filteredNodes.some(n => n.id === edge.target)
-        ).length
-      }
-    }
-
-    try {
-      const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `graph-export-${new Date().toISOString().slice(0, 10)}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      toast.success('Граф успешно экспортирован')
-    } catch (error) {
-      toast.error('Ошибка при экспорте графа')
-      console.error('Export error:', error)
-    }
-  }
+  const maxArticlesPresets = [
+    { value: 20, label: '🚀 Быстрый' },
+    { value: 50, label: '📊 Стандарт' },
+    { value: 100, label: '📚 Глубокий' },
+    { value: 200, label: '🔬 Полный' }
+  ]
 
   return (
-    <div className="space-y-8">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Graph Analyser - Анализ научных статей
-        </h1>
-        <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-          Профессиональный инструмент для интерактивного анализа научных статей,
-          визуализации связей и поиска исследовательских пробелов
-        </p>
-      </div>
-
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">📋 Пошаговое руководство</h3>
-        <div className="flex flex-wrap gap-3">
-          {tutorialSteps.map((step, index) => (
-            <div
-              key={index}
-              className={`flex-1 min-w-[150px] p-3 rounded-lg cursor-pointer transition-all ${
-                currentStep === index ? 'bg-primary-500 text-white shadow-lg' : 'bg-white hover:bg-gray-50'
-              }`}
-              onClick={() => setCurrentStep(index)}
-            >
-              <div className="text-2xl mb-1">{index + 1}</div>
-              <div className="font-medium text-sm">{step.title}</div>
-              <div className="text-xs mt-1 opacity-75">{step.description}</div>
-            </div>
-          ))}
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)' }}>
+      {/* Header */}
+      <header style={{
+        background: 'rgba(255,255,255,0.8)',
+        backdropFilter: 'blur(8px)',
+        borderBottom: '1px solid #e2e8f0',
+        padding: '16px 24px'
+      }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: 40, height: 40,
+            background: 'linear-gradient(135deg, #3b82f6, #14b8a6)',
+            borderRadius: 12,
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <span style={{ fontSize: 20 }}>🧬</span>
+          </div>
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: '#1e293b', margin: 0 }}>Graph Analyser</h1>
         </div>
-      </div>
+      </header>
 
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">📁 Загрузка данных из файла</h3>
-        <FileUploader
-          onFileUpload={handleFileUpload}
-          isLoading={isUploading}
-          error={uploadError}
-        />
-      </div>
+      {/* Main Content */}
+      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '64px 24px' }}>
+        {/* Hero */}
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <h2 style={{ fontSize: 36, fontWeight: 700, color: '#0f172a', marginBottom: 16 }}>
+            Постройте граф знаний
+          </h2>
+          <p style={{ fontSize: 18, color: '#64748b', maxWidth: 600, margin: '0 auto' }}>
+            Анализируйте научную литературу, извлекайте связи между сущностями
+            и визуализируйте знания с помощью AI
+          </p>
+        </div>
 
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Поиск</label>
+        {/* Two Options */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, marginBottom: 64 }}>
+          {/* Option 1: Search */}
+          <div style={{
+            background: '#fff',
+            borderRadius: 16,
+            padding: 32,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+            border: '1px solid #f1f5f9'
+          }}>
+            <div style={{
+              width: 56, height: 56,
+              background: '#dbeafe',
+              borderRadius: 12,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: 24
+            }}>
+              <span style={{ fontSize: 28 }}>🔬</span>
+            </div>
+            <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1e293b', marginBottom: 12 }}>
+              Поиск по теме
+            </h3>
+            <p style={{ color: '#64748b', marginBottom: 20, lineHeight: 1.6 }}>
+              Введите тему исследования — мы найдём статьи в PubMed и CrossRef
+            </p>
+
+            {/* Topic Input */}
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Введите ключевые слова..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !showAdvanced && handleStartResearch()}
+              placeholder="Например: carnitine metabolism"
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                borderRadius: 12,
+                border: '1px solid #e2e8f0',
+                fontSize: 15,
+                marginBottom: 16,
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
             />
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Фильтр по году</label>
-            <select
-              value={filterYear}
-              onChange={(e) => setFilterYear(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              {years.map(year => (
-                <option key={year} value={year}>
-                  {year === 'all' ? 'Все годы' : year}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Фильтр по категории</label>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              {categories.map(cat => (
-                <option key={cat} value={cat}>
-                  {cat === 'all' ? 'Все категории' : cat}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Фильтр по цитированиям</label>
-            <select
-              value={filterCitations}
-              onChange={(e) => setFilterCitations(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="all">Все</option>
-              <option value="high">Высокие (&ge; 100)</option>
-              <option value="medium">Средние (50-99)</option>
-              <option value="low">Низкие (&lt; 50)</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Масштаб</label>
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.1"
-              value={scale}
-              onChange={(e) => setScale(parseFloat(e.target.value))}
-              className="w-full"
-            />
-          </div>
-          <div className="flex items-end gap-2">
-            <button
-              onClick={() => { setFilterYear('all'); setFilterCategory('all'); setFilterCitations('all'); setSearchQuery(''); setScale(1) }}
-              className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              Сбросить
-            </button>
-            <button
-              onClick={() => setShowPatterns(!showPatterns)}
-              className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-            >
-              {showPatterns ? 'Скрыть паттерны' : 'Показать паттерны'}
-            </button>
-          </div>
-        </div>
 
-        {showPatterns && (
-          <div className="mb-6 p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
-            <h4 className="text-lg font-semibold text-gray-900 mb-3">🔍 Обнаруженные паттерны</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {patterns.map(pattern => (
-                <div
-                  key={pattern.id}
-                  className={`p-4 rounded-lg cursor-pointer transition-all ${
-                    highlightedPattern?.id === pattern.id
-                      ? 'bg-purple-600 text-white shadow-lg'
-                      : 'bg-white hover:bg-purple-100 border-2 border-purple-200'
-                  }`}
-                  onClick={() => setHighlightedPattern(highlightedPattern?.id === pattern.id ? null : pattern)}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">
-                      {pattern.type === 'cluster' ? '🔗' : pattern.type === 'trend' ? '📈' : '🔬'}
-                    </span>
-                    <h5 className="font-semibold">{pattern.name}</h5>
+            {/* Mode Selector */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button
+                onClick={() => setOptions(o => ({ ...o, mode: 'quick' }))}
+                style={{
+                  flex: 1,
+                  padding: '12px 8px',
+                  borderRadius: 10,
+                  border: options.mode === 'quick' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                  background: options.mode === 'quick' ? '#eff6ff' : '#fff',
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                <div style={{ fontSize: 20, marginBottom: 4 }}>🚀</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Quick</div>
+                <div style={{ fontSize: 11, color: '#64748b' }}>Авто-анализ</div>
+              </button>
+              <button
+                onClick={() => setOptions(o => ({ ...o, mode: 'research' }))}
+                style={{
+                  flex: 1,
+                  padding: '12px 8px',
+                  borderRadius: 10,
+                  border: options.mode === 'research' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                  background: options.mode === 'research' ? '#eff6ff' : '#fff',
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                <div style={{ fontSize: 20, marginBottom: 4 }}>📊</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Research</div>
+                <div style={{ fontSize: 11, color: '#64748b' }}>Таблица + Screening</div>
+              </button>
+            </div>
+
+            {/* Mode description */}
+            <div style={{
+              fontSize: 12,
+              color: '#64748b',
+              background: '#f8fafc',
+              padding: '8px 12px',
+              borderRadius: 8,
+              marginBottom: 12
+            }}>
+              {options.mode === 'quick'
+                ? '⚡ Быстрый режим: статьи автоматически анализируются и строится граф'
+                : '📋 Research режим: таблица статей → ручной отбор → настройка анализа'}
+            </div>
+
+            {/* Advanced Toggle */}
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                background: 'transparent',
+                border: '1px solid #e2e8f0',
+                borderRadius: 8,
+                fontSize: 13,
+                color: '#64748b',
+                cursor: 'pointer',
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              ⚙️ Расширенные настройки {showAdvanced ? '▲' : '▼'}
+            </button>
+
+
+            {/* Advanced Options */}
+            {showAdvanced && (
+              <div style={{
+                padding: 16,
+                background: '#f8fafc',
+                borderRadius: 12,
+                marginBottom: 16,
+                fontSize: 13
+              }}>
+                {/* Max Articles */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontWeight: 500, color: '#475569', marginBottom: 8 }}>
+                    📊 Макс. статей: {options.maxArticles}
+                  </label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                    {maxArticlesPresets.map(preset => (
+                      <button
+                        key={preset.value}
+                        onClick={() => setOptions(o => ({ ...o, maxArticles: preset.value }))}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 6,
+                          border: options.maxArticles === preset.value ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                          background: options.maxArticles === preset.value ? '#eff6ff' : '#fff',
+                          fontSize: 12,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {preset.label} ({preset.value})
+                      </button>
+                    ))}
                   </div>
-                  <p className="text-sm mb-2">{pattern.description}</p>
-                  <div className="text-xs opacity-75">
-                    {pattern.nodes.length} связанных статей
+                  <input
+                    type="range"
+                    min="10"
+                    max="1000"
+                    step="10"
+                    value={options.maxArticles}
+                    onChange={(e) => setOptions(o => ({ ...o, maxArticles: parseInt(e.target.value) }))}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8' }}>
+                    <span>10</span>
+                    <span>1000</span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg overflow-hidden" style={{ height: '600px' }}>
-          <svg width="100%" height="100%" viewBox="0 0 800 600">
-            <defs>
-              <marker id="arrowhead-citation" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="#4f46e5" />
-              </marker>
-              <marker id="arrowhead-reference" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
-              </marker>
-              <marker id="arrowhead-collaboration" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b" />
-              </marker>
-            </defs>
+                {/* Year Range */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontWeight: 500, color: '#475569', marginBottom: 8 }}>
+                    📅 Годы публикации
+                  </label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      min="1990"
+                      max={currentYear}
+                      value={options.yearFrom}
+                      onChange={(e) => setOptions(o => ({ ...o, yearFrom: parseInt(e.target.value) }))}
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6 }}
+                    />
+                    <span style={{ color: '#94a3b8' }}>—</span>
+                    <input
+                      type="number"
+                      min="1990"
+                      max={currentYear}
+                      value={options.yearTo}
+                      onChange={(e) => setOptions(o => ({ ...o, yearTo: parseInt(e.target.value) }))}
+                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6 }}
+                    />
+                  </div>
+                </div>
 
-            {mockEdges.filter(edge => 
-              filteredNodes.some(n => n.id === edge.source) && 
-              filteredNodes.some(n => n.id === edge.target)
-            ).map(edge => {
-              const sourcePos = getNodePosition(filteredNodes.findIndex(n => n.id === edge.source), filteredNodes.length)
-              const targetPos = getNodePosition(filteredNodes.findIndex(n => n.id === edge.target), filteredNodes.length)
-              const isSelected = selectedNode?.id === edge.source || selectedNode?.id === edge.target
-              const isHighlighted = highlightedPattern?.nodes.includes(edge.source) || highlightedPattern?.nodes.includes(edge.target)
-              const color = edge.type === 'citation' ? '#4f46e5' : edge.type === 'reference' ? '#10b981' : '#f59e0b'
+                {/* Sources */}
+                <div>
+                  <label style={{ display: 'block', fontWeight: 500, color: '#475569', marginBottom: 8 }}>
+                    📚 Источники
+                  </label>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={options.sources.pubmed}
+                        onChange={(e) => setOptions(o => ({ ...o, sources: { ...o.sources, pubmed: e.target.checked } }))}
+                      />
+                      PubMed
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={options.sources.crossref}
+                        onChange={(e) => setOptions(o => ({ ...o, sources: { ...o.sources, crossref: e.target.checked } }))}
+                      />
+                      CrossRef
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
 
-              return (
-                <line
-                  key={edge.id}
-                  x1={sourcePos.x}
-                  y1={sourcePos.y}
-                  x2={targetPos.x}
-                  y2={targetPos.y}
-                  stroke={isHighlighted ? '#8b5cf6' : color}
-                  strokeWidth={edge.strength * 3 * scale}
-                  markerEnd={`url(#arrowhead-${edge.type})`}
-                  className="transition-all duration-300"
-                  style={{ cursor: 'pointer', opacity: isHighlighted ? 1 : 0.6 }}
-                  onClick={() => setSelectedNode(null)}
-                />
-              )
-            })}
+            {/* Time Warning for large searches */}
+            {options.maxArticles > 100 && showAdvanced && (
+              <div style={{
+                padding: '8px 12px',
+                background: '#fef3c7',
+                borderRadius: 8,
+                fontSize: 12,
+                color: '#92400e',
+                marginBottom: 12
+              }}>
+                ⚠️ Обработка {options.maxArticles} статей займёт ~{Math.ceil(options.maxArticles / 30)} мин
+              </div>
+            )}
 
-            {filteredNodes.map((node, index) => {
-              const pos = getNodePosition(index, filteredNodes.length)
-              const isSelected = selectedNode?.id === node.id
-              const isHighlighted = isNodeHighlighted(node.id)
-              const size = 40 * scale * (1 + node.citations / 500)
-
-              return (
-                <g key={node.id} className="cursor-pointer transition-all duration-300">
-                  <circle
-                    cx={pos.x}
-                    cy={pos.y}
-                    r={size}
-                    fill={isHighlighted ? '#8b5cf6' : isSelected ? '#4f46e5' : '#6366f1'}
-                    stroke={isHighlighted ? '#4f46e5' : isSelected ? '#1e40af' : '#4b5563'}
-                    strokeWidth={isHighlighted ? 4 : 3}
-                    onClick={() => setSelectedNode(node)}
-                    onMouseEnter={() => setSelectedNode(node)}
-                    onMouseLeave={() => setSelectedNode(null)}
-                    className="hover:fill-indigo-600 transition-colors"
-                  />
-                  <text
-                    x={pos.x}
-                    y={pos.y - size - 10}
-                    textAnchor="middle"
-                    fontSize={14 * scale}
-                    fill="#374151"
-                    className="pointer-events-none"
-                  >
-                    {node.year}
-                  </text>
-                  <text
-                    x={pos.x}
-                    y={pos.y + size + 20}
-                    textAnchor="middle"
-                    fontSize={12 * scale}
-                    fill="#6b7280"
-                    className="pointer-events-none"
-                  >
-                    {node.citations} цит.
-                  </text>
-                </g>
-              )
-            })}
-          </svg>
-        </div>
-
-        <div className="flex flex-wrap justify-between items-center text-sm text-gray-600 mt-4 gap-4">
-          <div>
-            Показано: <span className="font-semibold text-primary-600">{filteredNodes.length}</span> из {mockNodes.length} статей
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <div className="flex items-center gap-1">
-              <div className="w-4 h-4 rounded-full bg-indigo-600"></div>
-              <span>Цитирование</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-4 h-4 rounded-full bg-green-600"></div>
-              <span>Ссылка</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-4 h-4 rounded-full bg-orange-500"></div>
-              <span>Коллаборация</span>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <button 
-              onClick={handleSaveResults}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-            >
-              💾 Сохранить результаты
-            </button>
-            <button 
-              onClick={handleExportGraph}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              📊 Экспорт графа
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {selectedNode && (
-        <div className="fixed top-4 right-4 bg-white rounded-lg shadow-xl p-6 max-w-sm z-50 border-l-4 border-primary-500">
-          <h3 className="text-xl font-bold text-gray-900 mb-3">{selectedNode.title}</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Автор:</span>
-              <span className="font-medium">{selectedNode.author}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Год:</span>
-              <span className="font-medium">{selectedNode.year}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Цитирования:</span>
-              <span className="font-medium text-primary-600">{selectedNode.citations}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Категория:</span>
-              <span className="font-medium">{selectedNode.category}</span>
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-sm font-medium text-gray-700 mb-1">Ключевые слова:</div>
-            <div className="flex flex-wrap gap-2">
-              {selectedNode.keywords.map(keyword => (
-                <span key={keyword} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                  {keyword}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-sm font-medium text-gray-700 mb-1">Аннотация:</div>
-            <p className="text-sm text-gray-600 line-clamp-3">{selectedNode.abstract}</p>
-          </div>
-          <div className="mt-4 space-y-2">
-            <Link
-              to="/graph"
-              className="block w-full text-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-            >
-              Подробный анализ
-            </Link>
             <button
-              onClick={() => setSelectedNode(null)}
-              className="block w-full text-center px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              onClick={handleStartResearch}
+              disabled={isLoading || !topic.trim()}
+              style={{
+                width: '100%',
+                padding: '14px',
+                background: isLoading || !topic.trim() ? '#94a3b8' : '#2563eb',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 12,
+                fontSize: 15,
+                fontWeight: 500,
+                cursor: isLoading || !topic.trim() ? 'not-allowed' : 'pointer'
+              }}
             >
-              Закрыть
+              {isLoading ? 'Поиск...' : `Начать исследование (${options.maxArticles} статей) →`}
+            </button>
+          </div>
+
+          {/* Option 2: Upload */}
+          <div style={{
+            background: '#fff',
+            borderRadius: 16,
+            padding: 32,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+            border: '1px solid #f1f5f9'
+          }}>
+            <div style={{
+              width: 56, height: 56,
+              background: '#ccfbf1',
+              borderRadius: 12,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: 24
+            }}>
+              <span style={{ fontSize: 28 }}>📤</span>
+            </div>
+            <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1e293b', marginBottom: 12 }}>
+              Загрузить файлы
+            </h3>
+            <p style={{ color: '#64748b', marginBottom: 24, lineHeight: 1.6 }}>
+              Загрузите свои PDF или текстовые документы для анализа
+            </p>
+            <div style={{ height: 52, marginBottom: 16 }}></div>
+            <button
+              onClick={handleFileUpload}
+              style={{
+                width: '100%',
+                padding: '14px',
+                background: '#0d9488',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 12,
+                fontSize: 15,
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              Выбрать файлы →
             </button>
           </div>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <FeatureCard
-          title="Загрузка статей"
-          description="Импортируйте статьи из web-ссылок или библиографических данных"
-          link="/upload"
-          icon="📥"
-        />
-        <FeatureCard
-          title="Анализ данных"
-          description="Автоматическое извлечение сущностей и взаимодействий"
-          link="/analysis"
-          icon="🔍"
-        />
-        <FeatureCard
-          title="Графовый анализ"
-          description="Интерактивная визуализация биохимических сетей с фильтрацией"
-          link="/graph"
-          icon="🕸️"
-        />
-        <FeatureCard
-          title="Research Gaps"
-          description="Находите пробелы в исследованиях для публикации в Q1"
-          link="/research-gaps"
-          icon="🔬"
-        />
-        <FeatureCard
-          title="Статистика"
-          description="Детальная статистика по анализируемым данным"
-          link="/statistics"
-          icon="📈"
-        />
-        <FeatureCard
-          title="Экспорт данных"
-          description="Экспортируйте результаты для публикации"
-          link="/export"
-          icon="💾"
-        />
-      </div>
-    </div>
-  )
-}
-
-function FeatureCard({ title, description, link, icon }: { title: string; description: string; link: string; icon: string }) {
-  return (
-    <Link to={link} className="block">
-      <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-primary-500">
-        <div className="text-5xl mb-4">{icon}</div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">{title}</h2>
-        <p className="text-gray-600">{description}</p>
-      </div>
-    </Link>
+        {/* Recent Researches */}
+        {
+          recentJobs.length > 0 && (
+            <div>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1e293b', marginBottom: 16 }}>
+                Недавние исследования
+              </h3>
+              <div style={{
+                background: '#fff',
+                borderRadius: 12,
+                border: '1px solid #e2e8f0',
+                overflow: 'hidden'
+              }}>
+                {recentJobs.slice(0, 5).map((job, index) => (
+                  <div
+                    key={job.id}
+                    onClick={() => openJob(job)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '16px 24px',
+                      borderBottom: index < recentJobs.length - 1 ? '1px solid #f1f5f9' : 'none',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 500, color: '#1e293b' }}>{job.topic}</div>
+                      <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
+                        {job.articlesFound} статей • {new Date(job.createdAt).toLocaleDateString('ru-RU')}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: 20,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        background: job.status === 'completed' ? '#dcfce7' : job.status === 'processing' ? '#fef3c7' : '#f1f5f9',
+                        color: job.status === 'completed' ? '#166534' : job.status === 'processing' ? '#92400e' : '#475569'
+                      }}>
+                        {job.status === 'completed' ? 'Готово' : job.status === 'processing' ? 'В процессе' : job.status}
+                      </span>
+                      <span style={{ color: '#94a3b8' }}>→</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        }
+      </main >
+    </div >
   )
 }

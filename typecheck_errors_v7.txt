@@ -1,0 +1,10 @@
+
+> graph-analyser@1.0.0 typecheck
+> tsc --noEmit
+
+src/core/integration.test.ts(128,16): error TS1005: ';' expected.
+src/core/integration.test.ts(130,7): error TS1128: Declaration or statement expected.
+src/core/integration.test.ts(143,3): error TS1128: Declaration or statement expected.
+src/core/integration.test.ts(143,4): error TS1128: Declaration or statement expected.
+src/core/integration.test.ts(363,1): error TS1128: Declaration or statement expected.
+src/core/integration.test.ts(363,2): error TS1128: Declaration or statement expected.

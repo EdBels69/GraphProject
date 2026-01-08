@@ -4,20 +4,26 @@ import { exportDataService } from '@/utils/exportData'
 import { useApi } from '@/hooks/useApi'
 
 export default function ExportDataPage() {
-  const [selectedFormat, setSelectedFormat] = useState<'json' | 'csv' | 'xlsx' | 'gexf'>('json')
+  const [selectedFormat, setSelectedFormat] = useState<'json' | 'csv' | 'xlsx' | 'gexf' | 'graphml'>('json')
   const [selectedData, setSelectedData] = useState<'all' | 'entities' | 'interactions' | 'graph' | 'statistics'>('all')
   const [includeMetadata, setIncludeMetadata] = useState(true)
   const [exporting, setExporting] = useState(false)
 
-  const { data: articles, loading: loadingArticles } = useApi('/articles', [])
-  const { data: entities, loading: loadingEntities } = useApi('/entities', [])
-  const { data: interactions, loading: loadingInteractions } = useApi('/interactions', [])
-  const { data: graph, loading: loadingGraph } = useApi('/graph', null)
-  const { data: statistics, loading: loadingStatistics } = useApi('/statistics', null)
+  const { data: articlesData, loading: loadingArticles } = useApi<any[]>('/articles', [])
+  const { data: entitiesData, loading: loadingEntities } = useApi<any[]>('/entities', [])
+  const { data: interactionsData, loading: loadingInteractions } = useApi<any[]>('/interactions', [])
+  const { data: graphData, loading: loadingGraph } = useApi<any>('/graph', null)
+  const { data: statisticsData, loading: loadingStatistics } = useApi<any>('/statistics', null)
+
+  const articles = articlesData || []
+  const entities = entitiesData || []
+  const interactions = interactionsData || []
+  const graph = graphData || undefined
+  const statistics = statisticsData || undefined
 
   const handleExport = async () => {
     setExporting(true)
-    
+
     try {
       const timestamp = new Date().toISOString().slice(0, 10)
       const filename = `graph-analyser-${selectedData}-${timestamp}`
@@ -40,11 +46,11 @@ export default function ExportDataPage() {
           if (selectedFormat === 'json') {
             exportDataService.exportToJSON({
               metadata,
-              articles: articles || [],
-              entities: entities || [],
-              interactions: interactions || [],
+              articles,
+              entities,
+              interactions,
               graph,
-              statistics
+              statistics: statistics ? statistics : undefined
             }, filename)
           } else if (selectedFormat === 'csv') {
             exportDataService.exportToCSV(articles || [], `${filename}-articles`)
@@ -52,10 +58,10 @@ export default function ExportDataPage() {
             setTimeout(() => exportDataService.exportToCSV(interactions || [], `${filename}-interactions`), 200)
           } else if (selectedFormat === 'xlsx') {
             exportDataService.exportToXLSX({
-              articles: articles || [],
-              entities: entities || [],
-              interactions: interactions || [],
-              statistics: statistics || {}
+              articles,
+              entities,
+              interactions,
+              statistics: statistics ? [statistics] : []
             }, filename)
           }
           break
@@ -87,14 +93,16 @@ export default function ExportDataPage() {
             exportDataService.exportToJSON({
               metadata,
               graph,
-              articles: articles || [],
-              entities: entities || [],
-              interactions: interactions || []
+              articles,
+              entities,
+              interactions
             }, filename)
           } else if (selectedFormat === 'gexf' && graph) {
             exportDataService.exportToGEXF(graph, filename)
+          } else if (selectedFormat === 'graphml' && graph) {
+            exportDataService.exportToGraphML(graph, filename)
           } else {
-            toast.error('Для экспорта графа выберите формат JSON или GEXF')
+            toast.error('Для экспорта графа выберите формат JSON, GEXF или GraphML')
             setExporting(false)
             return
           }
@@ -106,10 +114,10 @@ export default function ExportDataPage() {
             if (selectedFormat === 'json') {
               exportDataService.exportToJSON({ metadata, statistics: data, articles: [], entities: [], interactions: [] }, filename)
             } else if (selectedFormat === 'csv') {
-              const statsArray = Object.entries(data).map(([key, value]) => ({ metric: key, value: String(value) }))
+              const statsArray = statistics ? Object.entries(statistics).map(([key, value]) => ({ metric: key, value: String(value) })) : []
               exportDataService.exportToCSV(statsArray, filename)
             } else {
-              exportDataService.exportToXLSX({ statistics: data }, filename)
+              exportDataService.exportToXLSX({ statistics: statistics ? [statistics] : [] }, filename)
             }
           }
           break
@@ -137,6 +145,7 @@ export default function ExportDataPage() {
     { value: 'csv', label: 'CSV', description: 'Табличный формат для Excel/Google Sheets' },
     { value: 'xlsx', label: 'XLSX', description: 'Формат Excel с поддержкой формул' },
     { value: 'gexf', label: 'GEXF', description: 'Формат для Gephi/Cytoscape' },
+    { value: 'graphml', label: 'GraphML', description: 'Формат для yEd, Cytoscape, NetworkX' },
   ]
 
   const selectedOption = dataOptions.find(opt => opt.value === selectedData)!
@@ -157,11 +166,10 @@ export default function ExportDataPage() {
               <div
                 key={option.value}
                 onClick={() => setSelectedData(option.value as typeof selectedData)}
-                className={`p-4 rounded-md border-2 cursor-pointer transition-all ${
-                  selectedData === option.value
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-primary-300'
-                }`}
+                className={`p-4 rounded-md border-2 cursor-pointer transition-all ${selectedData === option.value
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-gray-200 hover:border-primary-300'
+                  }`}
               >
                 <div className="font-semibold text-gray-900">{option.label}</div>
                 <div className="text-sm text-gray-600">{option.description}</div>
@@ -179,11 +187,10 @@ export default function ExportDataPage() {
               <div
                 key={format.value}
                 onClick={() => setSelectedFormat(format.value as typeof selectedFormat)}
-                className={`p-4 rounded-md border-2 cursor-pointer transition-all ${
-                  selectedFormat === format.value
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-200 hover:border-primary-300'
-                }`}
+                className={`p-4 rounded-md border-2 cursor-pointer transition-all ${selectedFormat === format.value
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-gray-200 hover:border-primary-300'
+                  }`}
               >
                 <div className="font-semibold text-gray-900">{format.label}</div>
                 <div className="text-sm text-gray-600">{format.description}</div>
@@ -207,7 +214,7 @@ export default function ExportDataPage() {
             />
             <span className="ml-3 text-gray-700">Включить метаданные (дата анализа, версия модели, параметры)</span>
           </label>
-          
+
           <label className="flex items-center">
             <input
               type="checkbox"
@@ -217,7 +224,7 @@ export default function ExportDataPage() {
             />
             <span className="ml-3 text-gray-700">Сжать данные (gzip)</span>
           </label>
-          
+
           <label className="flex items-center">
             <input
               type="checkbox"

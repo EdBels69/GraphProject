@@ -1,15 +1,16 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { 
-  Home, 
-  FileText, 
-  MessageSquare, 
-  List, 
-  Network, 
+import {
+  Home,
+  FileText,
+  MessageSquare,
+  List,
+  Network,
   FileDown,
   Menu,
   X,
   Settings,
-  User
+  User,
+  BookOpen
 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from './ui/Button'
@@ -22,6 +23,7 @@ export default function Layout() {
     { path: '/', label: 'Главная', icon: Home },
     { path: '/upload', label: 'Загрузка файлов', icon: FileText },
     { path: '/ai-assistant', label: 'AI-помощник', icon: MessageSquare },
+    { path: '/research', label: 'Исследование', icon: BookOpen },
     { path: '/works', label: 'Список работ', icon: List },
     { path: '/analysis', label: 'Графовый анализ', icon: Network },
     { path: '/report', label: 'Отчет', icon: FileDown },
