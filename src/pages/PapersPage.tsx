@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useToast } from '@/contexts/ToastContext'
 
 interface Article {
     id: string
@@ -30,10 +31,126 @@ export default function PapersPage() {
     const [job, setJob] = useState<ResearchJob | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+    const [selectedIndex, setSelectedIndex] = useState(0) // For keyboard navigation
+    const { addToast } = useToast()
+
+    // Column configuration for reordering
+    type ColumnId = 'checkbox' | 'title' | 'year' | 'source' | 'status'
+    interface Column {
+        id: ColumnId
+        label: string
+        width?: number | string
+    }
+    const [columns, setColumns] = useState<Column[]>(() => {
+        // Load columns from localStorage if available
+        const saved = localStorage.getItem('papers_columns')
+        if (saved) {
+            try { return JSON.parse(saved) } catch { }
+        }
+        return [
+            { id: 'checkbox', label: '✅', width: 40 },
+            { id: 'title', label: 'Название' },
+            { id: 'year', label: 'Год', width: 60 },
+            { id: 'source', label: 'Источник', width: 80 },
+            { id: 'status', label: 'Статус', width: 100 }
+        ]
+    })
+    const [draggingColumn, setDraggingColumn] = useState<ColumnId | null>(null)
+
+    // Saved views
+    interface SavedView {
+        id: string
+        name: string
+        columns: Column[]
+        filter?: 'all' | 'included' | 'excluded' | 'pending'
+    }
+    const [savedViews, setSavedViews] = useState<SavedView[]>(() => {
+        const saved = localStorage.getItem('papers_saved_views')
+        if (saved) {
+            try { return JSON.parse(saved) } catch { }
+        }
+        return []
+    })
+    const [currentFilter, setCurrentFilter] = useState<'all' | 'included' | 'excluded' | 'pending'>('all')
+
+    // Persist columns and views to localStorage
+    useEffect(() => {
+        localStorage.setItem('papers_columns', JSON.stringify(columns))
+    }, [columns])
+
+    useEffect(() => {
+        localStorage.setItem('papers_saved_views', JSON.stringify(savedViews))
+    }, [savedViews])
+
+    const saveCurrentView = () => {
+        const name = prompt('Название вида:')
+        if (!name) return
+        const newView: SavedView = {
+            id: `view-${Date.now()}`,
+            name,
+            columns: [...columns],
+            filter: currentFilter
+        }
+        setSavedViews(prev => [...prev, newView])
+        addToast(`Вид "${name}" сохранён`, 'success')
+    }
+
+    const loadView = (view: SavedView) => {
+        setColumns(view.columns)
+        if (view.filter) setCurrentFilter(view.filter)
+        addToast(`Вид "${view.name}" загружен`, 'info')
+    }
+
+    const deleteView = (viewId: string) => {
+        setSavedViews(prev => prev.filter(v => v.id !== viewId))
+    }
 
     // Helper to check if job is in progress
     const isInProgress = (status: string) =>
         ['pending', 'searching', 'downloading', 'analyzing', 'processing'].includes(status)
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const articles = job?.articles || []
+        if (articles.length === 0) return
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if typing in input
+            if ((e.target as HTMLElement).tagName === 'INPUT') return
+
+            switch (e.key.toLowerCase()) {
+                case 'j': // Next article
+                    setSelectedIndex(i => Math.min(i + 1, articles.length - 1))
+                    break
+                case 'k': // Previous article
+                    setSelectedIndex(i => Math.max(i - 1, 0))
+                    break
+                case 'i': // Include selected
+                    if (articles[selectedIndex]) {
+                        setJob(prev => {
+                            if (!prev?.articles) return prev
+                            const updated = [...prev.articles]
+                            updated[selectedIndex] = { ...updated[selectedIndex], screeningStatus: 'included' }
+                            return { ...prev, articles: updated }
+                        })
+                    }
+                    break
+                case 'e': // Exclude selected
+                    if (articles[selectedIndex]) {
+                        setJob(prev => {
+                            if (!prev?.articles) return prev
+                            const updated = [...prev.articles]
+                            updated[selectedIndex] = { ...updated[selectedIndex], screeningStatus: 'excluded' }
+                            return { ...prev, articles: updated }
+                        })
+                    }
+                    break
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [job?.articles, selectedIndex])
 
     useEffect(() => {
         fetchJob()
@@ -59,6 +176,7 @@ export default function PapersPage() {
             }
         } catch (error) {
             console.error('Failed to fetch job:', error)
+            addToast('Не удалось загрузить данные задачи', 'error')
         } finally {
             setIsLoading(false)
         }
@@ -200,109 +318,311 @@ export default function PapersPage() {
                             padding: '16px 24px',
                             borderBottom: '1px solid #e2e8f0',
                             background: '#f8fafc',
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12
                         }}>
-                            <h2 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b', margin: 0 }}>
-                                Скрининг статей ({job.articles.filter(a => a.screeningStatus === 'included').length} выбрано)
-                            </h2>
-                            <div style={{ fontSize: 13, color: '#64748b' }}>
-                                Отметьте релевантные статьи галочками
+                            <div>
+                                <h2 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b', margin: 0 }}>
+                                    Скрининг статей ({job.articles.filter(a => a.screeningStatus === 'included').length} выбрано)
+                                </h2>
+                                <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
+                                    <kbd style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>J</kbd>/<kbd style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>K</kbd> навигация,
+                                    <kbd style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 11, marginLeft: 4 }}>I</kbd>/<kbd style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>E</kbd> include/exclude
+                                </div>
                             </div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                {/* Bulk Actions */}
+                                <button
+                                    onClick={() => {
+                                        const updated = job.articles!.map(a => ({ ...a, screeningStatus: 'included' as const }))
+                                        setJob({ ...job, articles: updated })
+                                    }}
+                                    style={{
+                                        padding: '8px 14px',
+                                        background: '#dcfce7',
+                                        color: '#166534',
+                                        border: '1px solid #bbf7d0',
+                                        borderRadius: 8,
+                                        fontSize: 13,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    ✅ Включить все
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const updated = job.articles!.map(a => ({ ...a, screeningStatus: 'excluded' as const }))
+                                        setJob({ ...job, articles: updated })
+                                    }}
+                                    style={{
+                                        padding: '8px 14px',
+                                        background: '#fee2e2',
+                                        color: '#991b1b',
+                                        border: '1px solid #fecaca',
+                                        borderRadius: 8,
+                                        fontSize: 13,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    ❌ Исключить все
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const updated = job.articles!.map(a => ({ ...a, screeningStatus: 'pending' as const }))
+                                        setJob({ ...job, articles: updated })
+                                    }}
+                                    style={{
+                                        padding: '8px 14px',
+                                        background: '#f1f5f9',
+                                        color: '#475569',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: 8,
+                                        fontSize: 13,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    🔄 Сбросить
+                                </button>
+                                <div style={{ width: 1, background: '#e2e8f0', margin: '0 4px' }} />
+                                {/* Export */}
+                                <a
+                                    href={`/api/research/jobs/${id}/export/csv`}
+                                    download
+                                    style={{
+                                        padding: '8px 14px',
+                                        background: '#f1f5f9',
+                                        color: '#475569',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: 8,
+                                        fontSize: 13,
+                                        textDecoration: 'none',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    📥 CSV
+                                </a>
+                                <a
+                                    href={`/api/research/jobs/${id}/export/bibtex`}
+                                    download
+                                    style={{
+                                        padding: '8px 14px',
+                                        background: '#f1f5f9',
+                                        color: '#475569',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: 8,
+                                        fontSize: 13,
+                                        textDecoration: 'none',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    📚 BibTeX
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Views & Filters Toolbar */}
+                        <div style={{ padding: '12px 24px', display: 'flex', gap: 16, alignItems: 'center', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
+                            {/* Filter tabs */}
+                            <div style={{ display: 'flex', gap: 4 }}>
+                                {(['all', 'pending', 'included', 'excluded'] as const).map(f => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setCurrentFilter(f)}
+                                        style={{
+                                            padding: '6px 12px',
+                                            background: currentFilter === f ? '#3b82f6' : '#f1f5f9',
+                                            color: currentFilter === f ? 'white' : '#64748b',
+                                            border: 'none',
+                                            borderRadius: 6,
+                                            fontSize: 12,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {f === 'all' ? 'Все' : f === 'pending' ? 'Ожидают' : f === 'included' ? 'Включены' : 'Исключены'}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div style={{ flex: 1 }} />
+
+                            {/* Saved views */}
+                            {savedViews.length > 0 && (
+                                <select
+                                    onChange={(e) => {
+                                        const view = savedViews.find(v => v.id === e.target.value)
+                                        if (view) loadView(view)
+                                    }}
+                                    defaultValue=""
+                                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12 }}
+                                >
+                                    <option value="" disabled>📁 Загрузить вид...</option>
+                                    {savedViews.map(v => (
+                                        <option key={v.id} value={v.id}>{v.name}</option>
+                                    ))}
+                                </select>
+                            )}
+                            <button
+                                onClick={saveCurrentView}
+                                style={{
+                                    padding: '6px 12px',
+                                    background: '#f1f5f9',
+                                    color: '#475569',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: 6,
+                                    fontSize: 12,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                💾 Сохранить вид
+                            </button>
                         </div>
 
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                                 <thead>
                                     <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
-                                        <th style={{ padding: '12px 16px', width: 40 }}>✅</th>
-                                        <th style={{ padding: '12px 16px' }}>Название</th>
-                                        <th style={{ padding: '12px 16px', width: 60 }}>Год</th>
-                                        <th style={{ padding: '12px 16px', width: 80 }}>Источник</th>
-                                        <th style={{ padding: '12px 16px', width: 100 }}>Статус</th>
+                                        {columns.map((col) => (
+                                            <th
+                                                key={col.id}
+                                                draggable={col.id !== 'checkbox'}
+                                                onDragStart={() => setDraggingColumn(col.id)}
+                                                onDragOver={(e) => e.preventDefault()}
+                                                onDrop={() => {
+                                                    if (draggingColumn && draggingColumn !== col.id) {
+                                                        const fromIndex = columns.findIndex(c => c.id === draggingColumn)
+                                                        const toIndex = columns.findIndex(c => c.id === col.id)
+                                                        const newCols = [...columns]
+                                                        const [moved] = newCols.splice(fromIndex, 1)
+                                                        newCols.splice(toIndex, 0, moved)
+                                                        setColumns(newCols)
+                                                    }
+                                                    setDraggingColumn(null)
+                                                }}
+                                                onDragEnd={() => setDraggingColumn(null)}
+                                                style={{
+                                                    padding: '12px 16px',
+                                                    width: col.width,
+                                                    cursor: col.id !== 'checkbox' ? 'grab' : 'default',
+                                                    background: draggingColumn === col.id ? '#e2e8f0' : undefined,
+                                                    userSelect: 'none'
+                                                }}
+                                            >
+                                                {col.label}
+                                                {col.id !== 'checkbox' && <span style={{ marginLeft: 4, opacity: 0.4 }}>⋮⋮</span>}
+                                            </th>
+                                        ))}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {job.articles.map((article) => {
-                                        const isIncluded = article.screeningStatus === 'included'
-                                        const isExcluded = article.screeningStatus === 'excluded'
-                                        return (
-                                            <tr key={article.id} style={{
-                                                borderBottom: '1px solid #f1f5f9',
-                                                background: isIncluded ? '#f0fdf4' : isExcluded ? '#fef2f2' : '#fff',
-                                                opacity: isExcluded ? 0.6 : 1
-                                            }}>
-                                                <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isIncluded}
-                                                        onChange={(e) => {
-                                                            // Optimistic update
-                                                            const newStatus = e.target.checked ? 'included' : 'pending'
-                                                            const updatedArticles = job.articles!.map(a =>
-                                                                a.id === article.id ? { ...a, screeningStatus: newStatus } : a
-                                                            )
-                                                            setJob({ ...job, articles: updatedArticles })
-
-                                                            // API call would go here (debounced or on continue)
-                                                            // For now we just sync state locally until 'Continue' is pressed
-                                                        }}
-                                                        style={{ width: 18, height: 18, cursor: 'pointer' }}
-                                                    />
-                                                </td>
-                                                <td style={{ padding: '12px 16px' }}>
-                                                    <div style={{ fontWeight: 500, color: '#1e293b', marginBottom: 4 }}>
-                                                        {article.title}
-                                                    </div>
-                                                    <div style={{ fontSize: 12, color: '#64748b' }}>
-                                                        {article.authors?.slice(0, 2).join(', ')}{article.authors?.length > 2 ? ' et al.' : ''}
-                                                    </div>
-                                                    {article.abstract && (
-                                                        <details style={{ marginTop: 6, fontSize: 12, color: '#475569' }}>
-                                                            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>Показать аннотацию</summary>
-                                                            <p style={{ marginTop: 4, lineHeight: 1.5 }}>{article.abstract}</p>
-                                                        </details>
-                                                    )}
-                                                </td>
-                                                <td style={{ padding: '12px 16px', color: '#475569' }}>{article.year}</td>
-                                                <td style={{ padding: '12px 16px' }}>
-                                                    <span style={{
-                                                        fontSize: 11, padding: '2px 6px', borderRadius: 4,
-                                                        background: article.source === 'pubmed' ? '#dbeafe' : '#ffedd5',
-                                                        color: article.source === 'pubmed' ? '#1e40af' : '#9a3412'
+                                    {job.articles
+                                        .filter(article => {
+                                            if (currentFilter === 'all') return true
+                                            if (currentFilter === 'pending') return article.screeningStatus === 'pending' || !article.screeningStatus
+                                            return article.screeningStatus === currentFilter
+                                        })
+                                        .map((article, index) => {
+                                            const isIncluded = article.screeningStatus === 'included'
+                                            const isExcluded = article.screeningStatus === 'excluded'
+                                            const isSelected = index === selectedIndex
+                                            return (
+                                                <tr
+                                                    key={article.id}
+                                                    onClick={() => setSelectedIndex(index)}
+                                                    style={{
+                                                        borderBottom: '1px solid #f1f5f9',
+                                                        background: isSelected
+                                                            ? '#eff6ff'
+                                                            : isIncluded ? '#f0fdf4' : isExcluded ? '#fef2f2' : '#fff',
+                                                        opacity: isExcluded ? 0.6 : 1,
+                                                        cursor: 'pointer',
+                                                        boxShadow: isSelected ? 'inset 3px 0 0 #3b82f6' : 'none'
                                                     }}>
-                                                        {article.source}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '12px 16px' }}>
-                                                    {isExcluded ? (
-                                                        <button
-                                                            onClick={() => {
-                                                                const updatedArticles = job.articles!.map(a =>
-                                                                    a.id === article.id ? { ...a, screeningStatus: 'pending' as const } : a
+                                                    {columns.map(col => {
+                                                        switch (col.id) {
+                                                            case 'checkbox':
+                                                                return (
+                                                                    <td key={col.id} style={{ padding: '12px 16px', textAlign: 'center' }}>
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={isIncluded}
+                                                                            onChange={(e) => {
+                                                                                const newStatus = (e.target.checked ? 'included' : 'pending') as "included" | "pending"
+                                                                                const updatedArticles = job.articles!.map(a =>
+                                                                                    a.id === article.id ? { ...a, screeningStatus: newStatus } : a
+                                                                                )
+                                                                                setJob({ ...job, articles: updatedArticles })
+                                                                            }}
+                                                                            style={{ width: 18, height: 18, cursor: 'pointer' }}
+                                                                        />
+                                                                    </td>
                                                                 )
-                                                                setJob({ ...job, articles: updatedArticles })
-                                                            }}
-                                                            style={{ fontSize: 11, color: '#ef4444', background: 'white', border: '1px solid #fca5a5', borderRadius: 4, cursor: 'pointer' }}
-                                                        >
-                                                            Вернуть
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => {
-                                                                const updatedArticles = job.articles!.map(a =>
-                                                                    a.id === article.id ? { ...a, screeningStatus: 'excluded' as const } : a
+                                                            case 'title':
+                                                                return (
+                                                                    <td key={col.id} style={{ padding: '12px 16px' }}>
+                                                                        <div style={{ fontWeight: 500, color: '#1e293b', marginBottom: 4 }}>
+                                                                            {article.title}
+                                                                        </div>
+                                                                        <div style={{ fontSize: 12, color: '#64748b' }}>
+                                                                            {article.authors?.slice(0, 2).join(', ')}{article.authors?.length > 2 ? ' et al.' : ''}
+                                                                        </div>
+                                                                        {article.abstract && (
+                                                                            <details style={{ marginTop: 6, fontSize: 12, color: '#475569' }}>
+                                                                                <summary style={{ cursor: 'pointer', userSelect: 'none' }}>Показать аннотацию</summary>
+                                                                                <p style={{ marginTop: 4, lineHeight: 1.5 }}>{article.abstract}</p>
+                                                                            </details>
+                                                                        )}
+                                                                    </td>
                                                                 )
-                                                                setJob({ ...job, articles: updatedArticles })
-                                                            }}
-                                                            style={{ fontSize: 11, color: '#94a3b8', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                                                        >
-                                                            Исключить
-                                                        </button>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
+                                                            case 'year':
+                                                                return <td key={col.id} style={{ padding: '12px 16px', color: '#475569' }}>{article.year}</td>
+                                                            case 'source':
+                                                                return (
+                                                                    <td key={col.id} style={{ padding: '12px 16px' }}>
+                                                                        <span style={{
+                                                                            fontSize: 11, padding: '2px 6px', borderRadius: 4,
+                                                                            background: article.source === 'pubmed' ? '#dbeafe' : '#ffedd5',
+                                                                            color: article.source === 'pubmed' ? '#1e40af' : '#9a3412'
+                                                                        }}>
+                                                                            {article.source}
+                                                                        </span>
+                                                                    </td>
+                                                                )
+                                                            case 'status':
+                                                                return (
+                                                                    <td key={col.id} style={{ padding: '12px 16px' }}>
+                                                                        {isExcluded ? (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const updatedArticles = job.articles!.map(a =>
+                                                                                        a.id === article.id ? { ...a, screeningStatus: 'pending' as const } : a
+                                                                                    )
+                                                                                    setJob({ ...job, articles: updatedArticles })
+                                                                                }}
+                                                                                style={{ fontSize: 11, color: '#ef4444', background: 'white', border: '1px solid #fca5a5', borderRadius: 4, cursor: 'pointer' }}
+                                                                            >
+                                                                                Вернуть
+                                                                            </button>
+                                                                        ) : (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const updatedArticles = job.articles!.map(a =>
+                                                                                        a.id === article.id ? { ...a, screeningStatus: 'excluded' as const } : a
+                                                                                    )
+                                                                                    setJob({ ...job, articles: updatedArticles })
+                                                                                }}
+                                                                                style={{ fontSize: 11, color: '#94a3b8', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                                                                            >
+                                                                                Исключить
+                                                                            </button>
+                                                                        )}
+                                                                    </td>
+                                                                )
+                                                            default:
+                                                                return null
+                                                        }
+                                                    })}
+                                                </tr>
+                                            )
+                                        })}
                                 </tbody>
                             </table>
                         </div>

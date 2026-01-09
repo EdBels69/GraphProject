@@ -7,49 +7,61 @@ import GraphViewer from '@/components/GraphViewer'
 import AnalyticsPanel from '@/components/AnalyticsPanel'
 import GraphAssistant from '@/components/GraphAssistant'
 import GraphDataTable from '@/components/GraphDataTable'
-import { Graph, GraphNode, GraphEdge, createGraph } from '../../shared/types'
+import SavedGraphsList from '@/components/SavedGraphsList'
+import { ResearchPanel } from '@/components/ResearchPanel'
+import {
+  Graph,
+  GraphNode,
+  GraphEdge,
+  createGraph,
+  createNode,
+  createEdge
+} from '../../shared/contracts/graph'
 import { exportToWord, exportToPDF, downloadBlob } from '@/services/exportService'
 
 // Demo graph data for testing
-const DEMO_GRAPH: Graph = createGraph('Демонстрационный граф', false, [
-  { id: 'p53', label: 'TP53 (p53)', weight: 10, type: 'protein' },
-  { id: 'mdm2', label: 'MDM2', weight: 8, type: 'protein' },
-  { id: 'bax', label: 'BAX', weight: 6, type: 'protein' },
-  { id: 'bcl2', label: 'BCL-2', weight: 5, type: 'protein' },
-  { id: 'casp3', label: 'Caspase-3', weight: 7, type: 'protein' },
-  { id: 'casp9', label: 'Caspase-9', weight: 5, type: 'protein' },
-  { id: 'cyto_c', label: 'Cytochrome C', weight: 6, type: 'protein' },
-  { id: 'apaf1', label: 'APAF-1', weight: 4, type: 'protein' },
-  { id: 'p21', label: 'p21 (CDKN1A)', weight: 6, type: 'protein' },
-  { id: 'cdk2', label: 'CDK2', weight: 5, type: 'protein' },
-  { id: 'cycline', label: 'Cyclin E', weight: 4, type: 'protein' },
-  { id: 'rb', label: 'RB1', weight: 5, type: 'protein' },
-], [
-  { id: 'e1', source: 'p53', target: 'mdm2', weight: 9 },
-  { id: 'e2', source: 'mdm2', target: 'p53', weight: 8 },
-  { id: 'e3', source: 'p53', target: 'bax', weight: 7 },
-  { id: 'e4', source: 'bax', target: 'bcl2', weight: 5 },
-  { id: 'e5', source: 'bax', target: 'cyto_c', weight: 6 },
-  { id: 'e6', source: 'cyto_c', target: 'apaf1', weight: 5 },
-  { id: 'e7', source: 'apaf1', target: 'casp9', weight: 6 },
-  { id: 'e8', source: 'casp9', target: 'casp3', weight: 7 },
-  { id: 'e9', source: 'p53', target: 'p21', weight: 8 },
-  { id: 'e10', source: 'p21', target: 'cdk2', weight: 6 },
-  { id: 'e11', source: 'cdk2', target: 'cycline', weight: 5 },
-  { id: 'e12', source: 'cdk2', target: 'rb', weight: 5 },
-  { id: 'e13', source: 'bcl2', target: 'casp3', weight: 4 },
-])
+const DEMO_GRAPH: Graph = createGraph('Демонстрационный граф', false)
+DEMO_GRAPH.nodes = [
+  { id: 'p53', label: 'TP53 (p53)', weight: 10, type: 'protein', data: { id: 'p53', name: 'TP53', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'mdm2', label: 'MDM2', weight: 8, type: 'protein', data: { id: 'mdm2', name: 'MDM2', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'bax', label: 'BAX', weight: 6, type: 'protein', data: { id: 'bax', name: 'BAX', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'bcl2', label: 'BCL-2', weight: 5, type: 'protein', data: { id: 'bcl2', name: 'BCL-2', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'casp3', label: 'Caspase-3', weight: 7, type: 'protein', data: { id: 'casp3', name: 'Caspase-3', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'casp9', label: 'Caspase-9', weight: 5, type: 'protein', data: { id: 'casp9', name: 'Caspase-9', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'cyto_c', label: 'Cytochrome C', weight: 6, type: 'protein', data: { id: 'cyto_c', name: 'Cyto C', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'apaf1', label: 'APAF-1', weight: 4, type: 'protein', data: { id: 'apaf1', name: 'APAF-1', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'p21', label: 'p21 (CDKN1A)', weight: 6, type: 'protein', data: { id: 'p21', name: 'p21', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'cdk2', label: 'CDK2', weight: 5, type: 'protein', data: { id: 'cdk2', name: 'CDK2', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'cycline', label: 'Cyclin E', weight: 4, type: 'protein', data: { id: 'cycline', name: 'Cyclin E', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'rb', label: 'RB1', weight: 5, type: 'protein', data: { id: 'rb', name: 'RB1', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+]
+DEMO_GRAPH.edges = [
+  { id: 'e1', source: 'p53', target: 'mdm2', weight: 9, data: { id: 'e1', source: 'p53', target: 'mdm2', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e2', source: 'mdm2', target: 'p53', weight: 8, data: { id: 'e2', source: 'mdm2', target: 'p53', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e3', source: 'p53', target: 'bax', weight: 7, data: { id: 'e3', source: 'p53', target: 'bax', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e4', source: 'bax', target: 'bcl2', weight: 5, data: { id: 'e4', source: 'bax', target: 'bcl2', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e5', source: 'bax', target: 'cyto_c', weight: 6, data: { id: 'e5', source: 'bax', target: 'cyto_c', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e6', source: 'cyto_c', target: 'apaf1', weight: 5, data: { id: 'e6', source: 'cyto_c', target: 'apaf1', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e7', source: 'apaf1', target: 'casp9', weight: 6, data: { id: 'e7', source: 'apaf1', target: 'casp9', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e8', source: 'casp9', target: 'casp3', weight: 7, data: { id: 'e8', source: 'casp9', target: 'casp3', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e9', source: 'p53', target: 'p21', weight: 8, data: { id: 'e9', source: 'p53', target: 'p21', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e10', source: 'p21', target: 'cdk2', weight: 6, data: { id: 'e10', source: 'p21', target: 'cdk2', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e11', source: 'cdk2', target: 'cycline', weight: 5, data: { id: 'e11', source: 'cdk2', target: 'cycline', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e12', source: 'cdk2', target: 'rb', weight: 5, data: { id: 'e12', source: 'cdk2', target: 'rb', type: 'interacts_with', confidence: 1, evidence: [] } },
+  { id: 'e13', source: 'bcl2', target: 'casp3', weight: 4, data: { id: 'e13', source: 'bcl2', target: 'casp3', type: 'interacts_with', confidence: 1, evidence: [] } },
+]
+
 
 export default function GraphAnalysisPage() {
   const location = useLocation()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [graph, setGraph] = useState<Graph | null>(null)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null)
   const [loading, setLoading] = useState(false)
 
   // Right panel state
-  const [activeTab, setActiveTab] = useState<'chat' | 'stats' | 'data'>('stats')
+  const [activeTab, setActiveTab] = useState<'chat' | 'stats' | 'data' | 'list' | 'research'>('stats')
   const [isPanelOpen, setIsPanelOpen] = useState(true)
 
   // Load graph from navigation state, URL params, or use demo
@@ -74,7 +86,10 @@ export default function GraphAnalysisPage() {
         })) || []
 
         if (nodes.length > 0) {
-          setGraph(createGraph('Загруженный граф', false, nodes, edges))
+          const newGraph = createGraph('Загруженный граф', false)
+          newGraph.nodes = nodes
+          newGraph.edges = edges
+          setGraph(newGraph)
           return
         }
       }
@@ -186,6 +201,15 @@ export default function GraphAnalysisPage() {
               </div>
             </button>
             <button
+              onClick={() => { setActiveTab('research'); setIsPanelOpen(true) }}
+              className={`px-3 py-1.4 text-sm font-medium rounded-md transition-all ${activeTab === 'research' && isPanelOpen ? 'bg-white shadow text-indigo-600' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                <span>Research</span>
+              </div>
+            </button>
+            <button
               onClick={() => { setActiveTab('stats'); setIsPanelOpen(true) }}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'stats' && isPanelOpen ? 'bg-white shadow text-purple-600' : 'text-gray-600 hover:text-gray-900'}`}
             >
@@ -201,6 +225,15 @@ export default function GraphAnalysisPage() {
               <div className="flex items-center gap-2">
                 <Database className="w-4 h-4" />
                 <span>Таблица</span>
+              </div>
+            </button>
+            <button
+              onClick={() => { setActiveTab('list'); setIsPanelOpen(true) }}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'list' && isPanelOpen ? 'bg-white shadow text-orange-600' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                <span>Сохраненные</span>
               </div>
             </button>
           </div>
@@ -261,17 +294,19 @@ export default function GraphAnalysisPage() {
           {isPanelOpen && (
             <>
               {/* Tab Content */}
-              <div className="flex-1 overflow-hidden bg-gray-50/50">
-                {activeTab === 'chat' && (
+              <div className="flex-1 overflow-hidden bg-gray-50/50 relative h-full">
+                {/* Chat Tab - Always mounted to preserve history */}
+                <div style={{ display: activeTab === 'chat' ? 'flex' : 'none' }} className="h-full flex-col">
                   <GraphAssistant
                     selectedNode={selectedNode}
                     graphId={graph.id}
                     graph={graph}
                     onClose={() => setIsPanelOpen(false)}
                   />
-                )}
+                </div>
 
-                {activeTab === 'stats' && (
+                {/* Stats Tab */}
+                <div style={{ display: activeTab === 'stats' ? 'block' : 'none' }} className="h-full">
                   <div className="h-full overflow-y-auto p-4 space-y-4">
                     <div className="flex justify-between items-center mb-2">
                       <h2 className="font-bold text-lg flex items-center gap-2">
@@ -282,22 +317,60 @@ export default function GraphAnalysisPage() {
                     </div>
                     <AnalyticsPanel graph={graph} />
                   </div>
-                )}
+                </div>
 
-                {activeTab === 'data' && (
-                  <div className="h-full flex flex-col">
-                    <div className="flex justify-between items-center p-4 border-b bg-white">
-                      <h2 className="font-bold text-lg flex items-center gap-2">
-                        <Database className="w-5 h-5 text-green-600" />
-                        Данные Графа
-                      </h2>
-                      <Button size="sm" variant="ghost" onClick={() => setIsPanelOpen(false)}>×</Button>
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <GraphDataTable graph={graph} onNodeSelect={handleNodeSelect} />
-                    </div>
+                {/* Data Tab */}
+                <div style={{ display: activeTab === 'data' ? 'flex' : 'none' }} className="h-full flex-col">
+                  <div className="flex justify-between items-center p-4 border-b bg-white">
+                    <h2 className="font-bold text-lg flex items-center gap-2">
+                      <Database className="w-5 h-5 text-green-600" />
+                      Данные Графа
+                    </h2>
+                    <Button size="sm" variant="ghost" onClick={() => setIsPanelOpen(false)}>×</Button>
                   </div>
-                )}
+                  <div className="flex-1 overflow-hidden">
+                    <GraphDataTable graph={graph} onNodeSelect={handleNodeSelect} />
+                  </div>
+                </div>
+
+                {/* Saved Graphs Tab */}
+                <div style={{ display: activeTab === 'list' ? 'flex' : 'none' }} className="h-full flex-col">
+                  <div className="flex justify-between items-center p-4 border-b bg-white">
+                    <h2 className="font-bold text-lg flex items-center gap-2">
+                      <Database className="w-5 h-5 text-orange-600" />
+                      Сохраненные Графы
+                    </h2>
+                    <Button size="sm" variant="ghost" onClick={() => setIsPanelOpen(false)}>×</Button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4">
+                    <SavedGraphsList
+                      currentGraphId={graph?.id}
+                      onLoadGraph={(id) => {
+                        setLoading(true)
+                        setSearchParams({ graphId: id })
+                        setSearchParams({ graphId: id })
+                        setActiveTab('stats')
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Research Tab */}
+                <div style={{ display: activeTab === 'research' ? 'flex' : 'none' }} className="h-full flex-col">
+                  {graph && (
+                    <ResearchPanel
+                      graphId={graph.id}
+                      onGraphUpdate={() => {
+                        // Reload graph data
+                        fetch(`/api/graphs/${graph.id}`)
+                          .then(r => r.json())
+                          .then(d => {
+                            if (d.success) setGraph(d.data)
+                          })
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             </>
           )}

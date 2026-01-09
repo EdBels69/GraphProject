@@ -7,7 +7,7 @@ import { useState, useMemo } from 'react'
 import { BarChart3, Users, AlertTriangle, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Graph } from '../../shared/types'
+import { Graph } from '../../shared/contracts/graph'
 import { GraphAnalyzer } from '../../shared/graphAlgorithms'
 
 interface AnalyticsPanelProps {

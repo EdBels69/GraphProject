@@ -144,6 +144,26 @@ export interface GapAnalysis {
 }
 
 // =============================================================================
+// STATISTICS & CONNECTIVITY
+// =============================================================================
+
+export interface ConnectivityResult {
+    connected: boolean
+    components: number
+    largestComponent: number
+}
+
+export interface GraphStatistics {
+    totalNodes: number
+    totalEdges: number
+    density: number
+    averageDegree: number
+    diameter: number
+    averagePathLength: number
+    clusteringCoefficient: number
+}
+
+// =============================================================================
 // ANALYSIS REQUEST/RESPONSE
 // =============================================================================
 

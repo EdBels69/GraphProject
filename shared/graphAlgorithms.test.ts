@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { GraphAnalyzer, createGraph, createNode, createEdge } from './graphAlgorithms'
-import { Graph, GraphNode, GraphEdge } from './types'
+import { GraphAnalyzer } from './graphAlgorithms'
+import { Graph, createGraph, createNode, createEdge } from './contracts/graph'
 
 describe('GraphAnalyzer', () => {
   let testGraph: Graph
@@ -8,10 +8,10 @@ describe('GraphAnalyzer', () => {
 
   beforeEach(() => {
     testGraph = createGraph('Test Graph')
-    const node1 = createNode('node1', 'Node 1', 5)
-    const node2 = createNode('node2', 'Node 2', 3)
-    const node3 = createNode('node3', 'Node 3', 7)
-    const node4 = createNode('node4', 'Node 4', 2)
+    const node1 = createNode('node1', 'Node 1', 'concept', {}, 5)
+    const node2 = createNode('node2', 'Node 2', 'concept', {}, 3)
+    const node3 = createNode('node3', 'Node 3', 'concept', {}, 7)
+    const node4 = createNode('node4', 'Node 4', 'concept', {}, 2)
 
     testGraph.nodes.push(node1, node2, node3, node4)
 
@@ -125,7 +125,8 @@ describe('GraphAnalyzer', () => {
   describe('addNode', () => {
     it('should add node to graph', () => {
       const initialLength = testGraph.nodes.length
-      const newNode = createNode('newNode', 'New Node', 10)
+      const newNode = createNode('newNode', 'New Node', 'concept', {}, 10)
+
 
       analyzer.addNode(newNode)
 
@@ -250,7 +251,7 @@ describe('createGraph', () => {
 
 describe('createNode', () => {
   it('should create node with correct properties', () => {
-    const node = createNode('node1', 'Test Node', 5)
+    const node = createNode('node1', 'Test Node', 'concept', {}, 5)
 
     expect(node).toHaveProperty('id')
     expect(node).toHaveProperty('label')
@@ -270,30 +271,25 @@ describe('createNode', () => {
 
 describe('createEdge', () => {
   it('should create edge with correct properties', () => {
-    const edge = createEdge('edge1', 'node1', 'node2', 5, true)
+    const edge = createEdge('edge1', 'node1', 'node2', 5, { relation: 'related' })
 
     expect(edge).toHaveProperty('id')
     expect(edge).toHaveProperty('source')
     expect(edge).toHaveProperty('target')
     expect(edge).toHaveProperty('weight')
-    expect(edge).toHaveProperty('directed')
     expect(edge).toHaveProperty('data')
     expect(edge.id).toBe('edge1')
     expect(edge.source).toBe('node1')
     expect(edge.target).toBe('node2')
     expect(edge.weight).toBe(5)
-    expect(edge.directed).toBe(true)
-  })
-
-  it('should create undirected edge by default', () => {
-    const edge = createEdge('edge1', 'node1', 'node2')
-
-    expect(edge.directed).toBeUndefined()
   })
 
   it('should create edge without weight', () => {
     const edge = createEdge('edge1', 'node1', 'node2')
 
-    expect(edge.weight).toBeUndefined()
+    // Factory defaults weight to 1, not undefined? 
+    // Let's check factory: weight: number = 1.
+    // So expect(edge.weight).toBe(1).
+    expect(edge.weight).toBe(1)
   })
 })

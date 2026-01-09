@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { GraphNode, Graph } from '@/shared/types'
+import { GraphNode } from '../../shared/contracts/graph'
+import { Graph } from '../../shared/contracts/graph'
 
 interface GraphAssistantProps {
     selectedNode: GraphNode | null
@@ -27,6 +28,13 @@ export default function GraphAssistant({ selectedNode, graphId, graph, onClose }
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight
         }
     }, [messages])
+
+    // Reset messages when graph changes
+    useEffect(() => {
+        setMessages([
+            { role: 'assistant', content: 'Привет! Я Senior Analyst на базе GLM-4.7. Я готов проанализировать структуру этого графа, найти скрытые связи или объяснить роль любого узла.' }
+        ])
+    }, [graphId])
 
     // Contextual Trigger: When a node is selected, auto-prompt the AI
     useEffect(() => {

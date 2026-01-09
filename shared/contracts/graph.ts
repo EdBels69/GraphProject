@@ -16,6 +16,7 @@ export interface GraphNode {
 
     /** Visual properties */
     size?: number
+    weight?: number
     color?: string
     x?: number
     y?: number
@@ -69,6 +70,9 @@ export interface Graph {
     description?: string
     createdAt: string
     updatedAt: string
+
+    /** Whether edges are directed (default: false) */
+    directed?: boolean
 
     /** Graph data */
     nodes: GraphNode[]
@@ -172,4 +176,62 @@ export function isGraph(obj: unknown): obj is Graph {
         Array.isArray(g.nodes) &&
         Array.isArray(g.edges)
     )
+}
+
+// =============================================================================
+// FACTORY FUNCTIONS
+// =============================================================================
+
+export function createGraph(
+    name: string,
+    directed: boolean = false
+): Graph {
+    return {
+        id: `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name,
+        description: '',
+        version: '2.0',
+        directed,
+        nodes: [],
+        edges: [],
+        metrics: undefined,
+        sources: [],
+        metadata: {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    }
+}
+
+export function createNode(
+    id: string,
+    label: string,
+    type: string = 'concept',
+    data: any = {},
+    weight: number = 1
+): GraphNode {
+    return {
+        id,
+        label,
+        type: type as any,
+        data,
+        weight,
+        x: 0,
+        y: 0
+    }
+}
+
+export function createEdge(
+    id: string,
+    source: string,
+    target: string,
+    weight: number = 1,
+    data: any = {}
+): GraphEdge {
+    return {
+        id,
+        source,
+        target,
+        weight,
+        data
+    }
 }

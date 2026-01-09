@@ -48,3 +48,5 @@ data/
 *.db
 *.db-shm
 *.db-wal
+
+/generated/prisma

@@ -1,4 +1,15 @@
-import { Graph, GraphNode, GraphEdge, PathResult, CentralityResult, ConnectivityResult, GraphStatistics } from './types'
+import {
+  Graph,
+  GraphNode,
+  GraphEdge,
+  GraphMetrics
+} from './contracts/graph'
+import {
+  CentralityResult,
+  PathResult,
+  ConnectivityResult,
+  GraphStatistics
+} from './contracts/analysis'
 import { cacheManager } from '../src/core/CacheManager'
 
 export class GraphAnalyzer {
@@ -120,6 +131,8 @@ export class GraphAnalyzer {
     }
 
     const result = {
+      source: startId,
+      target: endId,
       path,
       totalWeight: totalDistance,
       length: path.length
@@ -201,12 +214,17 @@ export class GraphAnalyzer {
 
       let eigenvector = degree / avgDegree
 
+
       results.push({
         nodeId,
+        nodeName: node?.label || nodeId,
+        nodeType: node?.type || 'concept',
         degree,
         betweenness,
         closeness,
-        eigenvector
+        eigenvector,
+        pagerank: 0,
+        rank: 0
       })
     })
 
@@ -336,12 +354,12 @@ export class GraphAnalyzer {
 
   addNode(node: GraphNode): void {
     this.graph.nodes.push(node)
-    this.graph.updatedAt = new Date()
+    this.graph.updatedAt = new Date().toISOString()
   }
 
   addEdge(edge: GraphEdge): void {
     this.graph.edges.push(edge)
-    this.graph.updatedAt = new Date()
+    this.graph.updatedAt = new Date().toISOString()
   }
 
   removeNode(nodeId: string): void {
@@ -349,12 +367,12 @@ export class GraphAnalyzer {
     this.graph.edges = this.graph.edges.filter(
       e => e.source !== nodeId && e.target !== nodeId
     )
-    this.graph.updatedAt = new Date()
+    this.graph.updatedAt = new Date().toISOString()
   }
 
   removeEdge(edgeId: string): void {
     this.graph.edges = this.graph.edges.filter(e => e.id !== edgeId)
-    this.graph.updatedAt = new Date()
+    this.graph.updatedAt = new Date().toISOString()
   }
 
   /**
@@ -694,35 +712,5 @@ export class GraphAnalyzer {
       valid: errors.length === 0,
       errors
     }
-  }
-}
-
-export function createGraph(name: string, directed: boolean = false): Graph {
-  return {
-    id: `graph-${Date.now()}`,
-    name,
-    nodes: [],
-    edges: [],
-    directed,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
-}
-
-export function createNode(id: string, label: string, weight?: number): GraphNode {
-  return {
-    id,
-    label,
-    weight
-  }
-}
-
-export function createEdge(id: string, source: string, target: string, weight?: number, directed?: boolean): GraphEdge {
-  return {
-    id,
-    source,
-    target,
-    weight,
-    directed
   }
 }

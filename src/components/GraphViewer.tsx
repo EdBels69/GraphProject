@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Graph, GraphNode, GraphEdge } from '@/shared/types'
+import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
 
 interface GraphViewerProps {
   graph: Graph
@@ -8,6 +8,7 @@ interface GraphViewerProps {
   onNodeDrag?: (nodeId: string, x: number, y: number) => void
   onNodeDrop?: (nodeId: string, x: number, y: number) => void
   showControls?: boolean
+  selectedNodeId?: string
 }
 
 export default function GraphViewer({
@@ -16,7 +17,8 @@ export default function GraphViewer({
   onEdgeSelect,
   onNodeDrag,
   onNodeDrop,
-  showControls = true
+  showControls = true,
+  selectedNodeId
 }: GraphViewerProps) {
   const [scale, setScale] = useState(1)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -41,6 +43,16 @@ export default function GraphViewer({
 
     return positions
   })
+
+  // Sync internal selection with prop
+  useEffect(() => {
+    if (selectedNodeId) {
+      const node = graph.nodes.find(n => n.id === selectedNodeId)
+      if (node) setSelectedNode(node)
+    } else {
+      setSelectedNode(null)
+    }
+  }, [selectedNodeId, graph.nodes])
 
   const svgRef = useRef<SVGSVGElement>(null)
   const isDragging = useRef(false)

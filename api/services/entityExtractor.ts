@@ -315,7 +315,7 @@ export class EntityExtractor {
       id: `${res.type}_${res.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_ai_${Date.now()}`,
       name: res.name,
       type: res.type as Entity['type'],
-      confidence: res.confidence,
+      confidence: res.confidence || 0.8,
       evidence: [sourceChunk.id],
       mentions: 1,
       source: 'AI_Extraction',

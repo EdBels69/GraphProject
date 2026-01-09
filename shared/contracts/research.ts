@@ -137,6 +137,9 @@ export interface ArticleSource {
     /** Abstract text */
     abstract?: string
 
+    /** Keywords */
+    keywords?: string[]
+
     /** URL to PDF (Open Access) */
     pdfUrl?: string
 

@@ -3,7 +3,7 @@
  * Exports graph data to Word (DOCX) and PDF formats
  */
 
-import { Graph, GraphNode, GraphEdge } from '../../shared/types'
+import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
 
 interface ExportOptions {
     includeStatistics?: boolean
@@ -345,7 +345,7 @@ export function exportToGEXF(graph: Graph): string {
         gexf += `      <node id="${escapeXML(node.id)}" label="${escapeXML(node.label)}">
         <attvalues>
           <attvalue for="0" value="${node.weight || 0}"/>
-          <attvalue for="1" value="${escapeXML((node.data?.group as string) || '')}"/>
+          <attvalue for="1" value="${escapeXML(((node.data as any)?.group as string) || '')}"/>
         </attvalues>
       </node>\n`
     })
@@ -388,7 +388,7 @@ export function exportToGraphML(graph: Graph): string {
         graphml += `    <node id="${escapeXML(node.id)}">
       <data key="label">${escapeXML(node.label)}</data>
       <data key="weight">${node.weight || 0}</data>
-      <data key="group">${escapeXML((node.data?.group as string) || '')}</data>
+      <data key="group">${escapeXML(((node.data as any)?.group as string) || '')}</data>
     </node>\n`
     })
 

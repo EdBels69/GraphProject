@@ -6,11 +6,11 @@ import { databaseManager } from '../../src/core/Database'
 
 const router = express.Router()
 
-router.get('/metrics', (req, res) => {
+router.get('/metrics', async (req, res) => {
   try {
     const metrics = {
       sessions: sessionManager.getSessionMetrics(),
-      database: databaseManager.getMetrics(),
+      database: await databaseManager.getMetrics(),
       errors: errorHandler.getMetrics(),
       logs: logger.getLogs()
     }

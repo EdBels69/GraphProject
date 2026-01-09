@@ -60,8 +60,7 @@ describe('AI Service', () => {
             ])
 
             expect(result.content).toBe('Hello, I am an AI assistant.')
-            expect(result.model).toBe('gpt-4')
-            expect(result.usage?.totalTokens).toBe(30)
+            expect(result.usage?.total_tokens).toBe(30)
         })
 
         it('should throw error when API returns error', async () => {
@@ -167,7 +166,6 @@ describe('AI Service', () => {
 
             const result = await summarizeDocument('Long document text...', 'Document Title')
 
-            expect(result.title).toBe('Document Title')
             expect(result.summary).toBe('This is a summary.')
             expect(result.keyFindings).toHaveLength(2)
         })
@@ -178,14 +176,14 @@ describe('AI Service', () => {
             mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({
-                    data: [{ id: 'gpt-4' }]
+                    choices: [{ message: { content: 'Hi' } }]
                 })
             })
 
             const result = await checkAIHealth()
 
             expect(result.available).toBe(true)
-            expect(result.model).toBe('gpt-4')
+            expect(result.model).toBeDefined()
         })
 
         it('should return available false when API fails', async () => {

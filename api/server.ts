@@ -7,13 +7,10 @@ import articlesRouter from './routes/articles'
 import analysisRouter from './routes/analysis'
 import graphRouter from './routes/graph'
 import graphsRouter from './routes/graphs'
-import gapsRouter from './routes/gaps'
-import patternsRouter from './routes/patterns'
 import statisticsRouter from './routes/statistics'
 import exportRouter from './routes/export'
 import adminRouter from './routes/admin'
 import pubmedRouter from './routes/pubmed'
-import graphAnalysisRouter from './routes/graphAnalysis'
 import searchRouter from './routes/search'
 import systemRouter from './routes/system'
 import documentsRouter from './routes/documents'
@@ -40,14 +37,11 @@ app.use('/api/articles', articlesRouter)
 app.use('/api/analysis', analysisRouter)
 app.use('/api/graph', graphRouter)
 app.use('/api/graphs', graphsRouter)
-app.use('/api/gaps', gapsRouter)
-app.use('/api/patterns', patternsRouter)
 app.use('/api/statistics', statisticsRouter)
 app.use('/api/export', exportRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/pubmed', pubmedRouter)
 app.use('/api/documents', documentsRouter)
-app.use('/api/graph-analysis', graphAnalysisRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/system', systemRouter)
 app.use('/api/mesh', meshRouter)

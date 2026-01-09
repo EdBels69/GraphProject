@@ -85,6 +85,17 @@ export default function HomePage() {
     }
   }
 
+  const handleDeleteJob = async (id: string) => {
+    try {
+      const response = await fetch(`/api/research/jobs/${id}`, { method: 'DELETE' })
+      if (response.ok) {
+        setRecentJobs(prev => prev.filter(job => job.id !== id))
+      }
+    } catch (error) {
+      console.error('Failed to delete job:', error)
+    }
+  }
+
   const handleFileUpload = () => {
     navigate('/upload')
   }
@@ -479,8 +490,31 @@ export default function HomePage() {
                         background: job.status === 'completed' ? '#dcfce7' : job.status === 'processing' ? '#fef3c7' : '#f1f5f9',
                         color: job.status === 'completed' ? '#166534' : job.status === 'processing' ? '#92400e' : '#475569'
                       }}>
-                        {job.status === 'completed' ? 'Готово' : job.status === 'processing' ? 'В процессе' : job.status}
+                        {job.status === 'completed' ? 'Готово' : ['searching', 'downloading', 'analyzing'].includes(job.status) ? 'В процессе' : job.status}
                       </span>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (window.confirm('Удалить эту задачу и все файлы?')) {
+                            handleDeleteJob(job.id)
+                          }
+                        }}
+                        style={{
+                          padding: '6px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          opacity: 0.7
+                        }}
+                        title="Удалить"
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                      >
+                        🗑️
+                      </button>
+
                       <span style={{ color: '#94a3b8' }}>→</span>
                     </div>
                   </div>

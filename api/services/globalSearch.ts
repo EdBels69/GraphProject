@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { pubmedService } from './pubmedService'
 
 export interface SearchResult {
   id: string
@@ -166,64 +167,24 @@ export class GlobalSearch {
     options: { maxResults: number; yearFrom?: number; yearTo?: number; sortBy?: string }
   ): Promise<SearchResult[]> {
     try {
-      const baseUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
-      const summaryUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
-
-      // Search for article IDs
-      const searchParams = new URLSearchParams({
-        db: 'pubmed',
-        term: query,
-        retmax: options.maxResults.toString(),
-        retmode: 'json'
+      // Use centralized PubMed service
+      const { articles } = await pubmedService.getArticles(query, {
+        maxResults: options.maxResults,
+        year: options.yearFrom // PubMed service currently supports single year or range, passing yearFrom as simplified year for now
       })
 
-      if (options.yearFrom) {
-        searchParams.append('mindate', `${options.yearFrom}/01/01`)
-      }
-      if (options.yearTo) {
-        searchParams.append('maxdate', `${options.yearTo}/12/31`)
-      }
-
-      const searchResponse = await axios.get(`${baseUrl}?${searchParams.toString()}`)
-      const searchResult = searchResponse.data.esearchresult
-      const ids = searchResult.idlist || []
-
-      if (ids.length === 0) {
-        return []
-      }
-
-      // Fetch summaries
-      const summaryParams = new URLSearchParams({
-        db: 'pubmed',
-        id: ids.join(','),
-        retmode: 'json'
-      })
-
-      const summaryResponse = await axios.get(`${summaryUrl}?${summaryParams.toString()}`)
-      const summaryResult = summaryResponse.data.esummaryresult
-
-      const results: SearchResult[] = []
-      const articles = summaryResult.result
-
-      for (const id of ids) {
-        const article = articles[id]
-        if (!article) continue
-
-        results.push({
-          id: `pubmed-${id}`,
-          source: 'pubmed',
-          title: article.title || '',
-          authors: article.authors?.map((a: any) => a.name) || [],
-          year: article.pubdate ? parseInt(article.pubdate.slice(0, 4)) : undefined,
-          abstract: article.abstract || '',
-          doi: article.elocationid || article.doi,
-          url: `https://pubmed.ncbi.nlm.nih.gov/${id}`,
-          citations: undefined, // PubMed doesn't provide citation count
-          relevanceScore: 0.8
-        })
-      }
-
-      return results
+      return articles.map(article => ({
+        id: `pubmed-${article.id}`,
+        source: 'pubmed',
+        title: article.title,
+        authors: article.authors,
+        year: article.year,
+        abstract: article.abstract,
+        doi: article.doi,
+        url: article.url,
+        citations: undefined, // PubMed doesn't provide easy citation counts in basic search
+        relevanceScore: 0.8 // Default score
+      }))
     } catch (error) {
       console.error('Error searching PubMed:', error)
       return []

@@ -3,16 +3,35 @@ export const AI_PROMPTS = {
         SYSTEM: `You are a biomedical NLP expert. Extract entities from the given text.
 
 Rules:
-1. Extract ALL biological entities (proteins, genes, chemicals, diseases, cell types).
-2. For each entity, determine its specific type.
-3. Assign a confidence score (0-1).
-4. Return ONLY valid JSON array.
+1. Extract ALL biological entities (proteins, genes, chemicals, diseases, pathways, cell types).
+2. For each entity, determine its specific type from: Gene, Protein, Disease, Drug, Pathway, Metabolite, Anatomy, Symptom, Concept.
+3. Assign a confidence score (0.0-1.0) based on how certain you are about the entity and its type.
+4. Count the number of times the entity is mentioned.
+5. Return ONLY valid JSON array. No explanations.
 
-Format:
+EXAMPLES:
+
+Input: "The p53 tumor suppressor protein is frequently mutated in human cancers. It regulates apoptosis through BAX and BCL-2."
+Output:
 [
-  { "name": "TP53", "type": "Gene", "confidence": 0.98, "mentions": 5 },
-  { "name": "Apoptosis", "type": "Process", "confidence": 0.95, "mentions": 3 }
-]`
+  { "name": "p53", "type": "Protein", "confidence": 0.98, "mentions": 1 },
+  { "name": "tumor suppressor", "type": "Concept", "confidence": 0.85, "mentions": 1 },
+  { "name": "cancer", "type": "Disease", "confidence": 0.95, "mentions": 1 },
+  { "name": "apoptosis", "type": "Pathway", "confidence": 0.92, "mentions": 1 },
+  { "name": "BAX", "type": "Protein", "confidence": 0.97, "mentions": 1 },
+  { "name": "BCL-2", "type": "Protein", "confidence": 0.97, "mentions": 1 }
+]
+
+Input: "Metformin is used to treat type 2 diabetes by improving insulin sensitivity in skeletal muscle."
+Output:
+[
+  { "name": "Metformin", "type": "Drug", "confidence": 0.99, "mentions": 1 },
+  { "name": "type 2 diabetes", "type": "Disease", "confidence": 0.98, "mentions": 1 },
+  { "name": "insulin", "type": "Protein", "confidence": 0.95, "mentions": 1 },
+  { "name": "skeletal muscle", "type": "Anatomy", "confidence": 0.94, "mentions": 1 }
+]
+
+Now extract entities from the user's text.`
     },
 
     SUMMARIZATION: {

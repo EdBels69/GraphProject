@@ -1,4 +1,4 @@
-import { Graph, GraphNode, GraphEdge } from './types'
+import { Graph, GraphNode, GraphEdge } from './contracts/graph'
 
 const GRAPHS_STORAGE_KEY = 'graph-analyser-graphs'
 
@@ -32,7 +32,7 @@ export class GraphStorage {
   }
 
   static save(graph: Graph): Graph {
-    graph.updatedAt = new Date()
+    graph.updatedAt = new Date().toISOString()
     this.graphs.set(graph.id, graph)
     this.persist()
     return graph

@@ -42,11 +42,75 @@ export async function extractEntitiesWithAI(text: string): Promise<ExtractedEnti
 
         const cleaned = response.content.replace(/```json\n?/g, '').replace(/```/g, '').trim()
         const parsed = JSON.parse(cleaned)
-        return Array.isArray(parsed) ? parsed : []
+        const entities = Array.isArray(parsed) ? parsed : []
+
+        // Validate and filter extracted entities
+        return validateExtractedEntities(entities)
     } catch (error) {
         logger.error('aiService', 'Entity extraction failed', { error })
         return []
     }
+}
+
+// 2.1 Entity Validation (Phase 14.1)
+const VALID_ENTITY_TYPES = ['Gene', 'Protein', 'Disease', 'Drug', 'Pathway', 'Metabolite', 'Anatomy', 'Symptom', 'Concept']
+const MIN_ENTITY_NAME_LENGTH = 2
+const MIN_CONFIDENCE_THRESHOLD = 0.5
+
+export function validateExtractedEntities(entities: ExtractedEntity[]): ExtractedEntity[] {
+    return entities.filter(entity => {
+        // Check required fields exist
+        if (!entity.name || typeof entity.name !== 'string') return false
+        if (!entity.type || typeof entity.type !== 'string') return false
+
+        // Check name length
+        if (entity.name.trim().length < MIN_ENTITY_NAME_LENGTH) return false
+
+        // Filter out common noise words
+        const noiseWords = ['the', 'a', 'an', 'is', 'are', 'was', 'were', 'this', 'that', 'these', 'study', 'method', 'results', 'figure', 'table']
+        if (noiseWords.includes(entity.name.toLowerCase())) return false
+
+        // Check confidence threshold
+        const confidence = entity.confidence ?? 0.8
+        if (confidence < MIN_CONFIDENCE_THRESHOLD) return false
+
+        // Normalize entity type
+        entity.type = normalizeEntityType(entity.type)
+
+        return true
+    }).map(entity => ({
+        ...entity,
+        confidence: entity.confidence ?? 0.8,
+        mentions: entity.mentions ?? 1
+    }))
+}
+
+function normalizeEntityType(type: string): string {
+    const normalized = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()
+
+    // Map common variants to standard types
+    const typeMap: Record<string, string> = {
+        'gene': 'Gene',
+        'protein': 'Protein',
+        'chemical': 'Drug',
+        'compound': 'Drug',
+        'medication': 'Drug',
+        'disease': 'Disease',
+        'disorder': 'Disease',
+        'condition': 'Disease',
+        'pathway': 'Pathway',
+        'process': 'Pathway',
+        'metabolism': 'Pathway',
+        'metabolite': 'Metabolite',
+        'tissue': 'Anatomy',
+        'organ': 'Anatomy',
+        'cell': 'Anatomy',
+        'symptom': 'Symptom',
+        'concept': 'Concept'
+    }
+
+    const lowerType = type.toLowerCase()
+    return typeMap[lowerType] || (VALID_ENTITY_TYPES.includes(normalized) ? normalized : 'Concept')
 }
 
 // 3. Summarization Facade

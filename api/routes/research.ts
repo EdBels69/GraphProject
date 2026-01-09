@@ -167,20 +167,20 @@ router.post('/jobs/:id/analyze', async (req, res) => {
 router.delete('/jobs/:id', async (req, res) => {
     try {
         const { id } = req.params
-        const cancelled = literatureAgent.cancelJob(id)
+        const deleted = await literatureAgent.deleteJob(id)
 
-        if (!cancelled) {
-            return res.status(404).json({ error: 'Job not found or cannot be cancelled' })
+        if (!deleted) {
+            return res.status(404).json({ error: 'Job not found' })
         }
 
         res.json({
             id,
-            status: 'cancelled',
-            message: 'Research job cancelled'
+            status: 'deleted',
+            message: 'Research job and files deleted successfully'
         })
     } catch (error) {
-        console.error('Error cancelling research job:', error)
-        res.status(500).json({ error: 'Failed to cancel research job' })
+        console.error('Error deleting research job:', error)
+        res.status(500).json({ error: 'Failed to delete research job' })
     }
 })
 
@@ -259,6 +259,151 @@ router.post('/jobs/:id/build-graph', async (req, res) => {
     } catch (error) {
         console.error('Error building graph:', error)
         res.status(500).json({ error: 'Failed to build graph' })
+    }
+})
+
+/**
+ * GET /api/research/jobs/:id/export/csv
+ * Export screening table as CSV
+ */
+router.get('/jobs/:id/export/csv', async (req, res) => {
+    try {
+        const { id } = req.params
+        const job = literatureAgent.getJob(id)
+
+        if (!job) {
+            return res.status(404).json({ error: 'Job not found' })
+        }
+
+        const articles = job.articles || []
+
+        // CSV header
+        const headers = ['ID', 'Title', 'Authors', 'Year', 'DOI', 'Source', 'Status', 'Screening']
+        const rows = articles.map(a => [
+            a.id,
+            `"${(a.title || '').replace(/"/g, '""')}"`,
+            `"${(a.authors || []).join('; ').replace(/"/g, '""')}"`,
+            a.year || '',
+            a.doi || '',
+            a.source || '',
+            a.status || '',
+            a.screeningStatus || 'pending'
+        ])
+
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+        res.setHeader('Content-Disposition', `attachment; filename="screening-${id}.csv"`)
+        res.send('\uFEFF' + csv) // BOM for Excel UTF-8
+    } catch (error) {
+        console.error('Error exporting CSV:', error)
+        res.status(500).json({ error: 'Failed to export CSV' })
+    }
+})
+
+/**
+ * GET /api/research/jobs/:id/export/bibtex
+ * Export included articles as BibTeX
+ */
+router.get('/jobs/:id/export/bibtex', async (req, res) => {
+    try {
+        const { id } = req.params
+        const job = literatureAgent.getJob(id)
+
+        if (!job) {
+            return res.status(404).json({ error: 'Job not found' })
+        }
+
+        const articles = (job.articles || []).filter(a => a.screeningStatus === 'included')
+
+        const entries = articles.map((a, idx) => {
+            const key = a.doi ? a.doi.replace(/[^a-zA-Z0-9]/g, '_') : `article_${idx + 1}`
+            const authors = (a.authors || []).join(' and ')
+            return `@article{${key},
+  title = {${a.title || 'Untitled'}},
+  author = {${authors}},
+  year = {${a.year || 'n.d.'}},
+  doi = {${a.doi || ''}},
+  url = {${a.url || ''}}
+}`
+        })
+
+        const bibtex = entries.join('\n\n')
+
+        res.setHeader('Content-Type', 'application/x-bibtex; charset=utf-8')
+        res.setHeader('Content-Disposition', `attachment; filename="references-${id}.bib"`)
+        res.send(bibtex)
+    } catch (error) {
+        console.error('Error exporting BibTeX:', error)
+        res.status(500).json({ error: 'Failed to export BibTeX' })
+    }
+})
+
+/**
+ * GET /api/research/jobs/:id/export/parquet
+ * Export screening table as Parquet format
+ */
+router.get('/jobs/:id/export/parquet', async (req, res) => {
+    try {
+        const { id } = req.params
+        const job = literatureAgent.getJob(id)
+
+        if (!job) {
+            return res.status(404).json({ error: 'Job not found' })
+        }
+
+        const articles = job.articles || []
+
+        // Dynamic import parquetjs-lite
+        const parquet = await import('parquetjs-lite')
+
+        // Define schema
+        const schema = new parquet.ParquetSchema({
+            id: { type: 'UTF8' },
+            title: { type: 'UTF8' },
+            authors: { type: 'UTF8' },
+            year: { type: 'INT32', optional: true },
+            doi: { type: 'UTF8', optional: true },
+            source: { type: 'UTF8' },
+            abstract: { type: 'UTF8', optional: true },
+            screeningStatus: { type: 'UTF8' }
+        })
+
+        // Create temp file path
+        const tempPath = path.join('/tmp', `screening-${id}-${Date.now()}.parquet`)
+
+        // Write parquet file
+        const writer = await parquet.ParquetWriter.openFile(schema, tempPath)
+
+        for (const article of articles) {
+            await writer.appendRow({
+                id: article.id || '',
+                title: article.title || '',
+                authors: (article.authors || []).join('; '),
+                year: article.year || null,
+                doi: article.doi || null,
+                source: article.source || '',
+                abstract: article.abstract || null,
+                screeningStatus: article.screeningStatus || 'pending'
+            })
+        }
+
+        await writer.close()
+
+        // Send file
+        res.setHeader('Content-Type', 'application/octet-stream')
+        res.setHeader('Content-Disposition', `attachment; filename="screening-${id}.parquet"`)
+
+        const fileStream = fs.createReadStream(tempPath)
+        fileStream.pipe(res)
+
+        // Cleanup temp file after sending
+        fileStream.on('close', () => {
+            fs.unlink(tempPath, () => { })
+        })
+    } catch (error) {
+        console.error('Error exporting Parquet:', error)
+        res.status(500).json({ error: 'Failed to export Parquet' })
     }
 })
 

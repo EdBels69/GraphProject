@@ -3,7 +3,8 @@ import { Graph } from '../../shared/contracts/graph'
 
 export interface ISearchResult {
     results: any[]
-    total: number
+    totalResults: number
+    [key: string]: any
 }
 
 export interface IGlobalSearch {
@@ -17,7 +18,7 @@ export interface IGlobalSearch {
 }
 
 export interface IUnpaywallService {
-    batchFindPdfs(dois: string[]): Promise<Map<string, { pdfUrl: string | null }>>
+    batchFindPdfs(dois: string[]): Promise<Map<string, { pdfUrl?: string }>>
 }
 
 export interface IDocumentParser {
@@ -29,7 +30,16 @@ export interface IChunkingEngine {
 }
 
 export interface IEntityExtractor {
-    extractFromChunks(chunks: any[]): Promise<{ entities: any[] }>
+    extractFromChunks(chunks: any[]): Promise<{
+        entities: any[],
+        relations: any[],
+        statistics: {
+            totalEntities: number,
+            byType: Record<string, number>,
+            totalRelations: number,
+            meshNormalized: number
+        }
+    }>
     mergeEntities(entities: any[]): any[]
 }
 
@@ -39,8 +49,19 @@ export interface IRelationExtractor {
 
 export interface IGraphBuilderResult {
     graph: Graph
+    metadata: {
+        entities: number
+        relations: number
+        sources: string[]
+        createdAt: Date
+    }
 }
 
 export interface IKnowledgeGraphBuilder {
-    buildGraph(entities: any[], relations: any[]): Promise<IGraphBuilderResult>
+    buildGraph(entities: any[], relations: any[], options?: {
+        minConfidence?: number
+        minMentions?: number
+        includeCooccurrence?: boolean
+        maxNodes?: number
+    }): Promise<IGraphBuilderResult>
 }

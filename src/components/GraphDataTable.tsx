@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Graph, GraphNode, GraphEdge } from '../../shared/types'
+import { Graph, GraphNode } from '../../shared/contracts/graph'
 import { Search } from 'lucide-react'
 
 interface GraphDataTableProps {

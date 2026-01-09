@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseError } from './ErrorHandler';
-import { Graph } from '../../shared/types';
+import { Graph } from '../../shared/contracts/graph';
 
 export interface Article {
   id: string;
@@ -44,30 +44,59 @@ export interface User {
   lastLoginAt?: Date;
 }
 
+export interface ResearchJobRecord {
+  id: string;
+  topic: string;
+  mode: 'quick' | 'research';
+  status: string;
+  articlesFound: number;
+  progress: number;
+  queries?: string[];
+  articlesProcessed?: number;
+  startTime?: Date;
+  endTime?: Date;
+  graphId?: string;
+  error?: string;
+  articles?: any[]; // Serialized articles array or fetched relations
+  createdAt: Date;
+  updatedAt: Date;
+  // New fields
+  includedIds?: string[];
+  excludedIds?: string[];
+  exclusionReasons?: Record<string, string>;
+  reviewText?: string;
+}
+
 export interface DatabaseConfig {
   filePath: string;
   enableWAL: boolean;
   verbose: boolean;
 }
 
+import { PrismaClient } from './prisma/client'
+
+// @ts-ignore
+const prisma = new PrismaClient({})
+
 export class DatabaseManager {
-  private articles: Map<string, Article> = new Map();
   private edges: Map<string, ArticleEdge> = new Map();
   private patterns: Map<string, Pattern> = new Map();
   private users: Map<string, User> = new Map();
-  private graphs: Map<string, Graph> = new Map();
+  // graphs Map replaced by SQLite
+  // researchJobs Map replaced by SQLite
   private isInitialized = false;
 
   constructor(config: Partial<DatabaseConfig> = {}) {
-    // In-memory storage - no config needed
+    // Config ignored
   }
 
   async initialize(): Promise<void> {
     try {
+      await prisma.$connect();
       this.isInitialized = true;
-      console.log('[Database] In-memory database initialized successfully');
+      console.log('[Database] SQLite (Prisma) connection established');
     } catch (error) {
-      console.error('[Database] Failed to initialize database:', error);
+      console.error('[Database] Failed to connect to SQLite:', error);
       throw new DatabaseError('DB_INIT_ERROR', 'Failed to initialize database', { error });
     }
   }
@@ -78,102 +107,10 @@ export class DatabaseManager {
     }
   }
 
-  async createArticle(article: Omit<Article, 'id' | 'uploadedAt'>): Promise<Article> {
-    this.ensureInitialized();
+  // Legacy Article methods removed/replaced by Job Articles persistence
 
-    const id = uuidv4();
-    const uploadedAt = new Date();
 
-    const newArticle: Article = {
-      ...article,
-      id,
-      uploadedAt
-    };
 
-    this.articles.set(id, newArticle);
-
-    console.log(`[Database] Created article ${id}`, { title: article.title });
-
-    return newArticle;
-  }
-
-  async getArticle(id: string): Promise<Article | null> {
-    this.ensureInitialized();
-
-    const article = this.articles.get(id);
-
-    if (!article) {
-      console.warn(`[Database] Article ${id} not found`);
-      return null;
-    }
-
-    return article;
-  }
-
-  async getArticles(filter?: { status?: string; userId?: string; limit?: number; offset?: number }): Promise<Article[]> {
-    this.ensureInitialized();
-
-    let articles = Array.from(this.articles.values());
-
-    if (filter?.status) {
-      articles = articles.filter(a => a.status === filter.status);
-    }
-
-    if (filter?.userId) {
-      articles = articles.filter(a => a.userId === filter.userId);
-    }
-
-    articles.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
-
-    if (filter?.limit) {
-      articles = articles.slice(filter.offset || 0, filter.limit);
-    }
-
-    if (filter?.offset) {
-      articles = articles.slice(filter.offset || 0, filter.limit);
-    }
-
-    console.log(`[Database] Retrieved ${articles.length} articles`);
-
-    return articles;
-  }
-
-  async updateArticle(id: string, updates: Partial<Omit<Article, 'id' | 'uploadedAt'>>): Promise<Article | null> {
-    this.ensureInitialized();
-
-    const existing = this.articles.get(id);
-
-    if (!existing) {
-      console.warn(`[Database] Article ${id} not found`);
-      return null;
-    }
-
-    const updated: Article = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date()
-    };
-
-    this.articles.set(id, updated);
-
-    console.log(`[Database] Updated article ${id}`);
-
-    return this.getArticle(id);
-  }
-
-  async deleteArticle(id: string): Promise<boolean> {
-    this.ensureInitialized();
-
-    const deleted = this.articles.delete(id);
-
-    if (deleted) {
-      console.log(`[Database] Deleted article ${id}`);
-      return true;
-    }
-
-    console.warn(`[Database] Article ${id} not found`);
-    return false;
-  }
 
   async createEdge(edge: Omit<ArticleEdge, 'id' | 'createdAt'>): Promise<ArticleEdge> {
     this.ensureInitialized();
@@ -272,71 +209,355 @@ export class DatabaseManager {
   async saveGraphToDb(graph: Graph): Promise<void> {
     this.ensureInitialized();
 
-    this.graphs.set(graph.id, graph);
-
-    console.log(`[Database] Saved graph ${graph.id}`, {
-      nodes: graph.nodes.length,
-      edges: graph.edges.length
-    });
+    try {
+      await prisma.graph.upsert({
+        where: { id: graph.id },
+        update: {
+          name: graph.name,
+          description: graph.description,
+          version: graph.version,
+          directed: graph.directed,
+          nodes: JSON.stringify(graph.nodes),
+          edges: JSON.stringify(graph.edges),
+          metrics: JSON.stringify(graph.metrics || {}),
+          sources: JSON.stringify(graph.sources || []),
+          metadata: JSON.stringify(graph.metadata || {}),
+          updatedAt: new Date()
+        },
+        create: {
+          id: graph.id,
+          name: graph.name,
+          description: graph.description,
+          version: graph.version || '2.0',
+          directed: graph.directed || false,
+          nodes: JSON.stringify(graph.nodes),
+          edges: JSON.stringify(graph.edges),
+          metrics: JSON.stringify(graph.metrics || {}),
+          sources: JSON.stringify(graph.sources || []),
+          metadata: JSON.stringify(graph.metadata || {}),
+          createdAt: new Date(graph.createdAt || Date.now()),
+          updatedAt: new Date()
+        }
+      });
+      console.log(`[Database] Saved graph ${graph.id} to SQLite`);
+    } catch (error) {
+      console.error(`[Database] Failed to save graph ${graph.id}:`, error);
+    }
   }
 
   async getGraphFromDb(id: string): Promise<Graph | null> {
     this.ensureInitialized();
 
-    const graph = this.graphs.get(id);
+    try {
+      const graph = await prisma.graph.findUnique({
+        where: { id }
+      });
 
-    if (!graph) {
-      console.warn(`[Database] Graph ${id} not found`);
+      if (!graph) return null;
+
+      return {
+        id: graph.id,
+        name: graph.name,
+        description: graph.description || undefined,
+        version: graph.version as any,
+        directed: graph.directed,
+        nodes: JSON.parse(graph.nodes),
+        edges: JSON.parse(graph.edges),
+        metrics: graph.metrics ? JSON.parse(graph.metrics) : undefined,
+        sources: graph.sources ? JSON.parse(graph.sources) : [],
+        metadata: graph.metadata ? JSON.parse(graph.metadata) : undefined,
+        createdAt: graph.createdAt.toISOString(),
+        updatedAt: graph.updatedAt.toISOString()
+      };
+    } catch (error) {
+      console.error(`[Database] Failed to get graph ${id}:`, error);
       return null;
     }
-
-    return graph;
   }
 
   async getAllGraphs(): Promise<Graph[]> {
     this.ensureInitialized();
 
-    const graphs = Array.from(this.graphs.values());
+    try {
+      const graphs = await prisma.graph.findMany({
+        orderBy: { updatedAt: 'desc' }
+      });
 
-    console.log(`[Database] Loaded ${graphs.length} graphs from database`);
-
-    return graphs;
+      return graphs.map((graph: any) => ({
+        id: graph.id,
+        name: graph.name,
+        description: graph.description || undefined,
+        version: graph.version as any,
+        directed: graph.directed,
+        nodes: JSON.parse(graph.nodes),
+        edges: JSON.parse(graph.edges),
+        metrics: graph.metrics ? JSON.parse(graph.metrics) : undefined,
+        sources: graph.sources ? JSON.parse(graph.sources) : [],
+        metadata: graph.metadata ? JSON.parse(graph.metadata) : undefined,
+        createdAt: graph.createdAt.toISOString(),
+        updatedAt: graph.updatedAt.toISOString()
+      }));
+    } catch (error) {
+      console.error('[Database] Failed to get all graphs:', error);
+      return [];
+    }
   }
 
   async deleteGraph(id: string): Promise<boolean> {
     this.ensureInitialized();
 
-    const deleted = this.graphs.delete(id);
-
-    if (deleted) {
-      console.log(`[Database] Graph ${id} deleted from database`);
+    try {
+      await prisma.graph.delete({
+        where: { id }
+      });
+      console.log(`[Database] Deleted graph ${id} from SQLite`);
       return true;
+    } catch (error) {
+      console.warn(`[Database] Failed to delete graph ${id} (may not exist):`, error);
+      return false;
     }
+  }
 
-    console.warn(`[Database] Graph ${id} not found`);
-    return false;
+  // ========== Research Jobs Persistence (Phase 10.3) ==========
+
+  // ========== Research Jobs Persistence (SQLite) ==========
+
+  async saveResearchJob(job: ResearchJobRecord): Promise<void> {
+    this.ensureInitialized();
+
+    try {
+      await prisma.researchJob.upsert({
+        where: { id: job.id },
+        update: {
+          topic: job.topic,
+          mode: job.mode,
+          status: job.status,
+          progress: job.progress,
+          error: job.error,
+          queries: JSON.stringify(job.queries || []),
+          articlesFound: job.articlesFound,
+          articlesProcessed: job.articlesProcessed || 0,
+          updatedAt: new Date(),
+          includedIds: JSON.stringify(job.includedIds || []),
+          excludedIds: JSON.stringify(job.excludedIds || []),
+          exclusionReasons: JSON.stringify(job.exclusionReasons || {}),
+          reviewText: job.reviewText,
+          graphId: job.graphId
+        },
+        create: {
+          id: job.id,
+          topic: job.topic,
+          mode: job.mode,
+          status: job.status,
+          progress: job.progress,
+          error: job.error,
+          queries: JSON.stringify(job.queries || []),
+          articlesFound: job.articlesFound,
+          articlesProcessed: job.articlesProcessed || 0,
+          createdAt: job.createdAt || new Date(),
+          updatedAt: new Date(),
+          includedIds: JSON.stringify(job.includedIds || []),
+          excludedIds: JSON.stringify(job.excludedIds || []),
+          exclusionReasons: JSON.stringify(job.exclusionReasons || {}),
+          reviewText: job.reviewText,
+          graphId: job.graphId
+        }
+      });
+      console.log(`[Database] Saved research job ${job.id} to SQLite`);
+    } catch (error) {
+      console.error(`[Database] Failed to save job ${job.id}:`, error);
+      // Fallback to memory if DB fails? No, simpler to throw or log.
+    }
+  }
+
+  async getResearchJob(id: string): Promise<ResearchJobRecord | null> {
+    this.ensureInitialized();
+
+    try {
+      const job = await prisma.researchJob.findUnique({
+        where: { id }
+      });
+
+      if (!job) return null;
+
+      // Map Prisma model back to ResearchJobRecord
+      const record = {
+        id: job.id,
+        topic: job.topic,
+        mode: job.mode as 'quick' | 'research',
+        status: job.status,
+        progress: job.progress,
+        error: job.error || undefined,
+        articlesFound: job.articlesFound,
+        queries: JSON.parse(job.queries),
+        articles: [], // Will be filled below
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+        graphId: job.graphId || undefined,
+        // Optional fields
+        includedIds: job.includedIds ? JSON.parse(job.includedIds) : undefined,
+        excludedIds: job.excludedIds ? JSON.parse(job.excludedIds) : undefined,
+        exclusionReasons: job.exclusionReasons ? JSON.parse(job.exclusionReasons) : undefined,
+        reviewText: job.reviewText || undefined
+      } as ResearchJobRecord;
+
+      // Fetch articles
+      record.articles = await this.getJobArticles(id);
+
+      return record;
+    } catch (error) {
+      console.error(`[Database] Failed to get job ${id}:`, error);
+      return null;
+    }
+  }
+
+  async getJobArticles(jobId: string): Promise<any[]> {
+    this.ensureInitialized();
+    try {
+      const articles: any[] = await prisma.article.findMany({
+        where: { jobId }
+      });
+
+      return articles.map(a => ({
+        id: a.id,
+        title: a.title,
+        doi: a.doi || undefined,
+        authors: JSON.parse(a.authors),
+        year: a.year || undefined,
+        abstract: a.abstract || undefined,
+        url: a.url || undefined,
+        pdfUrl: a.pdfUrl || undefined,
+        source: a.source as any,
+        status: a.status as any,
+        screeningStatus: a.screeningStatus as any || undefined,
+        extractedData: a.extractedData ? JSON.parse(a.extractedData) : undefined,
+        entities: a.entities ? JSON.parse(a.entities) : undefined,
+        relations: a.relations ? JSON.parse(a.relations) : undefined
+      }));
+    } catch (error) {
+      console.error(`[Database] Failed to get articles for job ${jobId}:`, error);
+      return [];
+    }
+  }
+
+  async saveJobArticles(jobId: string, articles: any[]): Promise<void> {
+    this.ensureInitialized();
+    try {
+      // Use transaction for better performance/integrity
+      const operations = articles.map(article =>
+        prisma.article.upsert({
+          where: { id: article.id },
+          create: {
+            id: article.id,
+            jobId: jobId,
+            title: article.title,
+            doi: article.doi,
+            authors: JSON.stringify(article.authors || []),
+            year: article.year,
+            abstract: article.abstract,
+            url: article.url,
+            pdfUrl: article.pdfUrl,
+            source: article.source,
+            status: article.status,
+            screeningStatus: article.screeningStatus,
+            extractedData: article.extractedData ? JSON.stringify(article.extractedData) : undefined,
+            entities: article.entities ? JSON.stringify(article.entities) : undefined,
+            relations: article.relations ? JSON.stringify(article.relations) : undefined
+          },
+          update: {
+            title: article.title,
+            doi: article.doi,
+            authors: JSON.stringify(article.authors || []),
+            year: article.year,
+            abstract: article.abstract,
+            url: article.url,
+            pdfUrl: article.pdfUrl,
+            source: article.source,
+            status: article.status,
+            screeningStatus: article.screeningStatus,
+            extractedData: article.extractedData ? JSON.stringify(article.extractedData) : undefined,
+            entities: article.entities ? JSON.stringify(article.entities) : undefined,
+            relations: article.relations ? JSON.stringify(article.relations) : undefined,
+            updatedAt: new Date()
+          }
+        })
+      );
+
+      await prisma.$transaction(operations);
+      console.log(`[Database] Saved ${articles.length} articles for job ${jobId}`);
+    } catch (error) {
+      console.error(`[Database] Failed to save articles for job ${jobId}:`, error);
+    }
+  }
+
+  async getAllResearchJobs(): Promise<ResearchJobRecord[]> {
+    this.ensureInitialized();
+
+    try {
+      const jobs = await prisma.researchJob.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
+
+      return jobs.map((job: any) => ({
+        id: job.id,
+        topic: job.topic,
+        mode: job.mode as 'quick' | 'research',
+        status: job.status,
+        progress: job.progress,
+        error: job.error || undefined,
+        articlesFound: job.articlesFound,
+        queries: JSON.parse(job.queries) as string[],
+        articles: [], // Minimal data for list view
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+        graphId: job.graphId || undefined
+      } as ResearchJobRecord));
+    } catch (error) {
+      console.error('[Database] Failed to get all jobs:', error);
+      return [];
+    }
+  }
+
+  async deleteResearchJob(id: string): Promise<boolean> {
+    this.ensureInitialized();
+
+    try {
+      await prisma.researchJob.delete({
+        where: { id }
+      });
+      console.log(`[Database] Deleted research job ${id} from SQLite`);
+      return true;
+    } catch (error) {
+      console.warn(`[Database] Failed to delete job ${id} (may not exist):`, error);
+      return false;
+    }
   }
 
   async close(): Promise<void> {
     this.isInitialized = false;
-    this.articles.clear();
+
     this.edges.clear();
     this.patterns.clear();
     this.users.clear();
-    this.graphs.clear();
+    // maps cleared
+    await prisma.$disconnect();
 
-    console.log('[Database] In-memory database connection closed');
+    console.log('[Database] Database connection closed');
   }
 
-  getMetrics(): any {
+  async getMetrics(): Promise<any> {
     this.ensureInitialized();
 
+    // Count jobs from SQLite
+    const jobCount = await prisma.researchJob.count();
+
     return {
-      articles: this.articles.size,
+      articles: await prisma.article.count(),
       edges: this.edges.size,
       patterns: this.patterns.size,
       users: this.users.size,
-      graphs: this.graphs.size
+      graphs: await prisma.graph.count(),
+      researchJobs: jobCount
     };
   }
 }

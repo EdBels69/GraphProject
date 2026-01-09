@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { pubmedService } from '../services/pubmedService';
 import { validatePubMedQuery } from '../../src/utils/validators';
-import { createGraph } from '../../shared/types';
+import { Graph, createGraph } from '../../shared/contracts/graph';
 import { GraphStorage } from '../../shared/graphStorage';
 import { logger } from '../../src/core/Logger';
 
@@ -69,7 +69,9 @@ router.post('/network', async (req: Request, res: Response) => {
       depth: depth || 1
     });
 
-    const graph = createGraph(`PubMed: ${query}`, false, network.nodes, network.edges);
+    const graph = createGraph(`PubMed: ${query}`, false);
+    graph.nodes = network.nodes as any; // Cast if mismatched types
+    graph.edges = network.edges as any;
 
     GraphStorage.save(graph);
 

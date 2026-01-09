@@ -1,3 +1,35 @@
+/**
+ * DEPRECATED: Use imports from '@/shared/contracts' instead
+ * 
+ * This file is kept for backward compatibility.
+ * All types are re-exported from the canonical contracts.
+ * 
+ * @deprecated Import from '@/shared/contracts' or '@/shared/contracts/graph'
+ */
+
+// =============================================================================
+// RE-EXPORTS FROM CONTRACTS (Canonical Source)
+// =============================================================================
+
+// Graph types - canonical versions
+export type {
+  GraphNode as GraphNodeNew,
+  GraphEdge as GraphEdgeNew,
+  Graph as GraphNew
+} from './contracts/graph'
+
+export type {
+  CentralityResult as CentralityResultNew,
+  PathResult as PathResultNew
+} from './contracts/analysis'
+
+export type { EntityType } from './contracts/entities'
+
+// =============================================================================
+// LEGACY TYPES (For Backward Compatibility)
+// These will be removed in v3.0
+// =============================================================================
+
 export interface Article {
   id: string
   title: string
@@ -11,7 +43,7 @@ export interface Article {
   published?: boolean
 }
 
-// Entity types for heterogeneous biomedical knowledge graph
+/** @deprecated Use EntityType from contracts/entities */
 export type NodeType =
   | 'Gene'
   | 'Protein'
@@ -21,52 +53,54 @@ export type NodeType =
   | 'Drug'
   | 'Symptom'
   | 'Anatomy'
-  | 'Concept'  // Fallback for unclassified entities
+  | 'Concept'
 
-// Relation types following Biolink model
+/** @deprecated Use RelationType from contracts/entities */
 export type RelationType =
-  | 'encodes'           // Gene -> Protein
-  | 'interacts_with'    // Protein <-> Protein
-  | 'participates_in'   // Entity -> Pathway
-  | 'associated_with'   // Gene/Protein <-> Disease
-  | 'inhibits'          // Drug -> Protein/Gene
-  | 'activates'         // Drug -> Protein/Gene
-  | 'treats'            // Drug -> Disease
-  | 'causes'            // Entity -> Disease/Symptom
-  | 'regulates'         // Gene -> Gene
-  | 'transports'        // Protein -> Metabolite
-  | 'metabolizes'       // Enzyme -> Metabolite
-  | 'cooccurs_with'     // Fallback: co-occurrence in text
-  | 'related_to'        // Fallback: unspecified relation
+  | 'encodes'
+  | 'interacts_with'
+  | 'participates_in'
+  | 'associated_with'
+  | 'inhibits'
+  | 'activates'
+  | 'treats'
+  | 'causes'
+  | 'regulates'
+  | 'transports'
+  | 'metabolizes'
+  | 'cooccurs_with'
+  | 'related_to'
 
-// Evidence types (STRING-style)
 export type EvidenceType =
-  | 'experimental'      // Lab-validated
-  | 'database'          // Curated database (KEGG, Reactome)
-  | 'text_mining'       // NLP from literature
-  | 'cooccurrence'      // Same paragraph/sentence
-  | 'ai_extraction'     // LLM-extracted
+  | 'experimental'
+  | 'database'
+  | 'text_mining'
+  | 'cooccurrence'
+  | 'ai_extraction'
 
+/** @deprecated Use GraphNode from contracts/graph */
 export interface GraphNode {
   id: string
   label: string
-  type?: NodeType           // NEW: Entity type
+  type?: NodeType
   weight?: number
   data?: Record<string, any>
 }
 
+/** @deprecated Use GraphEdge from contracts/graph */
 export interface GraphEdge {
   id: string
   source: string
   target: string
-  relation?: RelationType   // NEW: Typed relation
-  evidenceType?: EvidenceType  // NEW: How was this edge discovered
-  confidence?: number       // NEW: 0-1 confidence score
+  relation?: RelationType
+  evidenceType?: EvidenceType
+  confidence?: number
   weight?: number
   directed?: boolean
   data?: Record<string, any>
 }
 
+/** @deprecated Use Graph from contracts/graph */
 export interface Graph {
   id: string
   name: string
@@ -77,12 +111,14 @@ export interface Graph {
   updatedAt: Date
 }
 
+/** @deprecated Use PathResult from contracts/analysis */
 export interface PathResult {
   path: string[]
   totalWeight: number
   length: number
 }
 
+/** @deprecated Use CentralityResult from contracts/analysis */
 export interface CentralityResult {
   nodeId: string
   degree: number
@@ -107,7 +143,16 @@ export interface GraphStatistics {
   clusteringCoefficient: number
 }
 
-export function createGraph(name: string, directed: boolean = false, nodes?: GraphNode[], edges?: GraphEdge[]): Graph {
+// =============================================================================
+// FACTORY FUNCTIONS (Kept for compatibility)
+// =============================================================================
+
+export function createGraph(
+  name: string,
+  directed: boolean = false,
+  nodes?: GraphNode[],
+  edges?: GraphEdge[]
+): Graph {
   return {
     id: `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     name,
@@ -120,18 +165,9 @@ export function createGraph(name: string, directed: boolean = false, nodes?: Gra
 }
 
 export function createNode(id: string, label: string, weight?: number): GraphNode {
-  return {
-    id,
-    label,
-    weight
-  }
+  return { id, label, weight }
 }
 
 export function createEdge(id: string, source: string, target: string, weight?: number): GraphEdge {
-  return {
-    id,
-    source,
-    target,
-    weight
-  }
+  return { id, source, target, weight }
 }

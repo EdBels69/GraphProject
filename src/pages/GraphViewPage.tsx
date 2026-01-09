@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import GraphViewer from '@/components/GraphViewer'
-import { Graph, GraphNode, GraphEdge } from '../../shared/types'
+import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
+import { EntityType } from '../../shared/contracts/entities'
 
 type ViewMode = 'split' | 'graph' | 'table'
 
@@ -300,14 +301,19 @@ export default function GraphViewPage() {
 }
 
 function getTypeColor(type: string): { bg: string; text: string } {
+    // lowercase keys for EntityType
     const colors: Record<string, { bg: string; text: string }> = {
-        Gene: { bg: '#dbeafe', text: '#1e40af' },
-        Protein: { bg: '#fce7f3', text: '#9d174d' },
-        Metabolite: { bg: '#d1fae5', text: '#065f46' },
-        Disease: { bg: '#fee2e2', text: '#991b1b' },
-        Drug: { bg: '#fef3c7', text: '#92400e' },
-        Pathway: { bg: '#e0e7ff', text: '#3730a3' },
-        Concept: { bg: '#f1f5f9', text: '#475569' }
+        gene: { bg: '#dbeafe', text: '#1e40af' },
+        protein: { bg: '#fce7f3', text: '#9d174d' },
+        metabolite: { bg: '#d1fae5', text: '#065f46' },
+        disease: { bg: '#fee2e2', text: '#991b1b' },
+        drug: { bg: '#fef3c7', text: '#92400e' },
+        pathway: { bg: '#e0e7ff', text: '#3730a3' },
+        concept: { bg: '#f1f5f9', text: '#475569' },
+        // Add new v2.0 types
+        symptom: { bg: '#fee2e2', text: '#991b1b' },
+        treatment: { bg: '#e0e7ff', text: '#3730a3' },
+        mouse: { bg: '#f1f5f9', text: '#475569' } // fallback/extra
     }
-    return colors[type] || colors.Concept
+    return colors[type.toLowerCase()] || colors.concept
 }

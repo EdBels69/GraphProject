@@ -10,6 +10,9 @@
  * 6. Generate literature review
  */
 
+import fs from 'fs'
+import path from 'path'
+import { v4 as uuidv4 } from 'uuid'
 import { EventEmitter } from 'events'
 import {
     ResearchJob,
@@ -94,25 +97,62 @@ export class LiteratureAgent extends EventEmitter {
             job.error = error instanceof Error ? error.message : String(error)
             job.updatedAt = new Date().toISOString()
             logger.error('LiteratureAgent', `Job ${jobId} failed`, { error })
+            this.persistJob(job) // Persist failed state
         })
 
         return job
     }
 
     /**
-     * Get job by ID
+     * Persist job to database
      */
-    getJob(jobId: string): ResearchJob | undefined {
-        return this.jobs.get(jobId)
+    private async persistJob(job: ResearchJob): Promise<void> {
+        try {
+            await databaseManager.saveResearchJob({
+                id: job.id,
+                topic: job.topic,
+                mode: job.mode || 'research',
+                status: job.status,
+                articlesFound: job.articlesFound || 0,
+                progress: job.progress || 0,
+                graphId: job.graphId,
+                error: job.error,
+                articles: job.articles || [],
+                createdAt: new Date(job.createdAt || Date.now()),
+                updatedAt: new Date(job.updatedAt || Date.now())
+            })
+
+            // Also persist articles
+            if (job.articles && job.articles.length > 0) {
+                await databaseManager.saveJobArticles(job.id, job.articles)
+            }
+        } catch (e) {
+            logger.warn('LiteratureAgent', `Failed to persist job ${job.id}`, { error: e })
+        }
     }
 
     /**
-     * Get all jobs
+     * Get job by ID
+     */
+    getJob(jobId: string): ResearchJob | undefined {
+        // First check in-memory cache
+        const cached = this.jobs.get(jobId)
+        if (cached) return cached
+
+        // Job not in cache - will be loaded on next sync
+        return undefined
+    }
+
+    /**
+     * Get all jobs (from in-memory cache; DB is synced on startup)
      */
     getAllJobs(): ResearchJob[] {
         return Array.from(this.jobs.values())
     }
 
+    /**
+     * Cancel a job
+     */
     /**
      * Cancel a job
      */
@@ -124,6 +164,40 @@ export class LiteratureAgent extends EventEmitter {
 
         job.status = 'cancelled'
         job.updatedAt = new Date().toISOString()
+        this.persistJob(job) // Persist cancelled state
+        return true
+    }
+
+    /**
+     * Delete a job permanently (DB + Files)
+     */
+    async deleteJob(jobId: string): Promise<boolean> {
+        const job = this.jobs.get(jobId)
+
+        // 1. Cancel if running
+        const activeStatuses: ResearchJobStatus[] = ['searching', 'downloading', 'analyzing']
+        // @ts-ignore
+        if (job && activeStatuses.includes(job.status)) {
+            this.cancelJob(jobId)
+        }
+
+        // 2. Delete from DB
+        const deleted = await databaseManager.deleteResearchJob(jobId)
+        if (!deleted && !job) return false // Not found anywhere
+
+        // 3. Remove files
+        try {
+            const jobDir = path.join(process.cwd(), 'downloads', jobId)
+            if (fs.existsSync(jobDir)) {
+                fs.rmSync(jobDir, { recursive: true, force: true })
+            }
+        } catch (e) {
+            logger.warn('LiteratureAgent', `Failed to delete files for job ${jobId}`, { error: e })
+        }
+
+        // 4. Remove from memory
+        this.jobs.delete(jobId)
+
         return true
     }
 
@@ -211,10 +285,11 @@ export class LiteratureAgent extends EventEmitter {
                 let processed = 0
 
                 for (const article of articlesToAnalyze) {
-                    if (job.status === 'cancelled') break
+                    // Cast to any to avoid narrowing error where TypeScript thinks status can only be 'analyzing'
+                    if ((job as any).status === 'cancelled') break
 
                     try {
-                        const { entities, relations } = await this.processArticle(article)
+                        const { entities, relations } = await this.processArticle(article, job.topic)
                         if (entities.length > 0) {
                             allEntities.push(...entities)
                             allRelations.push(...relations)
@@ -227,13 +302,7 @@ export class LiteratureAgent extends EventEmitter {
                     job.updatedAt = new Date().toISOString()
                 }
 
-                // Merge & Store
-                // Note: accessing private method via bracket notation or just assuming it's available if compilation allows
-                // If strict private, we might need to expose it or inline it.
-                // Assuming it works as it was used in legacy processJob code too (implied)
-                // Actually literatureAgent.ts has EntityExtractor which has mergeEntities as public usually?
-                // Let's check EntityExtractor later if needed. For now assuming similar access.
-                const mergedEntities = this.entityExtractor['mergeEntities'](allEntities)
+                const mergedEntities = this.entityExtractor.mergeEntities(allEntities)
                 job.extractedEntities = mergedEntities
                 job.extractedRelations = allRelations
 
@@ -243,7 +312,7 @@ export class LiteratureAgent extends EventEmitter {
                         minConfidence: 0.3,
                         includeCooccurrence: true
                     })
-                    job.graphId = graphRes.graph.metadata.id
+                    job.graphId = graphRes.graph.id
                 } catch (e) {
                     logger.error('LiteratureAgent', `Failed to build graph`, { error: e })
                 }
@@ -316,8 +385,8 @@ export class LiteratureAgent extends EventEmitter {
         const graph = graphRes.graph
 
         // Save graph
-        await databaseManager.saveGraphToDb(graph)
-        GraphStorage.save(graph)
+        await databaseManager.saveGraphToDb(graph as any)
+        GraphStorage.save(graph as any)
 
         job.graphId = graph.id
         job.updatedAt = new Date().toISOString()
@@ -392,7 +461,7 @@ export class LiteratureAgent extends EventEmitter {
                 }
 
                 try {
-                    const { entities, relations } = await this.processArticle(article)
+                    const { entities, relations } = await this.processArticle(article, job.topic)
                     logger.info('LiteratureAgent', `Article "${article.title}" yielded ${entities.length} entities and ${relations.length} relations`)
 
                     if (entities.length > 0) {
@@ -404,24 +473,7 @@ export class LiteratureAgent extends EventEmitter {
 
                     job.articlesProcessed++
 
-                    // Save article to persistent database for "Works List"
-                    try {
-                        await databaseManager.createArticle({
-                            title: article.title,
-                            content: article.abstract || '',
-                            status: 'completed',
-                            url: article.url || article.pdfUrl || article.doi,
-                            metadata: {
-                                source: article.source,
-                                doi: article.doi,
-                                authors: article.authors,
-                                year: article.year,
-                                entitiesPreview: entities.slice(0, 5).map(e => e.name)
-                            }
-                        })
-                    } catch (dbError) {
-                        logger.warn('LiteratureAgent', `Failed to save article to DB: ${article.title}`, { error: dbError })
-                    }
+
 
                     const progress = 50 + Math.floor((i / processable.length) * 40)
                     this.updateJob(job, 'analyzing', progress)
@@ -435,7 +487,7 @@ export class LiteratureAgent extends EventEmitter {
             this.updateJob(job, 'analyzing', 95)
 
             // Merge entities from all articles
-            const mergedEntities = this.entityExtractor['mergeEntities'](allEntities)
+            const mergedEntities = this.entityExtractor.mergeEntities(allEntities)
 
             // Store for later graph building with user config
             job.extractedEntities = mergedEntities
@@ -617,7 +669,7 @@ Generate 3 simple search query variations:`
     /**
      * Process a single article
      */
-    private async processArticle(article: ArticleSource): Promise<{
+    private async processArticle(article: ArticleSource, topic: string): Promise<{
         entities: any[]
         relations: any[]
     }> {
@@ -654,11 +706,16 @@ Generate 3 simple search query variations:`
             })
             const buffer = Buffer.from(response.data)
 
-            // Save to local storage (New Feature)
-            // We save it but still process from buffer in memory for now to keep it fast
-            // In future iteration we can read from disk if needed
+            // Save to local storage with human-readable naming
+            // Folder: 2026-01-09_topic_name
+            // File: 2024_Smith_proteomics.pdf
             try {
-                await fileStorage.savePDF(article.id.split('-')[0] || 'unknown', article.id, buffer)
+                await fileStorage.savePDF(topic, {
+                    year: article.year,
+                    authors: article.authors,
+                    title: article.title,
+                    keywords: article.keywords
+                }, buffer)
             } catch (err) {
                 logger.warn('LiteratureAgent', `Failed to save PDF locally: ${article.id}`, { error: err })
             }
@@ -729,6 +786,7 @@ Generate 3 simple search query variations:`
         job.status = status
         job.progress = progress
         job.updatedAt = new Date().toISOString()
+        this.persistJob(job)
         this.emit('job:progress', job)
     }
 }
@@ -742,12 +800,12 @@ import { RelationExtractor } from './relationExtractor'
 import { KnowledgeGraphBuilder } from './knowledgeGraphBuilder'
 
 export const literatureAgent = new LiteratureAgent({
-    globalSearch: new GlobalSearch(),
-    unpaywall: new UnpaywallService(),
-    documentParser: new DocumentParser(),
-    chunkingEngine: new ChunkingEngine(),
-    entityExtractor: new EntityExtractor(),
-    relationExtractor: new RelationExtractor(),
-    graphBuilder: new KnowledgeGraphBuilder()
+    globalSearch: new GlobalSearch() as any,
+    unpaywall: new UnpaywallService() as any,
+    documentParser: new DocumentParser() as any,
+    chunkingEngine: new ChunkingEngine() as any,
+    entityExtractor: new EntityExtractor() as any,
+    relationExtractor: new RelationExtractor() as any,
+    graphBuilder: new KnowledgeGraphBuilder() as any
 })
 export default LiteratureAgent
