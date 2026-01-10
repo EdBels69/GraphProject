@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  Search, FileText, Activity, Trash2, ArrowRight,
+  Loader2, Filter, Database, Clock, Sparkles, FileUp
+} from 'lucide-react'
 
 interface ResearchJob {
   id: string
@@ -30,7 +34,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [options, setOptions] = useState<SearchOptions>({
-    mode: 'research',  // Default to research mode for methodological rigor
+    mode: 'research',
     maxArticles: 50,
     yearFrom: currentYear - 5,
     yearTo: currentYear,
@@ -85,7 +89,10 @@ export default function HomePage() {
     }
   }
 
-  const handleDeleteJob = async (id: string) => {
+  const handleDeleteJob = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!window.confirm('Delete this investigation record?')) return
+
     try {
       const response = await fetch(`/api/research/jobs/${id}`, { method: 'DELETE' })
       if (response.ok) {
@@ -94,10 +101,6 @@ export default function HomePage() {
     } catch (error) {
       console.error('Failed to delete job:', error)
     }
-  }
-
-  const handleFileUpload = () => {
-    navigate('/upload')
   }
 
   const openJob = (job: ResearchJob) => {
@@ -110,420 +113,194 @@ export default function HomePage() {
     }
   }
 
-  const maxArticlesPresets = [
-    { value: 20, label: '🚀 Быстрый' },
-    { value: 50, label: '📊 Стандарт' },
-    { value: 100, label: '📚 Глубокий' },
-    { value: 200, label: '🔬 Полный' }
-  ]
-
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)' }}>
-      {/* Header */}
-      <header style={{
-        background: 'rgba(255,255,255,0.8)',
-        backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid #e2e8f0',
-        padding: '16px 24px'
-      }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: 40, height: 40,
-            background: 'linear-gradient(135deg, #3b82f6, #14b8a6)',
-            borderRadius: 12,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <span style={{ fontSize: 20 }}>🧬</span>
-          </div>
-          <h1 style={{ fontSize: 20, fontWeight: 600, color: '#1e293b', margin: 0 }}>Graph Analyser</h1>
-        </div>
-      </header>
+    <div className="space-y-12">
+      {/* Hero Section */}
+      <div className="text-center space-y-6 py-8 animate-fade-in">
+        <h2 className="text-5xl lg:text-7xl font-display font-bold text-white tracking-tight leading-none pointer-events-none select-none">
+          KNOWLEDGE <span className="text-acid text-glow">SYNTHESIS</span>
+        </h2>
+        <p className="text-lg text-steel/60 max-w-2xl mx-auto font-light tracking-wide">
+          Construct semantic graphs from scientific literature.
+          Analyze relationships with neural precision.
+        </p>
+      </div>
 
-      {/* Main Content */}
-      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '64px 24px' }}>
-        {/* Hero */}
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <h2 style={{ fontSize: 36, fontWeight: 700, color: '#0f172a', marginBottom: 16 }}>
-            Постройте граф знаний
-          </h2>
-          <p style={{ fontSize: 18, color: '#64748b', maxWidth: 600, margin: '0 auto' }}>
-            Анализируйте научную литературу, извлекайте связи между сущностями
-            и визуализируйте знания с помощью AI
-          </p>
-        </div>
+      {/* Main Actions Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        {/* Research Card */}
+        <div className="glass-panel p-8 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:border-acid/30">
+          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-acid/5 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Two Options */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, marginBottom: 64 }}>
-          {/* Option 1: Search */}
-          <div style={{
-            background: '#fff',
-            borderRadius: 16,
-            padding: 32,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9'
-          }}>
-            <div style={{
-              width: 56, height: 56,
-              background: '#dbeafe',
-              borderRadius: 12,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: 24
-            }}>
-              <span style={{ fontSize: 28 }}>🔬</span>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="w-12 h-12 rounded-lg bg-acid/10 border border-acid/20 flex items-center justify-center mb-6">
+              <Search className="w-6 h-6 text-acid" />
             </div>
-            <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1e293b', marginBottom: 12 }}>
-              Поиск по теме
-            </h3>
-            <p style={{ color: '#64748b', marginBottom: 20, lineHeight: 1.6 }}>
-              Введите тему исследования — мы найдём статьи в PubMed и CrossRef
+
+            <h3 className="text-2xl font-display font-bold text-white mb-2">NEW INVESTIGATION</h3>
+            <p className="text-gray-400 mb-8 text-sm">
+              Initiate a deep search across PubMed & CrossRef databases.
             </p>
 
-            {/* Topic Input */}
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !showAdvanced && handleStartResearch()}
-              placeholder="Например: carnitine metabolism"
-              style={{
-                width: '100%',
-                padding: '14px 16px',
-                borderRadius: 12,
-                border: '1px solid #e2e8f0',
-                fontSize: 15,
-                marginBottom: 16,
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
+            <div className="space-y-5 mt-auto">
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !showAdvanced && handleStartResearch()}
+                placeholder="Enter research topic (e.g., 'CRISPR applications')..."
+                className="w-full bg-void/50 border border-white/10 rounded-xl px-5 py-4 text-white placeholder-gray-600 focus:border-acid focus:ring-1 focus:ring-acid outline-none transition-all font-mono text-sm"
+              />
 
-            {/* Mode Selector */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <button
-                onClick={() => setOptions(o => ({ ...o, mode: 'quick' }))}
-                style={{
-                  flex: 1,
-                  padding: '12px 8px',
-                  borderRadius: 10,
-                  border: options.mode === 'quick' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                  background: options.mode === 'quick' ? '#eff6ff' : '#fff',
-                  cursor: 'pointer',
-                  textAlign: 'center'
-                }}
-              >
-                <div style={{ fontSize: 20, marginBottom: 4 }}>🚀</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Quick</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Авто-анализ</div>
-              </button>
-              <button
-                onClick={() => setOptions(o => ({ ...o, mode: 'research' }))}
-                style={{
-                  flex: 1,
-                  padding: '12px 8px',
-                  borderRadius: 10,
-                  border: options.mode === 'research' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                  background: options.mode === 'research' ? '#eff6ff' : '#fff',
-                  cursor: 'pointer',
-                  textAlign: 'center'
-                }}
-              >
-                <div style={{ fontSize: 20, marginBottom: 4 }}>📊</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Research</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Таблица + Screening</div>
-              </button>
-            </div>
-
-            {/* Mode description */}
-            <div style={{
-              fontSize: 12,
-              color: '#64748b',
-              background: '#f8fafc',
-              padding: '8px 12px',
-              borderRadius: 8,
-              marginBottom: 12
-            }}>
-              {options.mode === 'quick'
-                ? '⚡ Быстрый режим: статьи автоматически анализируются и строится граф'
-                : '📋 Research режим: таблица статей → ручной отбор → настройка анализа'}
-            </div>
-
-            {/* Advanced Toggle */}
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                background: 'transparent',
-                border: '1px solid #e2e8f0',
-                borderRadius: 8,
-                fontSize: 13,
-                color: '#64748b',
-                cursor: 'pointer',
-                marginBottom: 12,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6
-              }}
-            >
-              ⚙️ Расширенные настройки {showAdvanced ? '▲' : '▼'}
-            </button>
-
-
-            {/* Advanced Options */}
-            {showAdvanced && (
-              <div style={{
-                padding: 16,
-                background: '#f8fafc',
-                borderRadius: 12,
-                marginBottom: 16,
-                fontSize: 13
-              }}>
-                {/* Max Articles */}
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontWeight: 500, color: '#475569', marginBottom: 8 }}>
-                    📊 Макс. статей: {options.maxArticles}
-                  </label>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                    {maxArticlesPresets.map(preset => (
-                      <button
-                        key={preset.value}
-                        onClick={() => setOptions(o => ({ ...o, maxArticles: preset.value }))}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: 6,
-                          border: options.maxArticles === preset.value ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                          background: options.maxArticles === preset.value ? '#eff6ff' : '#fff',
-                          fontSize: 12,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {preset.label} ({preset.value})
-                      </button>
-                    ))}
+              {/* Mode Selectors */}
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setOptions(o => ({ ...o, mode: 'quick' }))}
+                  className={`p-4 rounded-xl border transition-all text-left relative overflow-hidden ${options.mode === 'quick'
+                      ? 'bg-acid/10 border-acid text-white'
+                      : 'bg-void/30 border-white/5 text-gray-500 hover:bg-white/5 hover:border-white/10'
+                    }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className={`w-4 h-4 ${options.mode === 'quick' ? 'text-acid' : ''}`} />
+                    <span className="font-display font-bold text-sm tracking-wider">QUICK</span>
                   </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="1000"
-                    step="10"
-                    value={options.maxArticles}
-                    onChange={(e) => setOptions(o => ({ ...o, maxArticles: parseInt(e.target.value) }))}
-                    style={{ width: '100%' }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8' }}>
-                    <span>10</span>
-                    <span>1000</span>
-                  </div>
-                </div>
+                  <div className="text-[10px] opacity-60">Automated Pipeline</div>
+                </button>
 
-                {/* Year Range */}
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontWeight: 500, color: '#475569', marginBottom: 8 }}>
-                    📅 Годы публикации
-                  </label>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  onClick={() => setOptions(o => ({ ...o, mode: 'research' }))}
+                  className={`p-4 rounded-xl border transition-all text-left relative overflow-hidden ${options.mode === 'research'
+                      ? 'bg-plasma/10 border-plasma text-white'
+                      : 'bg-void/30 border-white/5 text-gray-500 hover:bg-white/5 hover:border-white/10'
+                    }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Database className={`w-4 h-4 ${options.mode === 'research' ? 'text-plasma-light' : ''}`} />
+                    <span className="font-display font-bold text-sm tracking-wider">RESEARCH</span>
+                  </div>
+                  <div className="text-[10px] opacity-60">Manual Screening</div>
+                </button>
+              </div>
+
+              {/* Advanced Options Toggle */}
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-2 text-xs text-gray-500 hover:text-white transition-colors w-full justify-center py-2"
+              >
+                <Filter className="w-3 h-3" />
+                {showAdvanced ? 'HIDE OPTIONS' : 'ADVANCED CONFIGURATION'}
+              </button>
+
+              {showAdvanced && (
+                <div className="p-4 bg-void/40 rounded-xl border border-white/5 space-y-4 animate-fade-in text-sm">
+                  {/* Simplified advanced options for UI cleanliness */}
+                  <div className="flex justify-between items-center text-gray-400">
+                    <span>Article Limit: <span className="text-white">{options.maxArticles}</span></span>
                     <input
-                      type="number"
-                      min="1990"
-                      max={currentYear}
-                      value={options.yearFrom}
-                      onChange={(e) => setOptions(o => ({ ...o, yearFrom: parseInt(e.target.value) }))}
-                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6 }}
-                    />
-                    <span style={{ color: '#94a3b8' }}>—</span>
-                    <input
-                      type="number"
-                      min="1990"
-                      max={currentYear}
-                      value={options.yearTo}
-                      onChange={(e) => setOptions(o => ({ ...o, yearTo: parseInt(e.target.value) }))}
-                      style={{ flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6 }}
+                      type="range" min="10" max="200" step="10"
+                      value={options.maxArticles}
+                      onChange={e => setOptions(o => ({ ...o, maxArticles: Number(e.target.value) }))}
+                      className="w-32 accent-acid"
                     />
                   </div>
                 </div>
+              )}
 
-                {/* Sources */}
-                <div>
-                  <label style={{ display: 'block', fontWeight: 500, color: '#475569', marginBottom: 8 }}>
-                    📚 Источники
-                  </label>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={options.sources.pubmed}
-                        onChange={(e) => setOptions(o => ({ ...o, sources: { ...o.sources, pubmed: e.target.checked } }))}
-                      />
-                      PubMed
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={options.sources.crossref}
-                        onChange={(e) => setOptions(o => ({ ...o, sources: { ...o.sources, crossref: e.target.checked } }))}
-                      />
-                      CrossRef
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Time Warning for large searches */}
-            {options.maxArticles > 100 && showAdvanced && (
-              <div style={{
-                padding: '8px 12px',
-                background: '#fef3c7',
-                borderRadius: 8,
-                fontSize: 12,
-                color: '#92400e',
-                marginBottom: 12
-              }}>
-                ⚠️ Обработка {options.maxArticles} статей займёт ~{Math.ceil(options.maxArticles / 30)} мин
-              </div>
-            )}
-
-            <button
-              onClick={handleStartResearch}
-              disabled={isLoading || !topic.trim()}
-              style={{
-                width: '100%',
-                padding: '14px',
-                background: isLoading || !topic.trim() ? '#94a3b8' : '#2563eb',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 12,
-                fontSize: 15,
-                fontWeight: 500,
-                cursor: isLoading || !topic.trim() ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {isLoading ? 'Поиск...' : `Начать исследование (${options.maxArticles} статей) →`}
-            </button>
-          </div>
-
-          {/* Option 2: Upload */}
-          <div style={{
-            background: '#fff',
-            borderRadius: 16,
-            padding: 32,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-            border: '1px solid #f1f5f9'
-          }}>
-            <div style={{
-              width: 56, height: 56,
-              background: '#ccfbf1',
-              borderRadius: 12,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: 24
-            }}>
-              <span style={{ fontSize: 28 }}>📤</span>
+              <button
+                onClick={handleStartResearch}
+                disabled={isLoading || !topic.trim()}
+                className="w-full bg-acid text-void font-display font-bold tracking-widest text-sm py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-glow-acid"
+              >
+                {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : <>INITIALIZE <ArrowRight className="w-5 h-5 ml-1" /></>}
+              </button>
             </div>
-            <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1e293b', marginBottom: 12 }}>
-              Загрузить файлы
-            </h3>
-            <p style={{ color: '#64748b', marginBottom: 24, lineHeight: 1.6 }}>
-              Загрузите свои PDF или текстовые документы для анализа
-            </p>
-            <div style={{ height: 52, marginBottom: 16 }}></div>
-            <button
-              onClick={handleFileUpload}
-              style={{
-                width: '100%',
-                padding: '14px',
-                background: '#0d9488',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 12,
-                fontSize: 15,
-                fontWeight: 500,
-                cursor: 'pointer'
-              }}
-            >
-              Выбрать файлы →
-            </button>
           </div>
         </div>
 
-        {/* Recent Researches */}
-        {
-          recentJobs.length > 0 && (
-            <div>
-              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#1e293b', marginBottom: 16 }}>
-                Недавние исследования
-              </h3>
-              <div style={{
-                background: '#fff',
-                borderRadius: 12,
-                border: '1px solid #e2e8f0',
-                overflow: 'hidden'
-              }}>
-                {recentJobs.slice(0, 5).map((job, index) => (
-                  <div
-                    key={job.id}
-                    onClick={() => openJob(job)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '16px 24px',
-                      borderBottom: index < recentJobs.length - 1 ? '1px solid #f1f5f9' : 'none',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 500, color: '#1e293b' }}>{job.topic}</div>
-                      <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
-                        {job.articlesFound} статей • {new Date(job.createdAt).toLocaleDateString('ru-RU')}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{
-                        padding: '4px 12px',
-                        borderRadius: 20,
-                        fontSize: 12,
-                        fontWeight: 500,
-                        background: job.status === 'completed' ? '#dcfce7' : job.status === 'processing' ? '#fef3c7' : '#f1f5f9',
-                        color: job.status === 'completed' ? '#166534' : job.status === 'processing' ? '#92400e' : '#475569'
-                      }}>
-                        {job.status === 'completed' ? 'Готово' : ['searching', 'downloading', 'analyzing'].includes(job.status) ? 'В процессе' : job.status}
+        {/* Upload Card */}
+        <div className="glass-panel p-8 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:border-white/20">
+          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-plasma/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="w-12 h-12 rounded-lg bg-plasma/10 border border-plasma/20 flex items-center justify-center mb-6">
+              <FileUp className="w-6 h-6 text-plasma-light" />
+            </div>
+
+            <h3 className="text-2xl font-display font-bold text-white mb-2">DATA INGESTION</h3>
+            <p className="text-gray-400 mb-8 text-sm">
+              Upload PDF or Text documents to the secure vault for analysis.
+            </p>
+
+            <div className="mt-auto border-2 border-dashed border-white/10 rounded-2xl h-48 flex flex-col items-center justify-center gap-4 group-hover:border-plasma/30 transition-colors cursor-pointer bg-void/20" onClick={() => navigate('/upload')}>
+              <div className="p-4 rounded-full bg-void border border-white/5 group-hover:scale-110 transition-transform duration-300">
+                <FileUp className="w-6 h-6 text-gray-400 group-hover:text-plasma-light" />
+              </div>
+              <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">Drop files or click</span>
+            </div>
+
+            <button
+              onClick={() => navigate('/upload')}
+              className="w-full mt-5 bg-white/5 hover:bg-white/10 text-white font-display font-bold tracking-widest text-sm py-4 rounded-xl transition-all border border-white/5"
+            >
+              OPEN UPLOADER
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      {recentJobs.length > 0 && (
+        <div className="max-w-6xl mx-auto pt-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-display font-bold text-white tracking-widest flex items-center gap-2">
+              <Activity className="w-4 h-4 text-acid" />
+              SYSTEM ACTIVITY
+            </h3>
+            <span className="text-xs font-mono text-gray-500">{recentJobs.length} RECORDS</span>
+          </div>
+
+          <div className="glass-panel rounded-xl overflow-hidden">
+            {recentJobs.slice(0, 5).map((job, i) => (
+              <div
+                key={job.id}
+                onClick={() => openJob(job)}
+                className={`
+                      p-5 flex items-center justify-between cursor-pointer transition-colors relative group
+                      ${i !== recentJobs.length - 1 ? 'border-b border-white/5' : ''}
+                      hover:bg-white/5
+                   `}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-2 h-2 rounded-full ${job.status === 'completed' ? 'bg-acid shadow-glow-acid' : 'bg-plasma animate-pulse'}`} />
+                  <div>
+                    <h4 className="font-medium text-white group-hover:text-acid transition-colors">{job.topic}</h4>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                        <Database className="w-3 h-3" /> {job.articlesFound} items
                       </span>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (window.confirm('Удалить эту задачу и все файлы?')) {
-                            handleDeleteJob(job.id)
-                          }
-                        }}
-                        style={{
-                          padding: '6px',
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          opacity: 0.7
-                        }}
-                        title="Удалить"
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
-                      >
-                        🗑️
-                      </button>
-
-                      <span style={{ color: '#94a3b8' }}>→</span>
+                      <span className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {new Date(job.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
-                ))}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={(e) => handleDeleteJob(job.id, e)}
+                    className="p-2 text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                </div>
               </div>
-            </div>
-          )
-        }
-      </main >
-    </div >
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

@@ -37,10 +37,13 @@ import axios from 'axios'
 import { databaseManager } from '../../src/core/Database'
 import GraphStorage from '../../shared/graphStorage'
 import { fileStorage } from './fileStorage'
+import { jobLogger } from './jobLogger'
 import { columnExtractor } from './columnExtractor'
 
 export class LiteratureAgent extends EventEmitter {
     private jobs: Map<string, ResearchJob> = new Map()
+    // jobLogs moved to JobLogger
+
     private globalSearch: IGlobalSearch
     private unpaywall: IUnpaywallService
     private documentParser: IDocumentParser
@@ -90,6 +93,7 @@ export class LiteratureAgent extends EventEmitter {
         }
 
         this.jobs.set(jobId, job)
+        this.log(jobId, 'info', `Job started for topic: "${job.topic}" in mode: ${job.mode}`)
 
         // Start processing in background
         this.processJob(job, request).catch(error => {
@@ -97,6 +101,7 @@ export class LiteratureAgent extends EventEmitter {
             job.error = error instanceof Error ? error.message : String(error)
             job.updatedAt = new Date().toISOString()
             logger.error('LiteratureAgent', `Job ${jobId} failed`, { error })
+            this.log(jobId, 'error', `Job failed: ${job.error}`)
             this.persistJob(job) // Persist failed state
         })
 
@@ -243,6 +248,7 @@ export class LiteratureAgent extends EventEmitter {
         extractRelations: boolean
         extractColumns: boolean
         domain?: string
+        columns?: string[]
     }): Promise<ResearchJob> {
         const job = this.jobs.get(jobId)
         if (!job) throw new Error('Job not found')
@@ -267,7 +273,7 @@ export class LiteratureAgent extends EventEmitter {
                 let processed = 0
                 for (const article of articlesToAnalyze) {
                     try {
-                        const data = await columnExtractor.extractData(article, config.domain || 'all', this.globalSearch)
+                        const data = await columnExtractor.extractData(article, config.domain || 'all', this.globalSearch, config.columns)
                         article.extractedData = data
                     } catch (e) {
                         logger.error('LiteratureAgent', `Failed to extract columns for ${article.title}`, { error: e })
@@ -278,24 +284,31 @@ export class LiteratureAgent extends EventEmitter {
                 }
             }
 
+
+
             // 2. Entity Extraction
             if (config.extractEntities) {
                 const allEntities: any[] = []
                 const allRelations: any[] = []
                 let processed = 0
 
+                this.log(jobId, 'ai', `Starting entity extraction for ${articlesToAnalyze.length} articles...`)
+
                 for (const article of articlesToAnalyze) {
                     // Cast to any to avoid narrowing error where TypeScript thinks status can only be 'analyzing'
                     if ((job as any).status === 'cancelled') break
 
                     try {
+                        this.log(jobId, 'ai', `Extracting from: ${article.title.substring(0, 50)}...`)
                         const { entities, relations } = await this.processArticle(article, job.topic)
                         if (entities.length > 0) {
                             allEntities.push(...entities)
                             allRelations.push(...relations)
+                            this.log(jobId, 'success', `  -> Extracted ${entities.length} entities, ${relations.length} relations`)
                         }
                     } catch (e) {
                         logger.error('LiteratureAgent', `Failed to extract entities for ${article.title}`, { error: e })
+                        this.log(jobId, 'error', `Failed to extract from ${article.title}`)
                     }
                     processed++
                     job.progress = 40 + Math.floor((processed / articlesToAnalyze.length) * 50)
@@ -306,15 +319,20 @@ export class LiteratureAgent extends EventEmitter {
                 job.extractedEntities = mergedEntities
                 job.extractedRelations = allRelations
 
+                this.log(jobId, 'success', `Total unique entities merged: ${mergedEntities.length}`)
+
                 // Build graph
                 try {
+                    this.log(jobId, 'info', 'Building initial knowledge graph...')
                     const graphRes = await this.graphBuilder.buildGraph(mergedEntities, allRelations, {
                         minConfidence: 0.3,
                         includeCooccurrence: true
                     })
                     job.graphId = graphRes.graph.id
+                    this.log(jobId, 'success', `Graph built successfully: ${graphRes.graph.id}`)
                 } catch (e) {
                     logger.error('LiteratureAgent', `Failed to build graph`, { error: e })
+                    this.log(jobId, 'error', 'Failed to build graph')
                 }
             }
 
@@ -400,123 +418,148 @@ export class LiteratureAgent extends EventEmitter {
      * Main processing pipeline
      */
     private async processJob(job: ResearchJob, request: ResearchJobRequest): Promise<void> {
+        try {
+            // Step 1 & 2: Search
+            const articles = await this.executeSearchPhase(job, request)
+            if (articles.length === 0) {
+                this.finalizeJob(job, request, [], [], articles) // Empty
+                return
+            }
+
+            // Research Mode: Stop after search
+            if (job.mode === 'research') {
+                await this.finalizeResearchMode(job, articles)
+                return
+            }
+
+            // Step 3: Find PDFs
+            const articlesWithPdf = await this.executePdfDiscoveryPhase(job, articles)
+
+            // Step 4: Download & Analyze
+            const { entities, relations } = await this.executeAnalysisPhase(job, articlesWithPdf, request)
+
+            // Step 5: Finalize
+            await this.finalizeJob(job, request, entities, relations, articles)
+
+        } catch (error) {
+            this.handleJobError(job, error)
+        }
+    }
+
+    private async executeSearchPhase(job: ResearchJob, request: ResearchJobRequest): Promise<ArticleSource[]> {
         const maxArticles = request.maxArticles || 20
         const sources = request.sources || ['pubmed', 'crossref']
 
-        try {
-            // Step 1: Generate search queries
-            this.updateJob(job, 'searching', 5)
-            job.queries = await this.generateQueries(request.topic)
-            logger.info('LiteratureAgent', `Generated ${job.queries.length} queries for "${request.topic}"`)
+        this.updateJob(job, 'searching', 5)
+        this.log(job.id, 'ai', 'Generating search queries with AI...')
 
-            // Step 2: Search sources
-            this.updateJob(job, 'searching', 15)
-            const articles = await this.searchSources(job.queries, sources, maxArticles, request.yearFrom, request.yearTo)
-            job.articlesFound = articles.length
-            job.articles = articles
-            logger.info('LiteratureAgent', `Found ${articles.length} articles`)
+        job.queries = await this.generateQueries(request.topic)
+        logger.info('LiteratureAgent', `Generated ${job.queries.length} queries for "${request.topic}"`)
+        this.log(job.id, 'search', `Generated queries: ${job.queries.join(', ')}`)
 
-            if (articles.length === 0) {
-                job.status = 'completed'
-                job.progress = 100
-                job.updatedAt = new Date().toISOString()
-                return
-            }
+        this.updateJob(job, 'searching', 15)
+        this.log(job.id, 'search', `Searching PubMed and CrossRef...`)
 
-            // ===== RESEARCH MODE: Skip auto-analysis, just return articles for screening =====
-            if (job.mode === 'research') {
-                // Mark all articles as pending screening
-                job.articles = articles.map(a => ({ ...a, screeningStatus: 'pending' as const }))
-                job.status = 'completed'
-                job.progress = 100
-                job.completedAt = new Date().toISOString()
-                job.updatedAt = new Date().toISOString()
+        const articles = await this.searchSources(job.queries, sources, maxArticles, request.yearFrom, request.yearTo)
+        job.articlesFound = articles.length
+        job.articles = articles
 
-                this.emit('job:completed', job)
-                logger.info('LiteratureAgent', `Research job ${job.id} completed - ${articles.length} articles ready for screening`)
-                return
-            }
+        logger.info('LiteratureAgent', `Found ${articles.length} articles`)
+        this.log(job.id, 'success', `Found ${articles.length} unique articles`)
 
-            // ===== QUICK MODE: Continue with auto-analysis =====
-            // Step 3: Find Open Access PDFs
-            this.updateJob(job, 'downloading', 30)
-            const articlesWithPdf = await this.findOpenAccessPdfs(articles)
-            const downloadable = articlesWithPdf.filter(a => a.pdfUrl)
-            logger.info('LiteratureAgent', `Found ${downloadable.length} Open Access PDFs`)
+        return articles
+    }
 
-            // Step 4: Download and process
-            this.updateJob(job, 'analyzing', 50)
-            const allEntities: any[] = []
-            const allRelations: any[] = []
+    private async finalizeResearchMode(job: ResearchJob, articles: ArticleSource[]): Promise<void> {
+        job.articles = articles.map(a => ({ ...a, screeningStatus: 'pending' as const }))
+        job.status = 'completed'
+        job.progress = 100
+        job.completedAt = new Date().toISOString()
+        job.updatedAt = new Date().toISOString()
 
-            // Filter for downloadable OR having abstract OR just title (fallback)
-            const processable = articlesWithPdf.filter(a => a.pdfUrl || a.abstract || a.title)
-            logger.info('LiteratureAgent', `Processing ${processable.length} articles out of ${articles.length} found`)
+        this.emit('job:completed', job)
+        logger.info('LiteratureAgent', `Research job ${job.id} completed - ${articles.length} articles ready for screening`)
+    }
 
-            for (let i = 0; i < Math.min(processable.length, maxArticles); i++) {
-                const article = processable[i]
+    private async executePdfDiscoveryPhase(job: ResearchJob, articles: ArticleSource[]): Promise<ArticleSource[]> {
+        this.updateJob(job, 'downloading', 30)
+        const articlesWithPdf = await this.findOpenAccessPdfs(articles)
+        const downloadable = articlesWithPdf.filter(a => a.pdfUrl)
+        logger.info('LiteratureAgent', `Found ${downloadable.length} Open Access PDFs`)
+        return articlesWithPdf
+    }
 
-                if (job.status === 'cancelled') {
-                    return
+    private async executeAnalysisPhase(job: ResearchJob, articles: ArticleSource[], request: ResearchJobRequest): Promise<{ entities: any[], relations: any[] }> {
+        const maxArticles = request.maxArticles || 20
+        this.updateJob(job, 'analyzing', 50)
+
+        const allEntities: any[] = []
+        const allRelations: any[] = []
+
+        const processable = articles.filter(a => a.pdfUrl || a.abstract || a.title)
+        logger.info('LiteratureAgent', `Processing ${processable.length} articles`)
+
+        for (let i = 0; i < Math.min(processable.length, maxArticles); i++) {
+            const article = processable[i]
+
+            if (job.status === 'cancelled') return { entities: [], relations: [] }
+
+            try {
+                const { entities, relations } = await this.processArticle(article, job.topic)
+                if (entities.length > 0) {
+                    allEntities.push(...entities)
+                    allRelations.push(...relations)
                 }
 
-                try {
-                    const { entities, relations } = await this.processArticle(article, job.topic)
-                    logger.info('LiteratureAgent', `Article "${article.title}" yielded ${entities.length} entities and ${relations.length} relations`)
-
-                    if (entities.length > 0) {
-                        allEntities.push(...entities)
-                        allRelations.push(...relations)
-                    } else {
-                        logger.warn('LiteratureAgent', `No entities found in article: ${article.title}`)
-                    }
-
-                    job.articlesProcessed++
-
-
-
-                    const progress = 50 + Math.floor((i / processable.length) * 40)
-                    this.updateJob(job, 'analyzing', progress)
-                } catch (error) {
-                    logger.warn('LiteratureAgent', `Failed to process article: ${article.title}`, { error })
-                }
+                job.articlesProcessed++
+                const progress = 50 + Math.floor((i / processable.length) * 40)
+                this.updateJob(job, 'analyzing', progress)
+            } catch (error) {
+                logger.warn('LiteratureAgent', `Failed to process article: ${article.title}`, { error })
             }
-
-
-            // Step 5: Store entities and relations for preview (NO auto-build)
-            this.updateJob(job, 'analyzing', 95)
-
-            // Merge entities from all articles
-            const mergedEntities = this.entityExtractor.mergeEntities(allEntities)
-
-            // Store for later graph building with user config
-            job.extractedEntities = mergedEntities
-            job.extractedRelations = allRelations
-
-            logger.info('LiteratureAgent', `Extracted ${mergedEntities.length} entities and ${allRelations.length} relations from ${job.articlesProcessed} articles`)
-
-            // Step 6: Generate review (optional)
-            if (request.generateReview && isFeatureEnabled('USE_AI_FEATURES')) {
-                const reviewText = await this.generateReview(request.topic, allEntities, articles)
-                job.reviewText = reviewText
-            }
-
-            // Complete - but NO graphId yet (user will configure and build)
-            job.status = 'completed'
-            job.progress = 100
-            job.completedAt = new Date().toISOString()
-            job.updatedAt = new Date().toISOString()
-
-            this.emit('job:completed', job)
-            logger.info('LiteratureAgent', `Job ${job.id} completed - awaiting graph configuration`)
-
-        } catch (error) {
-            job.status = 'failed'
-            job.error = error instanceof Error ? error.message : String(error)
-            job.updatedAt = new Date().toISOString()
-            this.emit('job:failed', job)
-            throw error
         }
+        return { entities: allEntities, relations: allRelations }
+    }
+
+    private async finalizeJob(
+        job: ResearchJob,
+        request: ResearchJobRequest,
+        entities: any[],
+        relations: any[],
+        articles: ArticleSource[]
+    ): Promise<void> {
+        this.updateJob(job, 'analyzing', 95)
+
+        const mergedEntities = this.entityExtractor.mergeEntities(entities)
+        job.extractedEntities = mergedEntities
+        job.extractedRelations = relations
+
+        logger.info('LiteratureAgent', `Extracted ${mergedEntities.length} entities from ${job.articlesProcessed} articles`)
+
+        if (request.generateReview && isFeatureEnabled('USE_AI_FEATURES')) {
+            const reviewText = await this.generateReview(request.topic, entities, articles)
+            job.reviewText = reviewText
+        }
+
+        job.status = 'completed'
+        job.progress = 100
+        job.completedAt = new Date().toISOString()
+        job.updatedAt = new Date().toISOString()
+
+        this.emit('job:completed', job)
+    }
+
+    private handleJobError(job: ResearchJob, error: unknown): void {
+        job.status = 'failed'
+        job.error = error instanceof Error ? error.message : String(error)
+        job.updatedAt = new Date().toISOString()
+        this.emit('job:failed', job)
+        // Note: throw error was present, but usually we don't want to crash the process, just log.
+        // However, if the caller expects a promise rejection, we might need to throw or return rejected promise.
+        // The original method caught errors and re-threw them.
+        // But since this is async void intended to run in background, throwing is fine if caught or unhandled rejection handled.
+        // I will log it here.
+        logger.error('LiteratureAgent', `Job ${job.id} failed`, { error })
     }
 
     /**
@@ -788,6 +831,20 @@ Generate 3 simple search query variations:`
         job.updatedAt = new Date().toISOString()
         this.persistJob(job)
         this.emit('job:progress', job)
+    }
+
+    /**
+     * Log an event for a job
+     */
+    private log(jobId: string, type: 'info' | 'search' | 'ai' | 'error' | 'success', message: string): void {
+        jobLogger.log(jobId, type, message)
+    }
+
+    /**
+     * Get logs for a job
+     */
+    getJobLogs(jobId: string): Array<{ timestamp: string; type: string; message: string }> {
+        return jobLogger.getLogs(jobId)
     }
 }
 

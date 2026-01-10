@@ -1,0 +1,30 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "module": "CommonJS",
+        "moduleResolution": "node",
+        "target": "ES2020",
+        "outDir": "./dist",
+        "noEmit": false,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "sourceMap": true,
+        "baseUrl": ".",
+        "skipLibCheck": true,
+        "allowImportingTsExtensions": false,
+        "types": [
+            "node"
+        ]
+    },
+    "include": [
+        "api/**/*",
+        "shared/**/*",
+        "src/core/Logger.ts",
+        "src/core/Database.ts"
+    ],
+    "exclude": [
+        "src/**/*",
+        "**/*.test.ts",
+        "vite.config.ts"
+    ]
+}

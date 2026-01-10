@@ -86,6 +86,21 @@ router.get('/jobs/:id', async (req, res) => {
 })
 
 /**
+ * GET /api/research/jobs/:id/logs
+ * Get live logs for a research job (Glass Box AI)
+ */
+router.get('/jobs/:id/logs', async (req, res) => {
+    try {
+        const { id } = req.params
+        const logs = literatureAgent.getJobLogs(id)
+        res.json(logs)
+    } catch (error) {
+        console.error('Error getting job logs:', error)
+        res.status(500).json({ error: 'Failed to fetch logs' })
+    }
+})
+
+/**
  * PATCH /api/research/jobs/:id/screening
  * Update screening decisions (include/exclude papers)
  */

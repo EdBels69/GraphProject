@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Graph, GraphNode } from '../../shared/contracts/graph'
-import { Search } from 'lucide-react'
+import { Search, Database, Share2, ArrowUpDown } from 'lucide-react'
 
 interface GraphDataTableProps {
     graph: Graph
@@ -33,75 +33,105 @@ export default function GraphDataTable({ graph, onNodeSelect }: GraphDataTablePr
         })
 
     return (
-        <div className="flex flex-col h-full bg-white border rounded-lg shadow-sm overflow-hidden">
+        <div className="flex flex-col h-full bg-transparent border border-white/10 rounded-xl overflow-hidden font-sans">
             {/* Header Controls */}
-            <div className="p-4 border-b bg-gray-50 space-y-3">
-                <div className="flex space-x-2 border-b border-gray-200">
+            <div className="p-4 border-b border-white/10 bg-white/5 space-y-4 backdrop-blur-sm">
+                <div className="flex space-x-1 border-b border-white/10 pb-1">
                     <button
-                        className={`px-4 py-2 text-sm font-medium ${activeTab === 'nodes' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`
+                             flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-lg transition-all flex items-center justify-center gap-2
+                             ${activeTab === 'nodes'
+                                ? 'bg-acid/10 text-acid border-b-2 border-acid'
+                                : 'text-steel hover:text-white hover:bg-white/5'}
+                        `}
                         onClick={() => setActiveTab('nodes')}
                     >
-                        Узлы ({graph.nodes.length})
+                        <Database className="w-3 h-3" />
+                        NODES ({graph.nodes.length})
                     </button>
                     <button
-                        className={`px-4 py-2 text-sm font-medium ${activeTab === 'edges' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`
+                             flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-t-lg transition-all flex items-center justify-center gap-2
+                             ${activeTab === 'edges'
+                                ? 'bg-plasma/10 text-plasma border-b-2 border-plasma'
+                                : 'text-steel hover:text-white hover:bg-white/5'}
+                        `}
                         onClick={() => setActiveTab('edges')}
                     >
-                        Связи ({graph.edges.length})
+                        <Share2 className="w-3 h-3" />
+                        EDGES ({graph.edges.length})
                     </button>
                 </div>
 
                 <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-steel/50" />
                     <input
                         type="text"
-                        placeholder="Поиск..."
+                        placeholder="SEARCH_DATASTREAM..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full bg-black/40 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-steel/40 focus:outline-none focus:border-acid/50 focus:ring-1 focus:ring-acid/20 font-mono transition-all"
                     />
                 </div>
             </div>
 
             {/* Table Content */}
-            <div className="flex-1 overflow-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50 sticky top-0 z-10">
+            <div className="flex-1 overflow-auto bg-black/20 custom-scrollbar">
+                <table className="min-w-full divide-y divide-white/5">
+                    <thead className="bg-white/5 sticky top-0 z-10 backdrop-blur-xl">
                         <tr>
                             {activeTab === 'nodes' ? (
                                 <>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => setSortField('label')}>Label</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => setSortField('weight')}>Weight</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-steel uppercase tracking-widest cursor-pointer hover:text-white transition-colors" onClick={() => setSortField('label')}>
+                                        <div className="flex items-center gap-1">Identifier <ArrowUpDown className="w-3 h-3 opacity-50" /></div>
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-steel uppercase tracking-widest cursor-pointer hover:text-white transition-colors" onClick={() => setSortField('weight')}>
+                                        <div className="flex items-center gap-1">Weight <ArrowUpDown className="w-3 h-3 opacity-50" /></div>
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-steel uppercase tracking-widest">Type</th>
                                 </>
                             ) : (
                                 <>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => { setSortField('weight'); setSortAsc(!sortAsc) }}>Weight</th>
+                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-steel uppercase tracking-widest">Source</th>
+                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-steel uppercase tracking-widest">Target</th>
+                                    <th className="px-6 py-3 text-left text-[10px] font-bold text-steel uppercase tracking-widest cursor-pointer hover:text-white transition-colors" onClick={() => { setSortField('weight'); setSortAsc(!sortAsc) }}>
+                                        <div className="flex items-center gap-1">Strength <ArrowUpDown className="w-3 h-3 opacity-50" /></div>
+                                    </th>
                                 </>
                             )}
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="divide-y divide-white/5">
                         {activeTab === 'nodes' ? (
-                            filteredNodes.map(node => (
+                            filteredNodes.map((node, idx) => (
                                 <tr
                                     key={node.id}
                                     onClick={() => onNodeSelect(node)}
-                                    className="hover:bg-blue-50 cursor-pointer transition-colors"
+                                    className={`
+                                        cursor-pointer transition-colors group
+                                        ${idx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]'}
+                                        hover:bg-acid/10 hover:border-l-2 hover:border-acid
+                                    `}
                                 >
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{node.label}</td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500">{node.weight}</td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500">{node.type || 'Entity'}</td>
+                                    <td className="px-6 py-3 whitespace-nowrap text-xs font-mono font-medium text-white group-hover:text-acid transition-colors">{node.label}</td>
+                                    <td className="px-6 py-3 whitespace-nowrap text-xs text-steel group-hover:text-white">{node.weight}</td>
+                                    <td className="px-6 py-3 whitespace-nowrap text-xs">
+                                        <span className="bg-white/10 text-steel px-2 py-0.5 rounded text-[10px] uppercase">{node.type || 'ENTITY'}</span>
+                                    </td>
                                 </tr>
                             ))
                         ) : (
-                            filteredEdges.map(edge => (
-                                <tr key={edge.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">{edge.source}</td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">{edge.target}</td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500">{edge.weight}</td>
+                            filteredEdges.map((edge, idx) => (
+                                <tr
+                                    key={edge.id}
+                                    className={`
+                                        ${idx % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]'}
+                                        hover:bg-plasma/10 transition-colors
+                                    `}
+                                >
+                                    <td className="px-6 py-3 whitespace-nowrap text-xs font-mono text-steel">{edge.source}</td>
+                                    <td className="px-6 py-3 whitespace-nowrap text-xs font-mono text-steel">{edge.target}</td>
+                                    <td className="px-6 py-3 whitespace-nowrap text-xs text-plasma font-bold">{edge.weight}</td>
                                 </tr>
                             ))
                         )}

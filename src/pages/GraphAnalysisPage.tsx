@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useLocation, Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, BarChart3, Share2, Download, RefreshCw, FileText, FileDown, MessageCircle, Database, Info } from 'lucide-react'
+import { ArrowLeft, BarChart3, Share2, Download, RefreshCw, FileText, FileDown, MessageCircle, Database, Info, Atom, Layers, Search, FlaskConical } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import GraphViewer from '@/components/GraphViewer'
+// import GraphViewer from '@/components/GraphViewer'
+import GraphViewerWebGL from '@/components/GraphViewerWebGL' // High-performance WebGL viewer
 import AnalyticsPanel from '@/components/AnalyticsPanel'
 import GraphAssistant from '@/components/GraphAssistant'
 import GraphDataTable from '@/components/GraphDataTable'
@@ -20,19 +21,19 @@ import {
 import { exportToWord, exportToPDF, downloadBlob } from '@/services/exportService'
 
 // Demo graph data for testing
-const DEMO_GRAPH: Graph = createGraph('Демонстрационный граф', false)
+const DEMO_GRAPH: Graph = createGraph('DEMO_SEQUENCE_ALPHA', false)
 DEMO_GRAPH.nodes = [
-  { id: 'p53', label: 'TP53 (p53)', weight: 10, type: 'protein', data: { id: 'p53', name: 'TP53', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'p53', label: 'TP53', weight: 10, type: 'protein', data: { id: 'p53', name: 'TP53', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
   { id: 'mdm2', label: 'MDM2', weight: 8, type: 'protein', data: { id: 'mdm2', name: 'MDM2', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
   { id: 'bax', label: 'BAX', weight: 6, type: 'protein', data: { id: 'bax', name: 'BAX', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
   { id: 'bcl2', label: 'BCL-2', weight: 5, type: 'protein', data: { id: 'bcl2', name: 'BCL-2', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'casp3', label: 'Caspase-3', weight: 7, type: 'protein', data: { id: 'casp3', name: 'Caspase-3', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'casp9', label: 'Caspase-9', weight: 5, type: 'protein', data: { id: 'casp9', name: 'Caspase-9', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'cyto_c', label: 'Cytochrome C', weight: 6, type: 'protein', data: { id: 'cyto_c', name: 'Cyto C', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'apaf1', label: 'APAF-1', weight: 4, type: 'protein', data: { id: 'apaf1', name: 'APAF-1', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'p21', label: 'p21 (CDKN1A)', weight: 6, type: 'protein', data: { id: 'p21', name: 'p21', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'casp3', label: 'CASP3', weight: 7, type: 'protein', data: { id: 'casp3', name: 'Caspase-3', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'casp9', label: 'CASP9', weight: 5, type: 'protein', data: { id: 'casp9', name: 'Caspase-9', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'cyto_c', label: 'CYCS', weight: 6, type: 'protein', data: { id: 'cyto_c', name: 'Cyto C', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'apaf1', label: 'APAF1', weight: 4, type: 'protein', data: { id: 'apaf1', name: 'APAF-1', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'p21', label: 'CDKN1A', weight: 6, type: 'protein', data: { id: 'p21', name: 'p21', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
   { id: 'cdk2', label: 'CDK2', weight: 5, type: 'protein', data: { id: 'cdk2', name: 'CDK2', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'cycline', label: 'Cyclin E', weight: 4, type: 'protein', data: { id: 'cycline', name: 'Cyclin E', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+  { id: 'cycline', label: 'CCNE1', weight: 4, type: 'protein', data: { id: 'cycline', name: 'Cyclin E', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
   { id: 'rb', label: 'RB1', weight: 5, type: 'protein', data: { id: 'rb', name: 'RB1', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
 ]
 DEMO_GRAPH.edges = [
@@ -86,7 +87,7 @@ export default function GraphAnalysisPage() {
         })) || []
 
         if (nodes.length > 0) {
-          const newGraph = createGraph('Загруженный граф', false)
+          const newGraph = createGraph('Uploaded Graph', false)
           newGraph.nodes = nodes
           newGraph.edges = edges
           setGraph(newGraph)
@@ -126,11 +127,7 @@ export default function GraphAnalysisPage() {
   const handleNodeSelect = (node: GraphNode) => {
     setSelectedNode(node)
     setSelectedEdge(null)
-    // Auto-open chat if closed, or switch to stats/chat if appropriate
     if (!isPanelOpen) setIsPanelOpen(true)
-    // Optional: Switch to chat to ask about the node? 
-    // Users preferred keeping context, so we won't force switch tab, but ensure sidebar is open.
-    // If user wants AI insights, they click Chat.
     setActiveTab('chat')
   }
 
@@ -160,220 +157,188 @@ export default function GraphAnalysisPage() {
 
   if (!graph) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4" />
-          <p className="text-gray-600">Загрузка графа...</p>
+      <div className="flex items-center justify-center min-h-screen bg-void">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-acid mx-auto" />
+          <p className="text-steel font-mono tracking-widest text-xs">INITIALIZING_VISUALIZATION...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4 relative h-[calc(100vh-80px)] flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-b shrink-0">
-        <div className="flex items-center gap-4">
-          <Link to="/upload">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              К загрузке
-            </Button>
+    <div className="fixed inset-0 bg-void flex flex-col font-sans overflow-hidden">
+
+      {/* Top Glass Bar */}
+      <div className="h-16 flex items-center justify-between px-6 z-30 border-b border-white/5 bg-void/80 backdrop-blur-md">
+        <div className="flex items-center gap-6">
+          <Link to="/upload" className="flex items-center gap-2 text-steel/60 hover:text-acid transition-colors group">
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            <span className="font-mono text-xs tracking-widest">BACK</span>
           </Link>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{graph.name}</h1>
-            <p className="text-xs text-gray-500">
-              {graph.nodes.length} узлов • {graph.edges.length} связей • Плотность: {(2 * graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1)) * 100).toFixed(1)}%
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-acid animate-pulse-slow shadow-glow-acid" />
+            <div>
+              <h1 className="text-lg font-bold font-display text-white tracking-wide uppercase">{graph.name}</h1>
+              <div className="flex items-center gap-3 text-[10px] font-mono text-steel/60">
+                <span>NODES: {graph.nodes.length}</span>
+                <span>EDGES: {graph.edges.length}</span>
+                <span>DENSITY: {(2 * graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1)) * 100).toFixed(1)}%</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Tab Controls */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-1 mr-4">
-            <button
-              onClick={() => { setActiveTab('chat'); setIsPanelOpen(true) }}
-              className={`px-3 py-1.4 text-sm font-medium rounded-md transition-all ${activeTab === 'chat' && isPanelOpen ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4" />
-                <span>AI Аналитик</span>
-              </div>
+        <div className="flex items-center gap-3">
+          {/* Toolbar Actions */}
+          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/5">
+            <button title="Demo Reload" onClick={loadDemoGraph} className="p-2 hover:bg-white/10 rounded text-steel hover:text-white transition-colors">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button
-              onClick={() => { setActiveTab('research'); setIsPanelOpen(true) }}
-              className={`px-3 py-1.4 text-sm font-medium rounded-md transition-all ${activeTab === 'research' && isPanelOpen ? 'bg-white shadow text-indigo-600' : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4" />
-                <span>Research</span>
-              </div>
+            <button title="Export JSON" onClick={handleExportJSON} className="p-2 hover:bg-white/10 rounded text-steel hover:text-white transition-colors">
+              <Download className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => { setActiveTab('stats'); setIsPanelOpen(true) }}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'stats' && isPanelOpen ? 'bg-white shadow text-purple-600' : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                <span>Инфо</span>
-              </div>
-            </button>
-            <button
-              onClick={() => { setActiveTab('data'); setIsPanelOpen(true) }}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'data' && isPanelOpen ? 'bg-white shadow text-green-600' : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4" />
-                <span>Таблица</span>
-              </div>
-            </button>
-            <button
-              onClick={() => { setActiveTab('list'); setIsPanelOpen(true) }}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'list' && isPanelOpen ? 'bg-white shadow text-orange-600' : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4" />
-                <span>Сохраненные</span>
-              </div>
+            <button title="Export Docx" onClick={async () => {
+              if (!graph) return
+              const blob = await exportToWord(graph)
+              downloadBlob(blob, `${graph.name}.docx`)
+            }} className="p-2 hover:bg-white/10 rounded text-steel hover:text-white transition-colors">
+              <FileText className="w-4 h-4" />
             </button>
           </div>
 
-          <Button variant="secondary" size="sm" onClick={loadDemoGraph} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Демо
-          </Button>
+          <div className="h-6 w-px bg-white/10" />
 
-          <Link to={graph.id ? `/analysis/data/${graph.id}` : '#'} state={{ graph }}>
-            <Button variant="outline" size="sm" className="mr-2">
-              <Database className="w-4 h-4 mr-2" />
-              Все данные
-            </Button>
-          </Link>
-          <Button variant="secondary" size="sm" onClick={handleExportJSON}>
-            <Download className="w-4 h-4 mr-2" />
-            JSON
-          </Button>
-          <Button variant="secondary" size="sm" onClick={async () => {
-            if (!graph) return
-            const blob = await exportToWord(graph)
-            downloadBlob(blob, `${graph.name}.docx`)
-          }}>
-            <FileText className="w-4 h-4 mr-2" />
-            Docx
-          </Button>
+          {/* Tab Toggle (if panel closed) */}
+          {!isPanelOpen && (
+            <button
+              onClick={() => setIsPanelOpen(true)}
+              className="p-2 bg-acid/10 border border-acid/20 text-acid rounded hover:bg-acid/20 transition-colors"
+            >
+              <Layers className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Main Content Layout */}
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex-1 flex relative overflow-hidden">
 
-        {/* Left: Graph Visualization (Flexible Width) */}
-        <div className={`transition-all duration-300 ${isPanelOpen ? 'w-2/3 pr-2' : 'w-full'} h-full flex flex-col`}>
-          <Card className="flex-1 h-full shadow-md border overflow-hidden relative">
-            <div className="absolute top-4 left-4 z-10 bg-white/80 p-2 rounded-lg backdrop-blur text-xs">
-              {selectedNode ? (
-                <div>
-                  <span className="font-bold">{selectedNode.label}</span>
-                  <div className="text-gray-500">ID: {selectedNode.id}</div>
-                </div>
-              ) : (
-                <span className="text-gray-500">Выберите узел для деталей</span>
-              )}
-            </div>
-            <GraphViewer
-              graph={graph}
-              onNodeSelect={handleNodeSelect}
-              onEdgeSelect={handleEdgeSelect}
-              showControls={true}
-            />
-          </Card>
+        {/* Graph Viewer (Background Layer) */}
+        {/* Graph Viewer (Background Layer) */}
+        <div className="absolute inset-0 z-0">
+          <GraphViewerWebGL
+            graph={graph}
+            onNodeSelect={handleNodeSelect}
+            onEdgeSelect={handleEdgeSelect}
+          />
         </div>
 
-        {/* Right: Tabbed Panel (Fixed Width when open) */}
-        <div className={`transition-all duration-300 ${isPanelOpen ? 'w-1/3 translate-x-0' : 'w-0 translate-x-full absolute right-0'} h-full border-l bg-white flex flex-col shadow-xl z-20`}>
-          {isPanelOpen && (
-            <>
-              {/* Tab Content */}
-              <div className="flex-1 overflow-hidden bg-gray-50/50 relative h-full">
-                {/* Chat Tab - Always mounted to preserve history */}
-                <div style={{ display: activeTab === 'chat' ? 'flex' : 'none' }} className="h-full flex-col">
-                  <GraphAssistant
-                    selectedNode={selectedNode}
-                    graphId={graph.id}
-                    graph={graph}
-                    onClose={() => setIsPanelOpen(false)}
-                  />
-                </div>
+        {/* Right Panel (Sliding Glass Sidebar) */}
+        <div className={`
+             absolute top-0 right-0 bottom-0 h-full z-20 transition-all duration-500 ease-in-out border-l border-white/10 bg-void/80 backdrop-blur-xl shadow-2xl flex flex-col
+             ${isPanelOpen ? 'w-[450px] translate-x-0' : 'w-[450px] translate-x-full'}
+        `}>
+          {/* Sidebar Toggle */}
+          <button
+            onClick={() => setIsPanelOpen(false)}
+            className="absolute -left-10 top-4 p-2 bg-void/80 border border-white/10 border-r-0 rounded-l text-steel hover:text-white hover:bg-white/10"
+          >
+            <ArrowLeft className="w-4 h-4 rotate-180" />
+          </button>
 
-                {/* Stats Tab */}
-                <div style={{ display: activeTab === 'stats' ? 'block' : 'none' }} className="h-full">
-                  <div className="h-full overflow-y-auto p-4 space-y-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <h2 className="font-bold text-lg flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-purple-600" />
-                        Метрики Графа
-                      </h2>
-                      <Button size="sm" variant="ghost" onClick={() => setIsPanelOpen(false)}>×</Button>
-                    </div>
-                    <AnalyticsPanel graph={graph} />
-                  </div>
-                </div>
+          {/* Tabs Header */}
+          <div className="flex items-center gap-1 p-2 border-b border-white/5 overflow-x-auto no-scrollbar">
+            {[
+              { id: 'stats', icon: BarChart3, label: 'METRICS' },
+              { id: 'chat', icon: MessageCircle, label: 'AI_ANALYST' },
+              { id: 'research', icon: FlaskConical, label: 'RESEARCH' },
+              { id: 'data', icon: Database, label: 'DATA' },
+              { id: 'list', icon: Share2, label: 'SAVED' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`
+                            flex items-center gap-2 px-3 py-2 rounded text-[10px] font-bold tracking-wider font-display transition-all whitespace-nowrap
+                            ${activeTab === tab.id
+                    ? 'bg-acid text-void shadow-glow-acid'
+                    : 'text-steel hover:bg-white/5 hover:text-white'}
+                        `}
+              >
+                <tab.icon className="w-3 h-3" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-                {/* Data Tab */}
-                <div style={{ display: activeTab === 'data' ? 'flex' : 'none' }} className="h-full flex-col">
-                  <div className="flex justify-between items-center p-4 border-b bg-white">
-                    <h2 className="font-bold text-lg flex items-center gap-2">
-                      <Database className="w-5 h-5 text-green-600" />
-                      Данные Графа
-                    </h2>
-                    <Button size="sm" variant="ghost" onClick={() => setIsPanelOpen(false)}>×</Button>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <GraphDataTable graph={graph} onNodeSelect={handleNodeSelect} />
-                  </div>
-                </div>
+          {/* Panel Content Area */}
+          <div className="flex-1 overflow-hidden relative">
 
-                {/* Saved Graphs Tab */}
-                <div style={{ display: activeTab === 'list' ? 'flex' : 'none' }} className="h-full flex-col">
-                  <div className="flex justify-between items-center p-4 border-b bg-white">
-                    <h2 className="font-bold text-lg flex items-center gap-2">
-                      <Database className="w-5 h-5 text-orange-600" />
-                      Сохраненные Графы
-                    </h2>
-                    <Button size="sm" variant="ghost" onClick={() => setIsPanelOpen(false)}>×</Button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4">
-                    <SavedGraphsList
-                      currentGraphId={graph?.id}
-                      onLoadGraph={(id) => {
-                        setLoading(true)
-                        setSearchParams({ graphId: id })
-                        setSearchParams({ graphId: id })
-                        setActiveTab('stats')
-                      }}
-                    />
-                  </div>
-                </div>
+            {/* AI Chat */}
+            <div className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${activeTab === 'chat' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
+              <GraphAssistant
+                selectedNode={selectedNode}
+                graphId={graph.id}
+                graph={graph}
+                onClose={() => setIsPanelOpen(false)}
+              />
+            </div>
 
-                {/* Research Tab */}
-                <div style={{ display: activeTab === 'research' ? 'flex' : 'none' }} className="h-full flex-col">
-                  {graph && (
-                    <ResearchPanel
-                      graphId={graph.id}
-                      onGraphUpdate={() => {
-                        // Reload graph data
-                        fetch(`/api/graphs/${graph.id}`)
-                          .then(r => r.json())
-                          .then(d => {
-                            if (d.success) setGraph(d.data)
-                          })
-                      }}
-                    />
-                  )}
-                </div>
+            {/* Metrics */}
+            <div className={`absolute inset-0 overflow-y-auto p-6 transition-opacity duration-300 ${activeTab === 'stats' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
+              <h2 className="text-xl font-display font-bold text-white mb-6 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-acid" /> NETWORK_METRICS
+              </h2>
+              <AnalyticsPanel graph={graph} />
+            </div>
+
+            {/* Research */}
+            <div className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${activeTab === 'research' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
+              {graph && (
+                <ResearchPanel
+                  graphId={graph.id}
+                  onGraphUpdate={() => {
+                    fetch(`/api/graphs/${graph.id}`)
+                      .then(r => r.json())
+                      .then(d => { if (d.success) setGraph(d.data) })
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Data Table */}
+            <div className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${activeTab === 'data' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
+              <div className="p-4 border-b border-white/5">
+                <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
+                  <Database className="w-5 h-5 text-plasma" /> RAW_DATA
+                </h2>
               </div>
-            </>
-          )}
+              <div className="flex-1 overflow-auto bg-black/20">
+                <GraphDataTable graph={graph} onNodeSelect={handleNodeSelect} />
+              </div>
+            </div>
+
+            {/* Saved Graphs */}
+            <div className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${activeTab === 'list' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
+              <div className="p-4 border-b border-white/5">
+                <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
+                  <Share2 className="w-5 h-5 text-indigo-400" /> GRAPH_LIBRARY
+                </h2>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <SavedGraphsList
+                  currentGraphId={graph?.id}
+                  onLoadGraph={(id) => {
+                    setLoading(true)
+                    setSearchParams({ graphId: id })
+                    setActiveTab('stats')
+                  }}
+                />
+              </div>
+            </div>
+
+          </div>
         </div>
 
       </div>

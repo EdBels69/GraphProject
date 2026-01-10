@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useToast } from '@/contexts/ToastContext'
+import ThinkingTerminal from '@/components/ThinkingTerminal'
+import {
+    ArrowLeft, Check, X, RotateCcw, Download, FileText,
+    Settings, GripVertical, CheckCircle2, AlertCircle, Loader2
+} from 'lucide-react'
 
 interface Article {
     id: string
@@ -17,7 +22,7 @@ interface ResearchJob {
     id: string
     topic: string
     mode?: 'quick' | 'research'
-    status: string  // Backend uses: pending, searching, downloading, analyzing, completed, failed
+    status: string
     articlesFound: number
     progress?: number
     articles?: Article[]
@@ -31,10 +36,10 @@ export default function PapersPage() {
     const [job, setJob] = useState<ResearchJob | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
-    const [selectedIndex, setSelectedIndex] = useState(0) // For keyboard navigation
+    const [selectedIndex, setSelectedIndex] = useState(0)
     const { addToast } = useToast()
 
-    // Column configuration for reordering
+    // Column config
     type ColumnId = 'checkbox' | 'title' | 'year' | 'source' | 'status'
     interface Column {
         id: ColumnId
@@ -42,22 +47,21 @@ export default function PapersPage() {
         width?: number | string
     }
     const [columns, setColumns] = useState<Column[]>(() => {
-        // Load columns from localStorage if available
         const saved = localStorage.getItem('papers_columns')
         if (saved) {
             try { return JSON.parse(saved) } catch { }
         }
         return [
-            { id: 'checkbox', label: '✅', width: 40 },
-            { id: 'title', label: 'Название' },
-            { id: 'year', label: 'Год', width: 60 },
-            { id: 'source', label: 'Источник', width: 80 },
-            { id: 'status', label: 'Статус', width: 100 }
+            { id: 'checkbox', label: 'SELECT', width: 48 },
+            { id: 'title', label: 'DOCUMENT TITLE' },
+            { id: 'year', label: 'YEAR', width: 80 },
+            { id: 'source', label: 'SOURCE', width: 100 },
+            { id: 'status', label: 'STATUS', width: 120 }
         ]
     })
     const [draggingColumn, setDraggingColumn] = useState<ColumnId | null>(null)
 
-    // Saved views
+    // Saved views logic
     interface SavedView {
         id: string
         name: string
@@ -73,7 +77,6 @@ export default function PapersPage() {
     })
     const [currentFilter, setCurrentFilter] = useState<'all' | 'included' | 'excluded' | 'pending'>('all')
 
-    // Persist columns and views to localStorage
     useEffect(() => {
         localStorage.setItem('papers_columns', JSON.stringify(columns))
     }, [columns])
@@ -82,8 +85,9 @@ export default function PapersPage() {
         localStorage.setItem('papers_saved_views', JSON.stringify(savedViews))
     }, [savedViews])
 
+    // ... View management functions ...
     const saveCurrentView = () => {
-        const name = prompt('Название вида:')
+        const name = prompt('View Status Name:')
         if (!name) return
         const newView: SavedView = {
             id: `view-${Date.now()}`,
@@ -92,40 +96,34 @@ export default function PapersPage() {
             filter: currentFilter
         }
         setSavedViews(prev => [...prev, newView])
-        addToast(`Вид "${name}" сохранён`, 'success')
+        addToast(`View "${name}" saved`, 'success')
     }
 
     const loadView = (view: SavedView) => {
         setColumns(view.columns)
         if (view.filter) setCurrentFilter(view.filter)
-        addToast(`Вид "${view.name}" загружен`, 'info')
+        addToast(`View "${view.name}" loaded`, 'info')
     }
 
-    const deleteView = (viewId: string) => {
-        setSavedViews(prev => prev.filter(v => v.id !== viewId))
-    }
-
-    // Helper to check if job is in progress
     const isInProgress = (status: string) =>
         ['pending', 'searching', 'downloading', 'analyzing', 'processing'].includes(status)
 
-    // Keyboard shortcuts
+    // Keyboard controls
     useEffect(() => {
         const articles = job?.articles || []
         if (articles.length === 0) return
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Ignore if typing in input
             if ((e.target as HTMLElement).tagName === 'INPUT') return
 
             switch (e.key.toLowerCase()) {
-                case 'j': // Next article
+                case 'j':
                     setSelectedIndex(i => Math.min(i + 1, articles.length - 1))
                     break
-                case 'k': // Previous article
+                case 'k':
                     setSelectedIndex(i => Math.max(i - 1, 0))
                     break
-                case 'i': // Include selected
+                case 'i':
                     if (articles[selectedIndex]) {
                         setJob(prev => {
                             if (!prev?.articles) return prev
@@ -135,7 +133,7 @@ export default function PapersPage() {
                         })
                     }
                     break
-                case 'e': // Exclude selected
+                case 'e':
                     if (articles[selectedIndex]) {
                         setJob(prev => {
                             if (!prev?.articles) return prev
@@ -154,14 +152,12 @@ export default function PapersPage() {
 
     useEffect(() => {
         fetchJob()
-        // Poll for updates if job is processing
         const interval = setInterval(fetchJob, 3000)
         setPollingInterval(interval)
         return () => clearInterval(interval)
     }, [id])
 
     useEffect(() => {
-        // Stop polling when job is completed or failed
         if (job && !isInProgress(job.status) && pollingInterval) {
             clearInterval(pollingInterval)
         }
@@ -176,7 +172,7 @@ export default function PapersPage() {
             }
         } catch (error) {
             console.error('Failed to fetch job:', error)
-            addToast('Не удалось загрузить данные задачи', 'error')
+            addToast('Connection error', 'error')
         } finally {
             setIsLoading(false)
         }
@@ -190,564 +186,297 @@ export default function PapersPage() {
         }
     }
 
-    const getStatusDisplay = (status: string) => {
-        const statusMap: Record<string, { label: string; bg: string; color: string }> = {
-            pending: { label: '⏳ Ожидание...', bg: '#fef3c7', color: '#92400e' },
-            searching: { label: '🔍 Поиск статей...', bg: '#dbeafe', color: '#1e40af' },
-            downloading: { label: '📥 Загрузка...', bg: '#e0e7ff', color: '#3730a3' },
-            analyzing: { label: '🔬 Анализ...', bg: '#fef3c7', color: '#92400e' },
-            processing: { label: '⚙️ Обработка...', bg: '#fef3c7', color: '#92400e' },
-            completed: { label: '✅ Готово', bg: '#dcfce7', color: '#166534' },
-            failed: { label: '❌ Ошибка', bg: '#fee2e2', color: '#991b1b' },
-            cancelled: { label: '🚫 Отменено', bg: '#f1f5f9', color: '#475569' }
-        }
-        return statusMap[status] || { label: `⏳ ${status}...`, bg: '#fef3c7', color: '#92400e' }
-    }
-
-    if (isLoading) {
+    if (isLoading || !job) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
-                    <div style={{ color: '#64748b' }}>Загрузка...</div>
-                </div>
+            <div className="min-h-screen flex items-center justify-center bg-void">
+                <Loader2 className="w-12 h-12 text-acid animate-spin" />
             </div>
         )
     }
-
-    if (!job) {
-        return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-                    <div style={{ color: '#64748b', marginBottom: 24 }}>Исследование не найдено</div>
-                    <button
-                        onClick={() => navigate('/')}
-                        style={{ padding: '12px 24px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}
-                    >
-                        На главную
-                    </button>
-                </div>
-            </div>
-        )
-    }
-
-    const statusDisplay = getStatusDisplay(job.status)
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+        <div className="space-y-8 pb-32 animate-fade-in">
             {/* Header */}
-            <header style={{
-                background: '#fff',
-                borderBottom: '1px solid #e2e8f0',
-                padding: '16px 24px'
-            }}>
-                <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <button
-                        onClick={() => navigate('/')}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            background: 'none', border: 'none',
-                            color: '#64748b', fontSize: 14, cursor: 'pointer'
-                        }}
-                    >
-                        ← На главную
-                    </button>
-                    <div style={{ fontSize: 14, color: '#94a3b8' }}>Шаг 2: Найденные статьи</div>
-                </div>
-            </header>
+            <div className="border-b border-white/5 pb-6">
+                <button
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2 text-steel/60 hover:text-acid mb-4 transition-colors font-mono text-xs tracking-widest"
+                >
+                    <ArrowLeft className="w-3 h-3" /> SYSTEM_ROOT
+                </button>
 
-            {/* Content */}
-            <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '48px 24px' }}>
-                <div style={{ textAlign: 'center', marginBottom: 40 }}>
-                    <h1 style={{ fontSize: 28, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>
-                        📄 {job.topic}
-                    </h1>
-
-                    {/* Status */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 16 }}>
-                        <span style={{
-                            padding: '6px 16px',
-                            borderRadius: 20,
-                            fontSize: 14,
-                            fontWeight: 500,
-                            background: statusDisplay.bg,
-                            color: statusDisplay.color
-                        }}>
-                            {statusDisplay.label}
-                        </span>
-                        <span style={{ color: '#64748b' }}>
-                            {job.articlesFound} статей найдено
-                        </span>
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                    <div>
+                        <h1 className="text-4xl font-display font-bold text-white uppercase tracking-tight mb-2">
+                            DATA STREAM: <span className="text-acid text-glow">{job.topic}</span>
+                        </h1>
+                        <div className="flex items-center gap-4 text-sm font-mono text-gray-400">
+                            <span className="bg-white/5 px-2 py-1 rounded text-xs border border-white/10 uppercase">{job.status}</span>
+                            <span>{job.articlesFound} RECORDS FOUND</span>
+                        </div>
                     </div>
 
-                    {/* Progress bar for in-progress jobs */}
-                    {isInProgress(job.status) && (
-                        <div style={{ maxWidth: 400, margin: '24px auto 0' }}>
-                            <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-                                <div
-                                    style={{
-                                        height: '100%',
-                                        background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
-                                        width: `${job.progress || 30}%`,
-                                        transition: 'width 0.3s ease',
-                                        animation: 'pulse 2s infinite'
-                                    }}
-                                />
-                            </div>
-                            <div style={{ fontSize: 13, color: '#64748b', marginTop: 8 }}>
-                                {job.status === 'searching' ? 'Ищем статьи в PubMed и CrossRef...' :
-                                    job.status === 'downloading' ? 'Загружаем полные тексты...' :
-                                        job.status === 'analyzing' ? 'Извлекаем сущности и связи...' :
-                                            'Обрабатываем данные...'}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Research Mode: Screening Table */}
-                {job.mode === 'research' && job.status === 'completed' && job.articles && (
-                    <div style={{
-                        background: '#fff',
-                        borderRadius: 16,
-                        border: '1px solid #e2e8f0',
-                        overflow: 'hidden',
-                        marginBottom: 32
-                    }}>
-                        <div style={{
-                            padding: '16px 24px',
-                            borderBottom: '1px solid #e2e8f0',
-                            background: '#f8fafc',
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12
-                        }}>
-                            <div>
-                                <h2 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b', margin: 0 }}>
-                                    Скрининг статей ({job.articles.filter(a => a.screeningStatus === 'included').length} выбрано)
-                                </h2>
-                                <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
-                                    <kbd style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>J</kbd>/<kbd style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>K</kbd> навигация,
-                                    <kbd style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 11, marginLeft: 4 }}>I</kbd>/<kbd style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 11 }}>E</kbd> include/exclude
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                {/* Bulk Actions */}
-                                <button
-                                    onClick={() => {
-                                        const updated = job.articles!.map(a => ({ ...a, screeningStatus: 'included' as const }))
-                                        setJob({ ...job, articles: updated })
-                                    }}
-                                    style={{
-                                        padding: '8px 14px',
-                                        background: '#dcfce7',
-                                        color: '#166534',
-                                        border: '1px solid #bbf7d0',
-                                        borderRadius: 8,
-                                        fontSize: 13,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    ✅ Включить все
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        const updated = job.articles!.map(a => ({ ...a, screeningStatus: 'excluded' as const }))
-                                        setJob({ ...job, articles: updated })
-                                    }}
-                                    style={{
-                                        padding: '8px 14px',
-                                        background: '#fee2e2',
-                                        color: '#991b1b',
-                                        border: '1px solid #fecaca',
-                                        borderRadius: 8,
-                                        fontSize: 13,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    ❌ Исключить все
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        const updated = job.articles!.map(a => ({ ...a, screeningStatus: 'pending' as const }))
-                                        setJob({ ...job, articles: updated })
-                                    }}
-                                    style={{
-                                        padding: '8px 14px',
-                                        background: '#f1f5f9',
-                                        color: '#475569',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: 8,
-                                        fontSize: 13,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    🔄 Сбросить
-                                </button>
-                                <div style={{ width: 1, background: '#e2e8f0', margin: '0 4px' }} />
-                                {/* Export */}
-                                <a
-                                    href={`/api/research/jobs/${id}/export/csv`}
-                                    download
-                                    style={{
-                                        padding: '8px 14px',
-                                        background: '#f1f5f9',
-                                        color: '#475569',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: 8,
-                                        fontSize: 13,
-                                        textDecoration: 'none',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    📥 CSV
-                                </a>
-                                <a
-                                    href={`/api/research/jobs/${id}/export/bibtex`}
-                                    download
-                                    style={{
-                                        padding: '8px 14px',
-                                        background: '#f1f5f9',
-                                        color: '#475569',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: 8,
-                                        fontSize: 13,
-                                        textDecoration: 'none',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    📚 BibTeX
-                                </a>
-                            </div>
-                        </div>
-
-                        {/* Views & Filters Toolbar */}
-                        <div style={{ padding: '12px 24px', display: 'flex', gap: 16, alignItems: 'center', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
-                            {/* Filter tabs */}
-                            <div style={{ display: 'flex', gap: 4 }}>
-                                {(['all', 'pending', 'included', 'excluded'] as const).map(f => (
-                                    <button
-                                        key={f}
-                                        onClick={() => setCurrentFilter(f)}
-                                        style={{
-                                            padding: '6px 12px',
-                                            background: currentFilter === f ? '#3b82f6' : '#f1f5f9',
-                                            color: currentFilter === f ? 'white' : '#64748b',
-                                            border: 'none',
-                                            borderRadius: 6,
-                                            fontSize: 12,
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        {f === 'all' ? 'Все' : f === 'pending' ? 'Ожидают' : f === 'included' ? 'Включены' : 'Исключены'}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div style={{ flex: 1 }} />
-
-                            {/* Saved views */}
-                            {savedViews.length > 0 && (
-                                <select
-                                    onChange={(e) => {
-                                        const view = savedViews.find(v => v.id === e.target.value)
-                                        if (view) loadView(view)
-                                    }}
-                                    defaultValue=""
-                                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12 }}
-                                >
-                                    <option value="" disabled>📁 Загрузить вид...</option>
-                                    {savedViews.map(v => (
-                                        <option key={v.id} value={v.id}>{v.name}</option>
-                                    ))}
-                                </select>
-                            )}
+                    {/* Filter Tabs */}
+                    <div className="flex p-1 bg-white/5 rounded-lg border border-white/5">
+                        {(['all', 'pending', 'included', 'excluded'] as const).map(f => (
                             <button
-                                onClick={saveCurrentView}
-                                style={{
-                                    padding: '6px 12px',
-                                    background: '#f1f5f9',
-                                    color: '#475569',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: 6,
-                                    fontSize: 12,
-                                    cursor: 'pointer'
-                                }}
+                                key={f}
+                                onClick={() => setCurrentFilter(f)}
+                                className={`
+                                  px-4 py-2 rounded-md text-xs font-bold font-display tracking-wider transition-all
+                                  ${currentFilter === f ? 'bg-acid text-void shadow-glow-acid' : 'text-gray-500 hover:text-white'}
+                                `}
                             >
-                                💾 Сохранить вид
+                                {f.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Progress Section */}
+            {isInProgress(job.status) && (
+                <div className="glass-panel p-8 rounded-xl space-y-6">
+                    <ThinkingTerminal jobId={job.id} status={job.status} />
+                    <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-acid shadow-glow-acid transition-all duration-300 relative"
+                            style={{ width: `${job.progress || 10}%` }}
+                        >
+                            <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/50 blur-[2px]" />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Main Data Table */}
+            {job.articles && (
+                <div className="glass-panel rounded-xl overflow-hidden shadow-2xl border border-white/10">
+                    {/* Toolbar */}
+                    <div className="p-4 border-b border-white/5 bg-black/20 flex flex-wrap gap-4 justify-between items-center">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setJob({ ...job, articles: job.articles!.map(a => ({ ...a, screeningStatus: 'included' })) })}
+                                className="px-3 py-1.5 bg-acid/10 border border-acid/20 text-acid rounded text-xs font-bold hover:bg-acid/20 transition-colors flex items-center gap-2"
+                            >
+                                <CheckCircle2 className="w-3 h-3" /> INCLUDE ALL
+                            </button>
+                            <button
+                                onClick={() => setJob({ ...job, articles: job.articles!.map(a => ({ ...a, screeningStatus: 'excluded' })) })}
+                                className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded text-xs font-bold hover:bg-red-500/20 transition-colors flex items-center gap-2"
+                            >
+                                <AlertCircle className="w-3 h-3" /> EXCLUDE ALL
                             </button>
                         </div>
 
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                                <thead>
-                                    <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
-                                        {columns.map((col) => (
-                                            <th
-                                                key={col.id}
-                                                draggable={col.id !== 'checkbox'}
-                                                onDragStart={() => setDraggingColumn(col.id)}
-                                                onDragOver={(e) => e.preventDefault()}
-                                                onDrop={() => {
-                                                    if (draggingColumn && draggingColumn !== col.id) {
-                                                        const fromIndex = columns.findIndex(c => c.id === draggingColumn)
-                                                        const toIndex = columns.findIndex(c => c.id === col.id)
-                                                        const newCols = [...columns]
-                                                        const [moved] = newCols.splice(fromIndex, 1)
-                                                        newCols.splice(toIndex, 0, moved)
-                                                        setColumns(newCols)
-                                                    }
-                                                    setDraggingColumn(null)
-                                                }}
-                                                onDragEnd={() => setDraggingColumn(null)}
-                                                style={{
-                                                    padding: '12px 16px',
-                                                    width: col.width,
-                                                    cursor: col.id !== 'checkbox' ? 'grab' : 'default',
-                                                    background: draggingColumn === col.id ? '#e2e8f0' : undefined,
-                                                    userSelect: 'none'
-                                                }}
-                                            >
+                        <div className="flex gap-2">
+                            <a href={`/api/research/jobs/${id}/export/csv`} className="px-3 py-1.5 bg-white/5 text-gray-400 hover:text-white rounded text-xs flex items-center gap-2 transition-colors">
+                                <Download className="w-3 h-3" /> CSV
+                            </a>
+                            <a href={`/api/research/jobs/${id}/export/bibtex`} className="px-3 py-1.5 bg-white/5 text-gray-400 hover:text-white rounded text-xs flex items-center gap-2 transition-colors">
+                                <FileText className="w-3 h-3" /> BIBTEX
+                            </a>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-white/10 bg-black/40 text-gray-500 font-display text-[10px] tracking-widest uppercase">
+                                    {columns.map((col) => (
+                                        <th
+                                            key={col.id}
+                                            draggable={col.id !== 'checkbox'}
+                                            onDragStart={() => setDraggingColumn(col.id)}
+                                            onDragOver={(e) => e.preventDefault()}
+                                            onDrop={() => {
+                                                if (draggingColumn && draggingColumn !== col.id) {
+                                                    const fromIndex = columns.findIndex(c => c.id === draggingColumn)
+                                                    const toIndex = columns.findIndex(c => c.id === col.id)
+                                                    const newCols = [...columns]
+                                                    const [moved] = newCols.splice(fromIndex, 1)
+                                                    newCols.splice(toIndex, 0, moved)
+                                                    setColumns(newCols)
+                                                }
+                                                setDraggingColumn(null)
+                                            }}
+                                            className={`
+                                                p-4 select-none
+                                                ${col.id !== 'checkbox' ? 'cursor-grab active:cursor-grabbing hover:text-white transition-colors' : ''}
+                                                ${draggingColumn === col.id ? 'bg-white/5' : ''}
+                                            `}
+                                            style={{ width: col.width }}
+                                        >
+                                            <div className="flex items-center gap-2">
                                                 {col.label}
-                                                {col.id !== 'checkbox' && <span style={{ marginLeft: 4, opacity: 0.4 }}>⋮⋮</span>}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {job.articles
-                                        .filter(article => {
-                                            if (currentFilter === 'all') return true
-                                            if (currentFilter === 'pending') return article.screeningStatus === 'pending' || !article.screeningStatus
-                                            return article.screeningStatus === currentFilter
-                                        })
-                                        .map((article, index) => {
-                                            const isIncluded = article.screeningStatus === 'included'
-                                            const isExcluded = article.screeningStatus === 'excluded'
-                                            const isSelected = index === selectedIndex
-                                            return (
-                                                <tr
-                                                    key={article.id}
-                                                    onClick={() => setSelectedIndex(index)}
-                                                    style={{
-                                                        borderBottom: '1px solid #f1f5f9',
-                                                        background: isSelected
-                                                            ? '#eff6ff'
-                                                            : isIncluded ? '#f0fdf4' : isExcluded ? '#fef2f2' : '#fff',
-                                                        opacity: isExcluded ? 0.6 : 1,
-                                                        cursor: 'pointer',
-                                                        boxShadow: isSelected ? 'inset 3px 0 0 #3b82f6' : 'none'
-                                                    }}>
-                                                    {columns.map(col => {
-                                                        switch (col.id) {
-                                                            case 'checkbox':
-                                                                return (
-                                                                    <td key={col.id} style={{ padding: '12px 16px', textAlign: 'center' }}>
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={isIncluded}
-                                                                            onChange={(e) => {
-                                                                                const newStatus = (e.target.checked ? 'included' : 'pending') as "included" | "pending"
-                                                                                const updatedArticles = job.articles!.map(a =>
-                                                                                    a.id === article.id ? { ...a, screeningStatus: newStatus } : a
-                                                                                )
-                                                                                setJob({ ...job, articles: updatedArticles })
-                                                                            }}
-                                                                            style={{ width: 18, height: 18, cursor: 'pointer' }}
-                                                                        />
-                                                                    </td>
-                                                                )
-                                                            case 'title':
-                                                                return (
-                                                                    <td key={col.id} style={{ padding: '12px 16px' }}>
-                                                                        <div style={{ fontWeight: 500, color: '#1e293b', marginBottom: 4 }}>
-                                                                            {article.title}
-                                                                        </div>
-                                                                        <div style={{ fontSize: 12, color: '#64748b' }}>
-                                                                            {article.authors?.slice(0, 2).join(', ')}{article.authors?.length > 2 ? ' et al.' : ''}
-                                                                        </div>
-                                                                        {article.abstract && (
-                                                                            <details style={{ marginTop: 6, fontSize: 12, color: '#475569' }}>
-                                                                                <summary style={{ cursor: 'pointer', userSelect: 'none' }}>Показать аннотацию</summary>
-                                                                                <p style={{ marginTop: 4, lineHeight: 1.5 }}>{article.abstract}</p>
-                                                                            </details>
-                                                                        )}
-                                                                    </td>
-                                                                )
-                                                            case 'year':
-                                                                return <td key={col.id} style={{ padding: '12px 16px', color: '#475569' }}>{article.year}</td>
-                                                            case 'source':
-                                                                return (
-                                                                    <td key={col.id} style={{ padding: '12px 16px' }}>
-                                                                        <span style={{
-                                                                            fontSize: 11, padding: '2px 6px', borderRadius: 4,
-                                                                            background: article.source === 'pubmed' ? '#dbeafe' : '#ffedd5',
-                                                                            color: article.source === 'pubmed' ? '#1e40af' : '#9a3412'
-                                                                        }}>
-                                                                            {article.source}
-                                                                        </span>
-                                                                    </td>
-                                                                )
-                                                            case 'status':
-                                                                return (
-                                                                    <td key={col.id} style={{ padding: '12px 16px' }}>
-                                                                        {isExcluded ? (
+                                                {col.id !== 'checkbox' && <GripVertical className="w-3 h-3 opacity-20" />}
+                                            </div>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-mono text-sm">
+                                {job.articles
+                                    .filter(article => {
+                                        if (currentFilter === 'all') return true
+                                        if (currentFilter === 'pending') return article.screeningStatus === 'pending' || !article.screeningStatus
+                                        return article.screeningStatus === currentFilter
+                                    })
+                                    .map((article, index) => {
+                                        const isIncluded = article.screeningStatus === 'included'
+                                        const isExcluded = article.screeningStatus === 'excluded'
+                                        const isSelected = index === selectedIndex
+
+                                        return (
+                                            <tr
+                                                key={article.id}
+                                                onClick={() => setSelectedIndex(index)}
+                                                className={`
+                                                    group transition-all duration-150 cursor-pointer text-gray-300
+                                                    ${isSelected ? 'bg-acid/5 shadow-[inset_2px_0_0_0_#CCFF00]' : 'hover:bg-white/5'}
+                                                    ${isExcluded ? 'opacity-40 grayscale' : ''}
+                                                `}
+                                            >
+                                                {columns.map(col => {
+                                                    switch (col.id) {
+                                                        case 'checkbox':
+                                                            return (
+                                                                <td key={col.id} className="p-4 text-center">
+                                                                    <div
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation()
+                                                                            const newStatus = isIncluded ? 'pending' : 'included'
+                                                                            const updated = job.articles!.map(a => a.id === article.id ? { ...a, screeningStatus: newStatus } : a)
+                                                                            setJob({ ...job, articles: updated }) // @ts-ignore
+                                                                        }}
+                                                                        className={`
+                                                                        w-5 h-5 rounded border flex items-center justify-center transition-all cursor-pointer
+                                                                        ${isIncluded
+                                                                                ? 'bg-acid border-acid text-void'
+                                                                                : 'bg-transparent border-white/20 hover:border-acid/50'}
+                                                                      `}
+                                                                    >
+                                                                        {isIncluded && <Check className="w-3 h-3 stroke-[3]" />}
+                                                                    </div>
+                                                                </td>
+                                                            )
+                                                        case 'title':
+                                                            return (
+                                                                <td key={col.id} className="p-4 min-w-[300px]">
+                                                                    <div className={`font-body font-medium text-base mb-1 group-hover:text-white transition-colors ${isIncluded ? 'text-acid' : ''}`}>
+                                                                        {article.title}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500 truncate max-w-[500px]">
+                                                                        {article.authors?.join(', ')}
+                                                                    </div>
+                                                                    {article.abstract && (
+                                                                        <details className="mt-2 text-xs text-gray-500 open:text-gray-300">
+                                                                            <summary className="cursor-pointer hover:text-acid transition-colors select-none">VIEW ABSTRACT</summary>
+                                                                            <p className="mt-2 leading-relaxed pl-2 border-l border-white/10 font-sans opacity-80">
+                                                                                {article.abstract}
+                                                                            </p>
+                                                                        </details>
+                                                                    )}
+                                                                </td>
+                                                            )
+                                                        case 'year':
+                                                            return (
+                                                                <td key={col.id} className="p-4 text-gray-500 group-hover:text-gray-300">
+                                                                    {article.year}
+                                                                </td>
+                                                            )
+                                                        case 'source':
+                                                            return (
+                                                                <td key={col.id} className="p-4">
+                                                                    <span className={`
+                                                                        text-[10px] px-2 py-1 rounded border uppercase tracking-wider
+                                                                        ${article.source === 'pubmed'
+                                                                            ? 'border-blue-500/30 text-blue-400 bg-blue-500/10'
+                                                                            : 'border-orange-500/30 text-orange-400 bg-orange-500/10'}
+                                                                    `}>
+                                                                        {article.source}
+                                                                    </span>
+                                                                </td>
+                                                            )
+                                                        case 'status':
+                                                            return (
+                                                                <td key={col.id} className="p-4">
+                                                                    <div className="flex gap-2">
+                                                                        {!isExcluded && (
                                                                             <button
-                                                                                onClick={() => {
-                                                                                    const updatedArticles = job.articles!.map(a =>
-                                                                                        a.id === article.id ? { ...a, screeningStatus: 'pending' as const } : a
-                                                                                    )
-                                                                                    setJob({ ...job, articles: updatedArticles })
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation()
+                                                                                    const updated = job.articles!.map(a => a.id === article.id ? { ...a, screeningStatus: 'excluded' as const } : a)
+                                                                                    setJob({ ...job, articles: updated })
                                                                                 }}
-                                                                                style={{ fontSize: 11, color: '#ef4444', background: 'white', border: '1px solid #fca5a5', borderRadius: 4, cursor: 'pointer' }}
+                                                                                className="p-1.5 rounded hover:bg-white/10 text-gray-600 hover:text-red-400 transition-colors"
+                                                                                title="Exclude"
                                                                             >
-                                                                                Вернуть
-                                                                            </button>
-                                                                        ) : (
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    const updatedArticles = job.articles!.map(a =>
-                                                                                        a.id === article.id ? { ...a, screeningStatus: 'excluded' as const } : a
-                                                                                    )
-                                                                                    setJob({ ...job, articles: updatedArticles })
-                                                                                }}
-                                                                                style={{ fontSize: 11, color: '#94a3b8', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                                                                            >
-                                                                                Исключить
+                                                                                <X className="w-4 h-4" />
                                                                             </button>
                                                                         )}
-                                                                    </td>
-                                                                )
-                                                            default:
-                                                                return null
-                                                        }
-                                                    })}
-                                                </tr>
-                                            )
-                                        })}
-                                </tbody>
-                            </table>
-                        </div>
+                                                                        {isExcluded && (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation()
+                                                                                    const updated = job.articles!.map(a => a.id === article.id ? { ...a, screeningStatus: 'pending' as const } : a)
+                                                                                    setJob({ ...job, articles: updated })
+                                                                                }}
+                                                                                className="p-1.5 rounded hover:bg-white/10 text-red-500 hover:text-white transition-colors"
+                                                                                title="Restore"
+                                                                            >
+                                                                                <RotateCcw className="w-4 h-4" />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                            )
+                                                        default: return null
+                                                    }
+                                                })}
+                                            </tr>
+                                        )
+                                    })}
+                            </tbody>
+                        </table>
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* Quick Mode: List View (Legacy) */}
-                {(job.mode !== 'research' || job.status !== 'completed') && job.articles && job.articles.length > 0 && (
-                    <div style={{
-                        background: '#fff',
-                        borderRadius: 16,
-                        border: '1px solid #e2e8f0',
-                        overflow: 'hidden',
-                        marginBottom: 32
-                    }}>
-                        <div style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                            <h2 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b', margin: 0 }}>
-                                Найденные статьи ({job.articles.length})
-                            </h2>
-                        </div>
-                        <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                            {job.articles.map((article, index) => (
-                                <div
-                                    key={article.id}
-                                    style={{
-                                        padding: '16px 24px',
-                                        borderBottom: index < job.articles!.length - 1 ? '1px solid #f1f5f9' : 'none'
-                                    }}
-                                >
-                                    <div style={{ fontWeight: 500, color: '#1e293b', marginBottom: 6 }}>
-                                        {article.title}
-                                    </div>
-                                    <div style={{ fontSize: 13, color: '#64748b' }}>
-                                        {article.authors?.slice(0, 3).join(', ')}{article.authors?.length > 3 ? ' et al.' : ''} • {article.year} • {article.source}
-                                    </div>
-                                    {article.abstract && (
-                                        <div style={{
-                                            fontSize: 13,
-                                            color: '#94a3b8',
-                                            marginTop: 8,
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical',
-                                            overflow: 'hidden'
-                                        }}>
-                                            {article.abstract}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Continue Actions */}
-                {job.status === 'completed' && (
-                    <div style={{ display: 'flex', gap: 16 }}>
-                        {job.mode === 'research' && (
-                            <button
-                                onClick={async () => {
-                                    setIsLoading(true);
-                                    // Save screening decisions
-                                    const includedIds = job.articles!.filter(a => a.screeningStatus === 'included').map(a => a.id)
-                                    const excludedIds = job.articles!.filter(a => a.screeningStatus === 'excluded').map(a => a.id)
-
-                                    try {
-                                        await fetch(`/api/research/jobs/${id}/screening`, {
-                                            method: 'PATCH',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ includedIds, excludedIds })
-                                        })
-                                        // Navigate to config
-                                        navigate(`/research/${id}/config`)
-                                    } catch (e) {
-                                        console.error(e)
-                                    } finally {
-                                        setIsLoading(false)
-                                    }
-                                }}
-                                disabled={!job.articles?.some(a => a.screeningStatus === 'included')}
-                                style={{
-                                    flex: 2,
-                                    padding: '18px',
-                                    background: job.articles?.some(a => a.screeningStatus === 'included') ? '#2563eb' : '#94a3b8',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: 14,
-                                    fontSize: 16,
-                                    fontWeight: 600,
-                                    cursor: job.articles?.some(a => a.screeningStatus === 'included') ? 'pointer' : 'not-allowed',
-                                    transition: 'background 0.2s'
-                                }}
-                            >
-                                ⚙️ Настроить анализ ({job.articles?.filter(a => a.screeningStatus === 'included').length}) →
-                            </button>
-                        )}
-
-                        {(job.mode !== 'research') && (
-                            <button
-                                onClick={handleContinue}
-                                style={{
-                                    width: '100%',
-                                    padding: '18px',
-                                    background: '#2563eb',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: 14,
-                                    fontSize: 16,
-                                    fontWeight: 600,
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                {job.graphId ? '🕸️ Перейти к графу →' : '⚙️ Настроить и построить граф →'}
-                            </button>
-                        )}
-                    </div>
-                )}
-            </main>
-
-            <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-      `}</style>
+            {/* Bottom Actions */}
+            {job.status === 'completed' && (
+                <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-void via-void/90 to-transparent pointer-events-none flex justify-center lg:justify-end lg:pr-12 gap-4">
+                    <button
+                        onClick={async () => {
+                            setIsLoading(true);
+                            // Logic (save screening)
+                            const includedIds = job.articles!.filter(a => a.screeningStatus === 'included').map(a => a.id)
+                            const excludedIds = job.articles!.filter(a => a.screeningStatus === 'excluded').map(a => a.id)
+                            try {
+                                await fetch(`/api/research/jobs/${id}/screening`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ includedIds, excludedIds })
+                                })
+                                navigate(`/research/${id}/config`)
+                            } catch (e) {
+                                console.error(e)
+                            } finally {
+                                setIsLoading(false)
+                            }
+                        }}
+                        disabled={!job.articles?.some(a => a.screeningStatus === 'included')}
+                        className={`
+                            pointer-events-auto px-8 py-4 rounded-xl font-display font-bold tracking-widest text-lg shadow-2xl transition-all hover:scale-105 active:scale-95
+                            ${job.articles?.some(a => a.screeningStatus === 'included')
+                                ? 'bg-acid text-void shadow-glow-acid'
+                                : 'bg-white/10 text-gray-500 cursor-not-allowed'}
+                        `}
+                    >
+                        INITIALIZE CONFIGURATION →
+                    </button>
+                </div>
+            )}
         </div>
     )
 }

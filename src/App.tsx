@@ -11,6 +11,7 @@ import PapersPage from '@/pages/PapersPage'
 import AnalysisConfigPage from '@/pages/AnalysisConfigPage'
 import GraphViewPage from '@/pages/GraphViewPage'
 import AIAnalysisPage from '@/pages/AIAnalysisPage'
+import SettingsPage from '@/pages/SettingsPage'
 
 // Legacy pages (with sidebar) - kept for compatibility
 import FileUploadPage from '@/pages/FileUploadPage'
@@ -31,15 +32,17 @@ function App() {
           <ErrorBoundary>
             <AppHealthCheck />
             <Routes>
-              {/* New Elicit-style routes (no sidebar) */}
-              <Route path="/" element={<HomePage />} />
-              <Route path="/research/:id/papers" element={<PapersPage />} />
-              <Route path="/research/:id/config" element={<AnalysisConfigPage />} />
-              <Route path="/research/:id/graph" element={<GraphViewPage />} />
-              <Route path="/research/:id/ai" element={<AIAnalysisPage />} />
-
-              {/* Legacy routes with sidebar (for backward compatibility) */}
+              {/* Unified Bio-Digital Layout */}
               <Route element={<Layout />}>
+                {/* Core Flows */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/research/:id/papers" element={<PapersPage />} />
+                <Route path="/research/:id/config" element={<AnalysisConfigPage />} />
+                <Route path="/research/:id/graph" element={<GraphViewPage />} />
+                <Route path="/research/:id/ai" element={<AIAnalysisPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+
+                {/* Main Utilities */}
                 <Route path="/upload" element={<FileUploadPage />} />
                 <Route path="/ai-assistant" element={<AIAssistantPage />} />
                 <Route path="/works" element={<WorkListPage />} />

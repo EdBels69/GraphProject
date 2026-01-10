@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
+import { ZoomIn, ZoomOut, Maximize, RefreshCw, Eye, EyeOff, Move } from 'lucide-react'
 
 interface GraphViewerProps {
   graph: Graph
@@ -128,8 +129,6 @@ export default function GraphViewer({
   const lastPanPosition = useRef({ x: 0, y: 0 })
 
   const handlePanStart = useCallback((e: React.MouseEvent) => {
-    // Start panning if clicking on background (svg) or edges, but not nodes
-    // Using simple tag check or ensuring node drag didn't start
     if (draggingNode) return
 
     setIsPanning(true)
@@ -155,13 +154,11 @@ export default function GraphViewer({
   }, [])
 
   const handleCenterView = useCallback(() => {
-    // Reset to center
     setOffset({ x: 0, y: 0 })
     setScale(1)
   }, [])
 
   const handleFitView = useCallback(() => {
-    // Calculate bounding box of nodes
     if (graph.nodes.length === 0) return
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -176,25 +173,19 @@ export default function GraphViewer({
     const height = maxY - minY
     const padding = 100
 
-    // Available space
     const containerWidth = svgRef.current?.clientWidth || 800
     const containerHeight = svgRef.current?.clientHeight || 600
 
     const scaleX = (containerWidth - padding) / width
     const scaleY = (containerHeight - padding) / height
-    const newScale = Math.min(Math.min(scaleX, scaleY), 1) // Don't zoom in too much
+    const newScale = Math.min(Math.min(scaleX, scaleY), 1)
 
-    // Center point of graph
     const graphCenterX = (minX + maxX) / 2
     const graphCenterY = (minY + maxY) / 2
 
-    // Center point of container
     const containerCenterX = containerWidth / 2
     const containerCenterY = containerHeight / 2
 
-    // Calculate offset to move graph center to container center
-    // newPos = (pos * scale) + offset
-    // offset = newPos - (pos * scale)
     const newOffsetX = containerCenterX - (graphCenterX * newScale)
     const newOffsetY = containerCenterY - (graphCenterY * newScale)
 
@@ -205,9 +196,9 @@ export default function GraphViewer({
   const getArrowMarker = (color: string) => {
     return (
       <marker
-        id={`arrow-${color}`}
+        id={`arrow-${color.replace('#', '')}`}
         viewBox="0 0 10 10"
-        refX="10"
+        refX="20"
         refY="5"
         markerWidth="6"
         markerHeight="6"
@@ -221,30 +212,37 @@ export default function GraphViewer({
     )
   }
 
+  const getTypeColor = (type?: string) => {
+    const normalized = type?.toLowerCase() || 'concept'
+    if (['gene', 'protein'].includes(normalized)) return '#CCFF00' // Acid
+    if (['disease', 'disorder', 'symptom'].includes(normalized)) return '#F43F5E' // Rose
+    if (['drug', 'chemical', 'medication'].includes(normalized)) return '#B829EA' // Plasma
+    if (['pathway', 'process', 'mechanism'].includes(normalized)) return '#38BDF8' // Sky Blue
+    if (['anatomy', 'tissue', 'organ', 'cell'].includes(normalized)) return '#F59E0B' // Amber
+    if (['article', 'paper'].includes(normalized)) return '#94A3B8' // Steel
+    return '#64748B' // Slate
+  }
+
   const getNodeColor = (node: GraphNode, isSelected: boolean) => {
-    if (isSelected) return '#4f46e5'
-    return node.weight ?
-      `hsl(${(node.weight / 10) * 240}, 70%, 50%)` :
-      '#8b5cf6'
+    if (isSelected) return '#FFFFFF' // Selected = White
+    return getTypeColor(node.data?.type || node.type)
   }
 
   const getEdgeColor = (edge: GraphEdge, isSelected: boolean) => {
-    if (isSelected) return '#4f46e5'
-    return edge.weight ?
-      `hsl(${(edge.weight / 10) * 240}, 70%, 60%)` :
-      '#9ca3af'
+    if (isSelected) return '#FFFFFF'
+    return '#334155' // Slate-700 for edges
   }
 
   const getNodeSize = (node: GraphNode) => {
     const baseSize = 30
     const weightMultiplier = node.weight ? Math.min(2, 1 + node.weight / 5) : 1
-    return baseSize * weightMultiplier * scale
+    return baseSize * weightMultiplier
   }
 
   const getEdgeWidth = (edge: GraphEdge) => {
-    const baseWidth = 2
+    const baseWidth = 1
     const weightMultiplier = edge.weight ? Math.min(3, 1 + edge.weight / 5) : 1
-    return baseWidth * weightMultiplier * scale
+    return baseWidth * weightMultiplier
   }
 
   useEffect(() => {
@@ -254,40 +252,59 @@ export default function GraphViewer({
   }, [handleMouseUp])
 
   return (
-    <div className="relative w-full h-[600px] bg-gray-50 border-2 border-gray-200 rounded-lg overflow-hidden">
+    <div className="relative w-full h-full bg-void overflow-hidden">
+      {/* Dynamic Background Grid */}
+      <div className="absolute inset-0 pointer-events-none opacity-20"
+        style={{
+          backgroundImage: 'radial-gradient(circle, #333 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+          transform: `translate(${offset.x % 40}px, ${offset.y % 40}px)`
+        }}
+      />
+
       {showControls && (
-        <div className="absolute top-4 left-4 z-10 bg-white rounded-lg shadow-lg p-4 space-y-3">
-          <div className="flex flex-col space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Масштаб</label>
-              <span className="text-sm text-gray-900">{(scale * 100).toFixed(0)}%</span>
-            </div>
+        <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+          <div className="glass-panel p-2 rounded-lg flex flex-col gap-1 backdrop-blur-md border border-white/10">
+            <button
+              onClick={() => setScale(s => Math.min(3, s * 1.2))}
+              className="p-2 hover:bg-white/10 rounded transition-colors text-steel hover:text-white"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setScale(s => Math.max(0.1, s * 0.8))}
+              className="p-2 hover:bg-white/10 rounded transition-colors text-steel hover:text-white"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-5 h-5" />
+            </button>
             <button
               onClick={handleCenterView}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+              className="p-2 hover:bg-white/10 rounded transition-colors text-steel hover:text-white"
+              title="Reset View"
             >
-              Сбросить
+              <RefreshCw className="w-5 h-5" />
             </button>
             <button
               onClick={handleFitView}
-              className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors"
+              className="p-2 hover:bg-white/10 rounded transition-colors text-steel hover:text-white"
+              title="Fit to Screen"
             >
-              Вписать
+              <Maximize className="w-5 h-5" />
             </button>
+            <div className="h-px bg-white/10 my-1" />
             <button
               onClick={() => setShowLabels(!showLabels)}
-              className={`px-4 py-2 rounded-md transition-colors ${showLabels ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                }`}
+              className={`p-2 rounded transition-colors ${showLabels ? 'text-acid bg-acid/10' : 'text-steel hover:bg-white/10'}`}
+              title="Toggle Labels"
             >
-              {showLabels ? 'Скрыть метки' : 'Показать метки'}
+              {showLabels ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
             </button>
           </div>
-          <div className="text-xs text-gray-600">
-            ЛКМ + Драг: панорамирование
-            <br />
-            Колесо: прокрутка
-            <br />
-            Перетаскивание узлов
+
+          <div className="glass-panel px-3 py-1 rounded text-xs font-mono text-steel border border-white/10 backdrop-blur-md">
+            {(scale * 100).toFixed(0)}%
           </div>
         </div>
       )}
@@ -306,11 +323,11 @@ export default function GraphViewer({
         onMouseDown={handlePanStart}
         onMouseLeave={handlePanEnd}
         onMouseUpCapture={handlePanEnd}
-        style={{ cursor: isPanning ? 'grabbing' : draggingNode ? 'grabbing' : 'grab' }}
+        style={{ cursor: isPanning ? 'grabbing' : draggingNode ? 'grabbing' : 'default' }}
       >
         <defs>
-          {getArrowMarker('#9ca3af')}
-          {getArrowMarker('#4f46e5')}
+          {getArrowMarker('#334155')}
+          {getArrowMarker('#FFFFFF')}
         </defs>
 
         <g transform={`translate(${offset.x}, ${offset.y}) scale(${scale})`}>
@@ -333,11 +350,11 @@ export default function GraphViewer({
                   stroke={color}
                   strokeWidth={width}
                   fill="none"
-                  markerEnd={graph.directed ? `url(#arrow-${color})` : undefined}
-                  className="cursor-pointer hover:stroke-blue-500 transition-colors"
+                  markerEnd={graph.directed ? `url(#arrow-${color.replace('#', '')})` : undefined}
+                  className="cursor-pointer transition-all duration-300"
                   onClick={(e) => handleEdgeClick(edge, e)}
                   style={{
-                    opacity: isSelected ? 1 : 0.6
+                    opacity: isSelected ? 1 : 0.4
                   }}
                 />
                 {edge.weight !== undefined && edge.weight > 0 && showLabels && (
@@ -345,9 +362,9 @@ export default function GraphViewer({
                     x={(sourcePos.x + targetPos.x) / 2}
                     y={(sourcePos.y + targetPos.y) / 2 - 10}
                     textAnchor="middle"
-                    fontSize="12"
-                    fill="#6b7280"
-                    className="pointer-events-none"
+                    fontSize="10"
+                    fill="#64748B"
+                    className="pointer-events-none font-mono"
                   >
                     {edge.weight}
                   </text>
@@ -380,45 +397,60 @@ export default function GraphViewer({
                   />
                 )}
 
+                {/* Glow effect for selected nodes */}
+                {isSelected && (
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={size + 5}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="2"
+                    strokeOpacity="0.5"
+                  >
+                    <animate attributeName="r" values={`${size + 5};${size + 10};${size + 5}`} dur="2s" repeatCount="indefinite" />
+                    <animate attributeName="stroke-opacity" values="0.5;0.0;0.5" dur="2s" repeatCount="indefinite" />
+                  </circle>
+                )}
+
                 <circle
                   cx={pos.x}
                   cy={pos.y}
                   r={size}
-                  fill={color}
-                  stroke={isSelected ? '#4f46e5' : '#1e40af'}
-                  strokeWidth={isSelected ? 3 : 2}
-                  className="cursor-grab hover:stroke-blue-500 transition-colors"
+                  fill={isSelected ? '#000000' : '#1e1e1e'} // Dark fill for nodes
+                  stroke={color}
+                  strokeWidth={isSelected ? 4 : 2}
+                  className="cursor-grab transition-all duration-200"
                   onClick={(e) => handleNodeClick(node, e)}
                   onMouseDown={(e) => handleMouseDown(node.id, e)}
                   style={{
-                    cursor: draggingNode === node.id ? 'grabbing' : 'grab'
+                    cursor: draggingNode === node.id ? 'grabbing' : 'grab',
+                    filter: isSelected ? `drop-shadow(0 0 8px ${color})` : 'none'
                   }}
+                />
+
+                {/* Inner dot */}
+                <circle
+                  cx={pos.x}
+                  cy={pos.y}
+                  r={size / 3}
+                  fill={color}
+                  opacity={0.8}
+                  className="pointer-events-none"
                 />
 
                 {showLabels && (
                   <text
                     x={pos.x}
-                    y={pos.y - size - 5}
-                    textAnchor="middle"
-                    fontSize="12"
-                    fill="#374151"
-                    fontWeight="500"
-                    className="pointer-events-none select-none"
-                  >
-                    {node.label}
-                  </text>
-                )}
-
-                {node.weight !== undefined && node.weight > 0 && showLabels && (
-                  <text
-                    x={pos.x}
                     y={pos.y + size + 15}
                     textAnchor="middle"
-                    fontSize="10"
-                    fill="#6b7280"
-                    className="pointer-events-none select-none"
+                    fill="white"
+                    fontWeight="600"
+                    fontSize="12"
+                    className="pointer-events-none select-none font-display tracking-wide shadow-black drop-shadow-md"
+                    style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}
                   >
-                    Вес: {node.weight}
+                    {node.label}
                   </text>
                 )}
               </g>
@@ -427,48 +459,28 @@ export default function GraphViewer({
         </g>
       </svg>
 
+      {/* Selection HUD at bottom left */}
       {selectedNode && (
-        <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 max-w-sm z-20">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {selectedNode.label}
-          </h3>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">ID:</span>
-              <span className="text-gray-900 font-mono">{selectedNode.id}</span>
+        <div className="absolute bottom-4 left-4 glass-panel border border-white/10 p-4 rounded-xl max-w-sm z-20 backdrop-blur-md animate-slide-up">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-3 h-3 rounded-full shadow-[0_0_10px]" style={{ backgroundColor: getNodeColor(selectedNode, false), boxShadow: `0 0 10px ${getNodeColor(selectedNode, false)}` }} />
+            <h3 className="text-lg font-bold text-white font-display">
+              {selectedNode.label}
+            </h3>
+          </div>
+          <div className="space-y-1 text-xs font-mono text-gray-400">
+            <div className="flex justify-between gap-8 border-b border-white/5 pb-1">
+              <span>ID</span>
+              <span className="text-white">{selectedNode.id}</span>
+            </div>
+            <div className="flex justify-between gap-8 border-b border-white/5 pb-1">
+              <span>TYPE</span>
+              <span className="text-acid uppercase">{selectedNode.data?.type || 'ENTITY'}</span>
             </div>
             {selectedNode.weight !== undefined && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Вес:</span>
-                <span className="text-gray-900 font-mono">{selectedNode.weight}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {selectedEdge && (
-        <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 max-w-sm z-20">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Связь
-          </h3>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">ID:</span>
-              <span className="text-gray-900 font-mono">{selectedEdge.id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">От:</span>
-              <span className="text-gray-900 font-mono">{selectedEdge.source}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">К:</span>
-              <span className="text-gray-900 font-mono">{selectedEdge.target}</span>
-            </div>
-            {selectedEdge.weight !== undefined && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Вес:</span>
-                <span className="text-gray-900 font-mono">{selectedEdge.weight}</span>
+              <div className="flex justify-between gap-8 pt-1">
+                <span>WEIGHT</span>
+                <span className="text-white">{selectedNode.weight}</span>
               </div>
             )}
           </div>

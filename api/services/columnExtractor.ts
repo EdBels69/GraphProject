@@ -56,10 +56,16 @@ class ColumnExtractor {
         return allColumns.filter(col => col.domains.includes(domain))
     }
 
-    public async extractData(article: ArticleSource, domain: string = 'all', globalSearch?: any): Promise<Record<string, any>> {
+    public async extractData(article: ArticleSource, domain: string = 'all', globalSearch?: any, targetColumnIds?: string[]): Promise<Record<string, any>> {
         if (!this.schema) this.loadSchema()
 
-        const columns = this.getColumns(domain)
+        let columns = this.getColumns(domain)
+
+        // If specific columns requested, filter by them (plus always include required metadata if needed logic exists, currently not enforcing required unless in schema)
+        if (targetColumnIds && targetColumnIds.length > 0) {
+            columns = columns.filter(c => targetColumnIds.includes(c.id))
+        }
+
         const result: Record<string, any> = {}
         const aiPromises: Promise<void>[] = []
 

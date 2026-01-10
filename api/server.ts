@@ -1,6 +1,13 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
+
+console.log('Server starting...')
+console.log('CWD:', process.cwd())
+console.log('DATABASE_URL:', process.env.DATABASE_URL)
+
+
+import path from 'path'
 import swaggerUi from 'swagger-ui-express'
 import { swaggerSpec } from './config/swagger'
 import articlesRouter from './routes/articles'
@@ -17,8 +24,9 @@ import documentsRouter from './routes/documents'
 import meshRouter from './routes/mesh'
 import aiRouter from './routes/ai'
 import researchRouter from './routes/research'
+import configRouter from './routes/config'
 
-dotenv.config()
+
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -47,20 +55,32 @@ app.use('/api/system', systemRouter)
 app.use('/api/mesh', meshRouter)
 app.use('/api/ai', aiRouter)
 app.use('/api/research', researchRouter)
+app.use('/api/config', configRouter)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-app.use((req: express.Request, res: express.Response) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      code: 'NOT_FOUND',
-      message: 'Route not found'
-    }
+// Serve Static Frontend in Production
+if (process.env.NODE_ENV === 'production') {
+  const publicPath = path.join(__dirname, '../public')
+  app.use(express.static(publicPath))
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(publicPath, 'index.html'))
   })
-})
+} else {
+  // 404 for API routes in dev
+  app.use((req: express.Request, res: express.Response) => {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Route not found'
+      }
+    })
+  })
+}
 
 function startServer() {
   app.listen(PORT, () => {

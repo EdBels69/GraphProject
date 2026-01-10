@@ -31,13 +31,40 @@ export async function chatCompletion(
 }
 
 // 2. Entity Extraction Facade
+import { configService } from './configService'
+
 export async function extractEntitiesWithAI(text: string): Promise<ExtractedEntity[]> {
     const chunk = text.slice(0, 150000) // 150k limit for GLM-4.7
 
     try {
+        const [prompts, ontology] = await Promise.all([
+            configService.getPrompts(),
+            configService.getOntology()
+        ])
+
+        const promptConfig = prompts['entity_extraction']
+        const ontologyDesc = ontology.nodeTypes.map(t => `${t.name} (${t.description || t.id})`).join(', ')
+
+        // Render Prompt
+        let systemPrompt = AI_PROMPTS.ENTITY_EXTRACTION.SYSTEM
+        let userContent = `Extract biomedical entities from this text:\n\n${chunk}`
+
+        if (promptConfig) {
+            // If custom prompt exists, use it (assumes it replaces the user message mostly, or we construct a new system/user pair)
+            // For simplicity, we'll treat the template as the USER message instruction, prepended to content.
+            // Or better: Treat template as "System" instructions if it defines role.
+            // Let's assume template replaces the rigid "Extract..." instruction.
+            const rendered = promptConfig.template
+                .replace('{{ontology}}', ontologyDesc)
+                .replace('{{content}}', chunk)
+
+            userContent = rendered
+            systemPrompt = 'You are an expert analyst.' // Generic fall-back if template handles everything
+        }
+
         const response = await chatCompletion([
-            { role: 'system', content: AI_PROMPTS.ENTITY_EXTRACTION.SYSTEM },
-            { role: 'user', content: `Extract biomedical entities from this text:\n\n${chunk}` }
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent }
         ], { temperature: 0.3 })
 
         const cleaned = response.content.replace(/```json\n?/g, '').replace(/```/g, '').trim()
@@ -45,7 +72,8 @@ export async function extractEntitiesWithAI(text: string): Promise<ExtractedEnti
         const entities = Array.isArray(parsed) ? parsed : []
 
         // Validate and filter extracted entities
-        return validateExtractedEntities(entities)
+        const validTypes = ontology.nodeTypes.map(t => t.name)
+        return validateExtractedEntities(entities, validTypes)
     } catch (error) {
         logger.error('aiService', 'Entity extraction failed', { error })
         return []
@@ -53,11 +81,11 @@ export async function extractEntitiesWithAI(text: string): Promise<ExtractedEnti
 }
 
 // 2.1 Entity Validation (Phase 14.1)
-const VALID_ENTITY_TYPES = ['Gene', 'Protein', 'Disease', 'Drug', 'Pathway', 'Metabolite', 'Anatomy', 'Symptom', 'Concept']
+// const VALID_ENTITY_TYPES = ['Gene', 'Protein', 'Disease', 'Drug', 'Pathway', 'Metabolite', 'Anatomy', 'Symptom', 'Concept'] // NOW DYNAMIC via validTypes argument
 const MIN_ENTITY_NAME_LENGTH = 2
 const MIN_CONFIDENCE_THRESHOLD = 0.5
 
-export function validateExtractedEntities(entities: ExtractedEntity[]): ExtractedEntity[] {
+export function validateExtractedEntities(entities: ExtractedEntity[], validTypes: string[] = []): ExtractedEntity[] {
     return entities.filter(entity => {
         // Check required fields exist
         if (!entity.name || typeof entity.name !== 'string') return false
@@ -75,7 +103,7 @@ export function validateExtractedEntities(entities: ExtractedEntity[]): Extracte
         if (confidence < MIN_CONFIDENCE_THRESHOLD) return false
 
         // Normalize entity type
-        entity.type = normalizeEntityType(entity.type)
+        entity.type = normalizeEntityType(entity.type, validTypes)
 
         return true
     }).map(entity => ({
@@ -85,10 +113,10 @@ export function validateExtractedEntities(entities: ExtractedEntity[]): Extracte
     }))
 }
 
-function normalizeEntityType(type: string): string {
+function normalizeEntityType(type: string, validTypes: string[]): string {
     const normalized = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()
 
-    // Map common variants to standard types
+    // Map common variants to standard types (could also be dynamic later)
     const typeMap: Record<string, string> = {
         'gene': 'Gene',
         'protein': 'Protein',
@@ -110,7 +138,22 @@ function normalizeEntityType(type: string): string {
     }
 
     const lowerType = type.toLowerCase()
-    return typeMap[lowerType] || (VALID_ENTITY_TYPES.includes(normalized) ? normalized : 'Concept')
+
+    // 1. Check mapped types
+    if (typeMap[lowerType]) return typeMap[lowerType]
+
+    // 2. Check strict match in validTypes (from Ontology)
+    // We fuzzy match case-insensitively against user defined types
+    const match = validTypes.find(t => t.toLowerCase() === lowerType)
+    if (match) return match
+
+    // 3. Keep original if it looks valid (Capitalized) and 'Concept' isn't forced
+    // But for strictness let's default to Concept unless valid
+    if (validTypes.length > 0) {
+        return 'Concept'
+    }
+
+    return normalized
 }
 
 // 3. Summarization Facade
@@ -118,9 +161,23 @@ export async function summarizeDocument(text: string, title?: string): Promise<D
     const chunk = text.slice(0, 150000)
 
     try {
+        const prompts = await configService.getPrompts()
+        const promptConfig = prompts['summarization']
+
+        let systemPrompt = AI_PROMPTS.SUMMARIZATION.SYSTEM
+        let userContent = `${title ? `Title: ${title}\n\n` : ''}Document text:\n\n${chunk}`
+
+        if (promptConfig) {
+            const rendered = promptConfig.template
+                .replace('{{topic}}', title || 'General Content')
+                .replace('{{content}}', chunk)
+            userContent = rendered
+            systemPrompt = 'You are a scientific summarizer.'
+        }
+
         const response = await chatCompletion([
-            { role: 'system', content: AI_PROMPTS.SUMMARIZATION.SYSTEM },
-            { role: 'user', content: `${title ? `Title: ${title}\n\n` : ''}Document text:\n\n${chunk}` }
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent }
         ], { temperature: 0.5, maxTokens: 4096 })
 
         const cleaned = response.content.replace(/```json\n?/g, '').replace(/```/g, '').trim()

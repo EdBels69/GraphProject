@@ -5,139 +5,134 @@ import {
   MessageSquare,
   List,
   Network,
-  FileDown,
+  Activity,
   Menu,
-  X,
   Settings,
   User,
   BookOpen
 } from 'lucide-react'
 import { useState } from 'react'
-import { Button } from './ui/Button'
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
 
   const navItems = [
-    { path: '/', label: 'Главная', icon: Home },
-    { path: '/upload', label: 'Загрузка файлов', icon: FileText },
-    { path: '/ai-assistant', label: 'AI-помощник', icon: MessageSquare },
-    { path: '/research', label: 'Исследование', icon: BookOpen },
-    { path: '/works', label: 'Список работ', icon: List },
-    { path: '/analysis', label: 'Графовый анализ', icon: Network },
-    { path: '/report', label: 'Отчет', icon: FileDown },
+    { path: '/', label: 'HOME', icon: Home },
+    { path: '/upload', label: 'INGEST', icon: FileText },
+    { path: '/research', label: 'SEARCH', icon: BookOpen },
+    { path: '/analysis', label: 'GRAPH', icon: Network },
+    { path: '/ai-assistant', label: 'NEURAL', icon: MessageSquare },
+    { path: '/works', label: 'DATABASE', icon: List },
+    { path: '/health', label: 'SYSTEM', icon: Activity },
   ]
 
-  const isActive = (path: string) => location.pathname === path
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/'
+    return location.pathname.startsWith(path)
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Mobile sidebar overlay */}
+    <div className="min-h-screen flex font-body text-steel relative overflow-hidden bg-void">
+      {/* Sidebar Backdrop (Mobile) */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-void/80 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Glass Sidebar */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200
-          transform transition-transform duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-50 w-64 bg-glass/80 backdrop-blur-xl border-r border-white/5
+          transform transition-transform duration-300 ease-out
           lg:translate-x-0 lg:static lg:inset-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-gray-200">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Network className="w-6 h-6 text-white" />
+        <div className="h-16 flex items-center px-6 border-b border-white/5">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-8 h-8 rounded-sm bg-acid/20 border border-acid/50 flex items-center justify-center group-hover:shadow-glow-acid transition-all duration-500">
+              <Network className="w-5 h-5 text-acid" />
             </div>
-            <span className="text-xl font-bold text-gray-900">
-              Graph Analyser
+            <span className="font-display font-bold text-xl tracking-wider text-white group-hover:text-acid transition-colors">
+              CORTEX
             </span>
           </Link>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
+            const active = isActive(item.path)
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => setSidebarOpen(false)}
                 className={`
-                  flex items-center gap-3 px-4 py-3 rounded-lg
-                  transition-colors duration-200
-                  ${isActive(item.path)
-                    ? 'bg-blue-50 text-blue-600 font-medium'
-                    : 'text-gray-700 hover:bg-gray-100'
+                  flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-300 group relative overflow-hidden
+                  ${active
+                    ? 'text-void bg-acid font-bold shadow-glow-acid'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }
                 `}
-                onClick={() => setSidebarOpen(false)}
               >
-                <Icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <Icon className={`w-4 h-4 ${active ? 'animate-pulse' : ''}`} />
+                <span className="font-display tracking-widest text-sm">{item.label}</span>
+
+                {/* Active Indicator Line for non-active hover */}
+                {!active && (
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-acid opacity-0 group-hover:opacity-100 transition-opacity" />
+                )}
               </Link>
             )
           })}
         </nav>
 
-        {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-gray-600" />
+        {/* User Stats / Footer */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5 bg-black/20">
+          <div className="flex items-center gap-3 p-2 rounded-lg border border-white/5 bg-white/5">
+            <div className="w-8 h-8 rounded bg-plasma/20 flex items-center justify-center border border-plasma/50">
+              <User className="w-4 h-4 text-plasma-light" />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Пользователь</p>
-              <p className="text-xs text-gray-500">user@example.com</p>
+            <div className="flex-1 min-w-0">
+              <p className="font-display text-xs text-gray-300 truncate">OPERATOR</p>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-acid animate-pulse"></div>
+                <p className="text-[10px] text-acid">ONLINE</p>
+              </div>
             </div>
-            <Button variant="ghost" size="sm">
+            <button className="text-gray-500 hover:text-white transition-colors">
               <Settings className="w-4 h-4" />
-            </Button>
+            </button>
           </div>
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
-            >
-              {sidebarOpen ? (
-                <X className="w-6 h-6 text-gray-700" />
-              ) : (
-                <Menu className="w-6 h-6 text-gray-700" />
-              )}
-            </button>
-
-            {/* Page title */}
-            <h1 className="text-lg font-semibold text-gray-900 hidden sm:block">
-              {navItems.find(item => isActive(item.path))?.label || 'Graph Analyser'}
-            </h1>
-
-            {/* Header actions */}
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm">
-                <Settings className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Mobile Header */}
+        <header className="lg:hidden h-16 border-b border-white/5 flex items-center justify-between px-4 bg-glass/50 backdrop-blur-md sticky top-0 z-30">
+          <button onClick={() => setSidebarOpen(true)} className="text-white">
+            <Menu />
+          </button>
+          <span className="font-display font-bold text-white">CORTEX</span>
+          <div className="w-6" /> {/* Spacer */}
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-4 lg:p-6">
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent p-4 lg:p-8 relative">
+          {/* Ambient Glows */}
+          <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0 opacity-20">
+            <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-plasma/30 rounded-full blur-[128px]" />
+            <div className="absolute bottom-[-10%] left-[10%] w-[400px] h-[400px] bg-acid/10 rounded-full blur-[128px]" />
+          </div>
+
+          <div className="relative z-10 max-w-7xl mx-auto animate-fade-in">
             <Outlet />
           </div>
         </main>

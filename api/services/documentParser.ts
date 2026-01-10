@@ -1,5 +1,5 @@
-import mammoth from 'mammoth'
-import pdf from 'pdf-parse'
+import path from 'path'
+import Piscina from 'piscina'
 
 export interface ParsedDocument {
   id: string
@@ -25,15 +25,22 @@ export interface ParsedTable {
 }
 
 export class DocumentParser {
+  private pool: Piscina
+
+  constructor() {
+    const ext = path.extname(__filename)
+    this.pool = new Piscina({
+      filename: path.resolve(__dirname, `../workers/parser.worker${ext}`)
+    })
+  }
+
   async parsePDF(buffer: Buffer, originalname: string = ''): Promise<ParsedDocument> {
     try {
-      const data = await pdf(buffer)
-      const text = data.text || ''
-      const pageCount = data.numpages || 0
+      const result = await this.pool.run({ buffer, type: 'pdf' })
+      const { text, pageCount, info } = result
 
       const tables = this.extractTables(text)
 
-      const info = data.info as any;
       return {
         id: `doc-${Date.now()}`,
         title: info?.Title || originalname || `Document ${Date.now()}`,
@@ -53,8 +60,8 @@ export class DocumentParser {
 
   async parseDOCX(buffer: Buffer, originalname: string = ''): Promise<ParsedDocument> {
     try {
-      const result = await mammoth.extractRawText({ buffer })
-      const text = result.value || ''
+      const result = await this.pool.run({ buffer, type: 'docx' })
+      const { text, pageCount } = result
 
       const tables = this.extractTables(text)
 
@@ -66,7 +73,7 @@ export class DocumentParser {
         metadata: {
           fileName: originalname,
           fileType: 'docx',
-          pageCount: Math.ceil((text.length || 0) / 2000), // Estimate pages
+          pageCount,
           extractedAt: new Date()
         }
       }
@@ -74,6 +81,7 @@ export class DocumentParser {
       throw new Error(`Failed to parse DOCX: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
+
 
   async parseText(text: string, fileName: string): Promise<ParsedDocument> {
     try {

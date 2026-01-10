@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { GraphNode } from '../../shared/contracts/graph'
 import { Graph } from '../../shared/contracts/graph'
+import { Bot, User, Send, Sparkles, X } from 'lucide-react'
 
 interface GraphAssistantProps {
     selectedNode: GraphNode | null
@@ -16,7 +17,7 @@ interface Message {
 
 export default function GraphAssistant({ selectedNode, graphId, graph, onClose }: GraphAssistantProps) {
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: 'Привет! Я Senior Analyst на базе GLM-4.7. Я готов проанализировать структуру этого графа, найти скрытые связи или объяснить роль любого узла.' }
+        { role: 'assistant', content: 'SYSTEM READY. How can I assist with graph analysis today?' }
     ])
     const [input, setInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
@@ -32,7 +33,7 @@ export default function GraphAssistant({ selectedNode, graphId, graph, onClose }
     // Reset messages when graph changes
     useEffect(() => {
         setMessages([
-            { role: 'assistant', content: 'Привет! Я Senior Analyst на базе GLM-4.7. Я готов проанализировать структуру этого графа, найти скрытые связи или объяснить роль любого узла.' }
+            { role: 'assistant', content: 'SYSTEM READY. How can I assist with graph analysis today?' }
         ])
     }, [graphId])
 
@@ -65,16 +66,16 @@ export default function GraphAssistant({ selectedNode, graphId, graph, onClose }
             setMessages(prev => [...prev, { role: 'assistant', content: data.answer }])
         } catch (error) {
             console.error('AI Error:', error)
-            setMessages(prev => [...prev, { role: 'assistant', content: 'Извините, произошла ошибка при обращении к аналитическому ядру. Попробуйте еще раз.' }])
+            setMessages(prev => [...prev, { role: 'assistant', content: 'CONNECTION_ERROR: Analytical Core unreachable.' }])
         } finally {
             setIsLoading(false)
         }
     }
 
     const handleContextualInquiry = async (node: GraphNode) => {
-        const prompt = `Проанализируй узел "${node.label}" (ID: ${node.id}). 
-        Какова его роль в структуре? С какими ключевыми сущностями он связан?
-        Дай научную интерпретацию.`
+        const prompt = `Analyze node "${node.label}" (ID: ${node.id}). 
+        What is its structural role? What key entities is it connected to?
+        Provide a scientific interpretation.`
 
         const userMsg: Message = { role: 'user', content: prompt }
         setMessages(prev => [...prev, userMsg])
@@ -93,29 +94,44 @@ export default function GraphAssistant({ selectedNode, graphId, graph, onClose }
     }
 
     return (
-        <div className="flex flex-col h-full bg-white border-l border-gray-200 shadow-xl w-full transform transition-transform">
+        <div className="flex flex-col h-full w-full bg-transparent font-sans">
             {/* Header */}
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
-                <div className="flex items-center space-x-2">
-                    <span className="text-2xl">🧬</span>
-                    <h3 className="font-semibold text-gray-800">Senior Analyst (GLM-4.7)</h3>
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 backdrop-blur-sm">
+                <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-acid/10 border border-acid/20 flex items-center justify-center">
+                        <Bot className="w-5 h-5 text-acid" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-white text-sm font-display tracking-wide">AI_ANALYST</h3>
+                        <p className="text-[10px] text-acid font-mono">GLM-4.7 // ONLINE</p>
+                    </div>
                 </div>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                    ✕
+                <button
+                    onClick={onClose}
+                    className="p-1 hover:bg-white/10 rounded text-steel hover:text-white transition-colors"
+                >
+                    <X className="w-4 h-4" />
                 </button>
             </div>
 
             {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-6">
                 {messages.map((msg, idx) => (
                     <div
                         key={idx}
-                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
                     >
+                        <div className={`
+                            w-8 h-8 rounded-full flex items-center justify-center shrink-0
+                            ${msg.role === 'user' ? 'bg-white text-void' : 'bg-acid/10 text-acid border border-acid/20'}
+                        `}>
+                            {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                        </div>
+
                         <div
-                            className={`max-w-[90%] rounded-2xl p-3 text-sm shadow-sm ${msg.role === 'user'
-                                ? 'bg-blue-600 text-white rounded-tr-none'
-                                : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+                            className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed shadow-lg backdrop-blur-sm ${msg.role === 'user'
+                                ? 'bg-white text-void rounded-tr-none font-medium'
+                                : 'bg-black/40 text-steel border border-white/10 rounded-tl-none'
                                 }`}
                         >
                             <div className="markdown-body" style={{ whiteSpace: 'pre-wrap' }}>
@@ -125,34 +141,36 @@ export default function GraphAssistant({ selectedNode, graphId, graph, onClose }
                     </div>
                 ))}
                 {isLoading && (
-                    <div className="flex justify-start">
-                        <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm">
-                            <div className="flex space-x-1">
-                                <span className="text-xs text-gray-400 animate-pulse">Анализирую граф...</span>
-                            </div>
+                    <div className="flex items-start gap-4 animate-pulse">
+                        <div className="w-8 h-8 rounded-full bg-acid/10 border border-acid/20 flex items-center justify-center shrink-0">
+                            <Bot className="w-4 h-4 text-acid" />
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-mono text-acid bg-acid/5 px-3 py-2 rounded-lg border border-acid/10">
+                            <Sparkles className="w-3 h-3 animate-spin" />
+                            PROCESSING_QUERY...
                         </div>
                     </div>
                 )}
             </div>
 
             {/* Input */}
-            <div className="p-4 bg-white border-t border-gray-100">
-                <div className="flex space-x-2">
+            <div className="p-4 border-t border-white/10 bg-black/20 backdrop-blur-md">
+                <div className="flex gap-2 relative">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Задайте вопрос по графу..."
-                        className="flex-1 p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 text-sm"
+                        placeholder="Ask about graph patterns..."
+                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-steel/50 focus:outline-none focus:border-acid/50 focus:bg-white/10 transition-all font-mono"
                         disabled={isLoading}
                     />
                     <button
                         onClick={handleSendMessage}
-                        disabled={isLoading}
-                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        disabled={isLoading || !input.trim()}
+                        className="bg-acid text-void rounded-xl px-4 hover:bg-acid/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-glow-acid"
                     >
-                        ➤
+                        <Send className="w-4 h-4" />
                     </button>
                 </div>
             </div>

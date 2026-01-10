@@ -3,10 +3,11 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
-import { Trash2, ExternalLink, Calendar, Pencil, Merge, CheckSquare, Square } from 'lucide-react'
+import { Trash2, ExternalLink, Calendar, Pencil, Merge, CheckSquare, Square, Share2, Network } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Graph } from '../../shared/contracts/graph'
 import { GraphMergeService } from '../services/graphMergeService'
+import { useToast } from '@/contexts/ToastContext'
 
 interface SavedGraphsListProps {
     currentGraphId?: string
@@ -27,6 +28,7 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
     const [processedMergeName, setProcessedMergeName] = useState('')
 
     const navigate = useNavigate()
+    const { addToast } = useToast()
 
     useEffect(() => {
         fetchGraphs()
@@ -66,8 +68,6 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
     const confirmRename = async () => {
         if (!renameId || !newName.trim()) return
         try {
-            // Need to implement PUT route support in backend or use a specific endpoint
-            // Assuming PUT /api/graphs/:id updates metadata including name
             const graph = graphs.find(g => g.id === renameId)
             if (!graph) return
 
@@ -133,10 +133,11 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
                 if (result.data?.graph?.id) {
                     handleLoad(result.data.graph.id)
                 }
+                addToast(`Merged ${graphsToMerge.length} graphs. Created ${mergedGraph.nodes.length} nodes.`, 'success')
             }
         } catch (error) {
             console.error('Merge failed:', error)
-            alert('Merge failed. Check console.')
+            addToast('Merge failed', 'error')
         } finally {
             setIsLoading(false)
         }
@@ -151,64 +152,75 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
     }
 
     if (isLoading) {
-        return <div className="p-4 text-center text-gray-500">Загрузка списка графов...</div>
+        return (
+            <div className="p-10 text-center flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-acid border-t-transparent rounded-full animate-spin"></div>
+                <div className="text-acid font-mono text-xs animate-pulse">LOADING_REPOSITORY...</div>
+            </div>
+        )
     }
 
     if (graphs.length === 0) {
         return (
-            <Card className="p-6 text-center bg-gray-50 border-dashed">
-                <p className="text-gray-500">Нет сохраненных графов</p>
-            </Card>
+            <div className="p-8 text-center border border-dashed border-white/10 rounded-xl bg-white/5">
+                <Network className="w-8 h-8 text-steel mx-auto mb-3 opacity-50" />
+                <p className="text-steel text-sm">No graphs found in local repository</p>
+            </div>
         )
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-900">Сохраненные графы</h3>
+        <div className="space-y-4 font-sans pb-20">
+            <div className="flex justify-between items-center px-1">
+                <div className="flex items-center gap-2">
+                    <Share2 className="w-4 h-4 text-white/70" />
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Available Graphs</h3>
+                    <span className="bg-white/10 text-white text-[10px] px-1.5 rounded-sm font-mono">{graphs.length}</span>
+                </div>
+
                 <div className="flex gap-2">
                     {isSelectionMode ? (
                         <>
-                            <Button
-                                variant="primary"
-                                size="sm"
+                            <button
                                 disabled={selectedIds.size < 2}
                                 onClick={handleMergeClick}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-acid text-void rounded text-xs font-bold hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                <Merge className="w-4 h-4 mr-2" />
-                                Объединить ({selectedIds.size})
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
+                                <Merge className="w-3 h-3" />
+                                MERGE ({selectedIds.size})
+                            </button>
+                            <button
                                 onClick={() => {
                                     setIsSelectionMode(false)
                                     setSelectedIds(new Set())
                                 }}
+                                className="px-3 py-1.5 text-steel hover:text-white text-xs transition-colors"
                             >
-                                Отмена
-                            </Button>
+                                CANCEL
+                            </button>
                         </>
                     ) : (
-                        <Button
-                            variant="secondary"
-                            size="sm"
+                        <button
                             onClick={() => setIsSelectionMode(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded text-xs transition-colors"
                         >
-                            <CheckSquare className="w-4 h-4 mr-2" />
-                            Выбрать
-                        </Button>
+                            <CheckSquare className="w-3 h-3 text-steel" />
+                            SELECT
+                        </button>
                     )}
                 </div>
             </div>
 
-            <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 grid-cols-1">
                 {graphs.map(graph => (
-                    <Card
+                    <div
                         key={graph.id}
-                        className={`p-4 hover:shadow-md transition-shadow cursor-pointer border relative 
-                            ${currentGraphId === graph.id ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200'}
-                            ${isSelectionMode && selectedIds.has(graph.id) ? 'bg-blue-50 border-blue-300' : ''}
+                        className={`
+                            relative group p-4 rounded-xl border transition-all cursor-pointer backdrop-blur-sm
+                            ${currentGraphId === graph.id
+                                ? 'bg-acid/5 border-acid/50 shadow-glow-acid'
+                                : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/10'}
+                            ${isSelectionMode && selectedIds.has(graph.id) ? 'bg-indigo-500/10 border-indigo-500/50' : ''}
                         `}
                         onClick={() => {
                             if (isSelectionMode) {
@@ -221,71 +233,75 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
                         {isSelectionMode && (
                             <div className="absolute top-4 right-4 z-10">
                                 {selectedIds.has(graph.id) ? (
-                                    <CheckSquare className="w-5 h-5 text-blue-600" />
+                                    <CheckSquare className="w-5 h-5 text-indigo-400 drop-shadow-lg" />
                                 ) : (
-                                    <Square className="w-5 h-5 text-gray-300" />
+                                    <Square className="w-5 h-5 text-white/20" />
                                 )}
                             </div>
                         )}
 
-                        <div className="flex justify-between items-start mb-2 group">
-                            <h4 className="font-medium text-gray-900 truncate pr-2 flex-1" title={graph.name}>
+                        <div className="flex justify-between items-start mb-3 pr-6">
+                            <h4 className={`font-bold text-sm truncate pr-2 flex-1 ${currentGraphId === graph.id ? 'text-acid' : 'text-white'}`} title={graph.name}>
                                 {graph.name}
                             </h4>
-                            <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-gray-500 hover:text-blue-600 p-1 h-auto"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        setRenameId(graph.id)
-                                        setNewName(graph.name)
-                                    }}
-                                >
-                                    <Pencil className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        setDeleteId(graph.id)
-                                    }}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+
+                            {!isSelectionMode && (
+                                <div className="hidden group-hover:flex space-x-1 absolute top-3 right-3 bg-black/50 rounded-lg p-1 backdrop-blur-md border border-white/10">
+                                    <button
+                                        className="text-steel hover:text-white p-1.5 rounded hover:bg-white/10 transition-colors"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setRenameId(graph.id)
+                                            setNewName(graph.name)
+                                        }}
+                                        title="Rename"
+                                    >
+                                        <Pencil className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                        className="text-red-400 hover:text-red-300 p-1.5 rounded hover:bg-red-500/10 transition-colors"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setDeleteId(graph.id)
+                                        }}
+                                        title="Delete"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-4 text-[10px] text-steel font-mono mb-3">
+                            <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded">
+                                <Network className="w-3 h-3" />
+                                <span className="text-white">{graph.nodes.length}</span> NODES
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded">
+                                <Share2 className="w-3 h-3" />
+                                <span className="text-white">{graph.edges.length}</span> EDGES
                             </div>
                         </div>
 
-                        <div className="text-sm text-gray-500 mb-3 space-y-1">
-                            <div className="flex items-center">
-                                <span className="font-medium mr-2">{graph.nodes.length}</span> узлов
-                                <span className="mx-2">•</span>
-                                <span className="font-medium mr-2">{graph.edges.length}</span> связей
-                            </div>
-                            <div className="flex items-center text-xs text-gray-400">
-                                <Calendar className="w-3 h-3 mr-1" />
+                        <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                            <div className="flex items-center text-[10px] text-white/40">
+                                <Calendar className="w-3 h-3 mr-1.5" />
                                 {new Date(graph.updatedAt || graph.createdAt).toLocaleDateString()}
                             </div>
-                        </div>
 
-                        <div className="flex justify-end">
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                className="w-full text-xs"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleLoad(graph.id)
-                                }}
-                            >
-                                <ExternalLink className="w-3 h-3 mr-1" />
-                                Открыть
-                            </Button>
+                            {!isSelectionMode && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleLoad(graph.id)
+                                    }}
+                                    className="text-[10px] bg-white/5 hover:bg-acid hover:text-void text-steel px-2 py-1 rounded transition-colors"
+                                >
+                                    OPEN_GRAPH &rarr;
+                                </button>
+                            )}
                         </div>
-                    </Card>
+                    </div>
                 ))}
             </div>
 
@@ -293,13 +309,13 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
             <Modal
                 isOpen={!!deleteId}
                 onClose={() => setDeleteId(null)}
-                title="Удаление графа"
+                title="DELETE_CONFIRMATION"
             >
                 <div className="space-y-4">
-                    <p>Вы действительно хотите удалить этот граф? Это действие нельзя отменить.</p>
+                    <p className="text-sm text-gray-400">Permanently delete this graph from the repository? This action cannot be undone.</p>
                     <div className="flex justify-end space-x-2">
-                        <Button variant="ghost" onClick={() => setDeleteId(null)}>Отмена</Button>
-                        <Button variant="danger" onClick={confirmDelete}>Удалить</Button>
+                        <Button variant="ghost" onClick={() => setDeleteId(null)}>CANCEL</Button>
+                        <Button variant="danger" onClick={confirmDelete}>DELETE</Button>
                     </div>
                 </div>
             </Modal>
@@ -308,18 +324,18 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
             <Modal
                 isOpen={!!renameId}
                 onClose={() => setRenameId(null)}
-                title="Переименовать граф"
+                title="RENAME_GRAPH"
             >
                 <div className="space-y-4">
                     <Input
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
-                        placeholder="Введите новое имя"
+                        placeholder="Enter new designation..."
                         autoFocus
                     />
                     <div className="flex justify-end space-x-2">
-                        <Button variant="ghost" onClick={() => setRenameId(null)}>Отмена</Button>
-                        <Button onClick={confirmRename}>Сохранить</Button>
+                        <Button variant="ghost" onClick={() => setRenameId(null)}>CANCEL</Button>
+                        <Button onClick={confirmRename}>SAVE</Button>
                     </div>
                 </div>
             </Modal>
@@ -328,25 +344,25 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
             <Modal
                 isOpen={isMergeModalOpen}
                 onClose={() => setIsMergeModalOpen(false)}
-                title="Объединение графов"
+                title="MERGE_PROTOCOL"
             >
                 <div className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                        Выбрано графов: {selectedIds.size}. Узлы с одинаковыми названиями будут объединены, веса связей просуммированы.
+                    <p className="text-sm text-gray-400">
+                        Merging {selectedIds.size} graphs. Nodes with identical labels will be fused.
                     </p>
                     <Input
                         value={processedMergeName}
                         onChange={(e) => setProcessedMergeName(e.target.value)}
-                        placeholder="Название нового графа"
+                        placeholder="Merged Graph Designation"
                     />
                     <div className="flex justify-end space-x-2">
-                        <Button variant="ghost" onClick={() => setIsMergeModalOpen(false)}>Отмена</Button>
+                        <Button variant="ghost" onClick={() => setIsMergeModalOpen(false)}>CANCEL</Button>
                         <Button onClick={executeMerge} disabled={isLoading}>
-                            {isLoading ? 'Объединение...' : 'Создать граф'}
+                            {isLoading ? 'PROCESSING...' : 'EXECUTE_MERGE'}
                         </Button>
                     </div>
                 </div>
             </Modal>
-        </div>
+        </div >
     )
 }

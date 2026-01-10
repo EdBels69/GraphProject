@@ -6,47 +6,51 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        primary: {
-          50: '#e0f2fe',
-          100: '#bae6fd',
-          200: '#7dd3fc',
-          300: '#38bdf8',
-          400: '#0ea5e9',
-          500: '#0284c7',
-          600: '#0369a1',
-          700: '#075985',
-          800: '#0c4a6e',
-          900: '#075985',
-          950: '#0c4a6e',
-        },
-        success: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-          950: '#052e16',
-        },
-        warning: {
-          50: '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#f97316',
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
-          950: '#431407',
-        },
+      fontFamily: {
+        display: ['Rajdhani', 'sans-serif'],
+        body: ['Outfit', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'monospace'],
       },
+      colors: {
+        void: '#050505',   // Deepest background
+        space: '#0A0A0F',  // Secondary background
+        glass: '#141419',  // Card base
+
+        // Accents
+        acid: {
+          DEFAULT: '#CCFF00', // Primary Action
+          dim: '#8db300',
+          500: '#CCFF00'      // Fallback for some components
+        },
+        plasma: {
+          DEFAULT: '#7000FF', // Secondary Depth
+          light: '#9D4DFF'
+        },
+
+        // Semantic
+        steel: {
+          DEFAULT: '#E0E0E0',
+          dim: '#A0A0A0'
+        },
+        ash: '#404040'
+      },
+      backgroundImage: {
+        'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")",
+      },
+      boxShadow: {
+        'glow-acid': '0 0 20px rgba(204, 255, 0, 0.35)',
+        'glow-plasma': '0 0 30px rgba(112, 0, 255, 0.25)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.5s ease-out forwards',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        }
+      }
     },
   },
   plugins: [],

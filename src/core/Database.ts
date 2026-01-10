@@ -73,7 +73,7 @@ export interface DatabaseConfig {
   verbose: boolean;
 }
 
-import { PrismaClient } from './prisma/client'
+import { PrismaClient } from './prisma'
 
 // @ts-ignore
 const prisma = new PrismaClient({})
@@ -94,11 +94,15 @@ export class DatabaseManager {
     try {
       await prisma.$connect();
       this.isInitialized = true;
-      console.log('[Database] SQLite (Prisma) connection established');
+      console.log('[Database] Database connection established');
     } catch (error) {
-      console.error('[Database] Failed to connect to SQLite:', error);
+      console.error('[Database] Failed to connect to database:', error);
       throw new DatabaseError('DB_INIT_ERROR', 'Failed to initialize database', { error });
     }
+  }
+
+  getClient() {
+    return prisma;
   }
 
   private ensureInitialized(): void {
@@ -210,40 +214,67 @@ export class DatabaseManager {
     this.ensureInitialized();
 
     try {
-      await prisma.graph.upsert({
-        where: { id: graph.id },
-        update: {
-          name: graph.name,
-          description: graph.description,
-          version: graph.version,
-          directed: graph.directed,
-          nodes: JSON.stringify(graph.nodes),
-          edges: JSON.stringify(graph.edges),
-          metrics: JSON.stringify(graph.metrics || {}),
-          sources: JSON.stringify(graph.sources || []),
-          metadata: JSON.stringify(graph.metadata || {}),
-          updatedAt: new Date()
-        },
-        create: {
-          id: graph.id,
-          name: graph.name,
-          description: graph.description,
-          version: graph.version || '2.0',
-          directed: graph.directed || false,
-          nodes: JSON.stringify(graph.nodes),
-          edges: JSON.stringify(graph.edges),
-          metrics: JSON.stringify(graph.metrics || {}),
-          sources: JSON.stringify(graph.sources || []),
-          metadata: JSON.stringify(graph.metadata || {}),
-          createdAt: new Date(graph.createdAt || Date.now()),
-          updatedAt: new Date()
-        }
-      });
-      console.log(`[Database] Saved graph ${graph.id} to SQLite`);
+      // Prepare relational data
+      const nodesData = graph.nodes.map((n: any) => ({
+        graphId: graph.id,
+        label: n.type || 'concept', // Store "type" in "label" column for querying convenience
+        name: n.label || n.id,      // Store display label in "name"
+        data: JSON.stringify(n)
+      }));
+
+      const edgesData = graph.edges.map((e: any) => ({
+        graphId: graph.id,
+        source: e.source,
+        target: e.target,
+        relation: e.relation || 'related_to',
+        data: JSON.stringify(e)
+      }));
+
+      await prisma.$transaction([
+        // 1. Maintain the "Header" and JSON blobs for legacy compatibility/fast full reads
+        prisma.graph.upsert({
+          where: { id: graph.id },
+          update: {
+            name: graph.name,
+            description: graph.description,
+            version: graph.version,
+            directed: graph.directed,
+            nodes: JSON.stringify(graph.nodes),
+            edges: JSON.stringify(graph.edges),
+            metrics: JSON.stringify(graph.metrics || {}),
+            sources: JSON.stringify(graph.sources || []),
+            metadata: JSON.stringify(graph.metadata || {}),
+            updatedAt: new Date()
+          },
+          create: {
+            id: graph.id,
+            name: graph.name,
+            description: graph.description,
+            version: graph.version || '2.0',
+            directed: graph.directed || false,
+            nodes: JSON.stringify(graph.nodes),
+            edges: JSON.stringify(graph.edges),
+            metrics: JSON.stringify(graph.metrics || {}),
+            sources: JSON.stringify(graph.sources || []),
+            metadata: JSON.stringify(graph.metadata || {}),
+            createdAt: new Date(graph.createdAt || Date.now()),
+            updatedAt: new Date()
+          }
+        }),
+        // 2. Clear old relational data to ensure clean state
+        prisma.graphNode.deleteMany({ where: { graphId: graph.id } }),
+        prisma.graphEdge.deleteMany({ where: { graphId: graph.id } }),
+        // 3. Insert new relational data
+        prisma.graphNode.createMany({ data: nodesData }),
+        prisma.graphEdge.createMany({ data: edgesData })
+      ]);
+
+      console.log(`[Database] Saved graph ${graph.id} to SQLite (Relational: ${nodesData.length} nodes, ${edgesData.length} edges)`);
     } catch (error) {
       console.error(`[Database] Failed to save graph ${graph.id}:`, error);
     }
   }
+
 
   async getGraphFromDb(id: string): Promise<Graph | null> {
     this.ensureInitialized();
