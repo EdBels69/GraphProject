@@ -96,19 +96,19 @@ export default function GraphAssistant({ selectedNode, graphId, graph, onClose }
     return (
         <div className="flex flex-col h-full w-full bg-transparent font-sans">
             {/* Header */}
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 backdrop-blur-sm">
+            <div className="p-4 border-b border-ash/20 flex justify-between items-center bg-void backdrop-blur-sm">
                 <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 rounded-lg bg-acid/10 border border-acid/20 flex items-center justify-center">
                         <Bot className="w-5 h-5 text-acid" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-white text-sm font-display tracking-wide">AI_ANALYST</h3>
+                        <h3 className="font-bold text-steel text-sm font-display tracking-wide">AI_ANALYST</h3>
                         <p className="text-[10px] text-acid font-mono">GLM-4.7 // ONLINE</p>
                     </div>
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-1 hover:bg-white/10 rounded text-steel hover:text-white transition-colors"
+                    className="p-1 hover:bg-steel/10 rounded text-steel hover:text-black transition-colors"
                 >
                     <X className="w-4 h-4" />
                 </button>
@@ -123,15 +123,15 @@ export default function GraphAssistant({ selectedNode, graphId, graph, onClose }
                     >
                         <div className={`
                             w-8 h-8 rounded-full flex items-center justify-center shrink-0
-                            ${msg.role === 'user' ? 'bg-white text-void' : 'bg-acid/10 text-acid border border-acid/20'}
+                            ${msg.role === 'user' ? 'bg-acid text-void' : 'bg-plasma/10 text-plasma border border-plasma/20'}
                         `}>
                             {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                         </div>
 
                         <div
-                            className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed shadow-lg backdrop-blur-sm ${msg.role === 'user'
-                                ? 'bg-white text-void rounded-tr-none font-medium'
-                                : 'bg-black/40 text-steel border border-white/10 rounded-tl-none'
+                            className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed shadow-md backdrop-blur-sm ${msg.role === 'user'
+                                ? 'bg-acid/5 text-steel border border-acid/20 rounded-tr-none font-medium'
+                                : 'bg-white text-steel border border-ash/20 rounded-tl-none'
                                 }`}
                         >
                             <div className="markdown-body" style={{ whiteSpace: 'pre-wrap' }}>
@@ -154,7 +154,7 @@ export default function GraphAssistant({ selectedNode, graphId, graph, onClose }
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-white/10 bg-black/20 backdrop-blur-md">
+            <div className="p-4 border-t border-ash/20 bg-void backdrop-blur-md">
                 <div className="flex gap-2 relative">
                     <input
                         type="text"
@@ -162,7 +162,7 @@ export default function GraphAssistant({ selectedNode, graphId, graph, onClose }
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                         placeholder="Ask about graph patterns..."
-                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-steel/50 focus:outline-none focus:border-acid/50 focus:bg-white/10 transition-all font-mono"
+                        className="flex-1 bg-white border border-ash/30 rounded-xl px-4 py-3 text-sm text-steel placeholder:text-steel-dim focus:outline-none focus:border-acid focus:ring-1 focus:ring-acid/20 transition-all font-mono"
                         disabled={isLoading}
                     />
                     <button

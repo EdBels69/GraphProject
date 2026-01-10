@@ -11,28 +11,28 @@ const icons = {
 
 const styles = {
     success: {
-        bg: 'bg-green-50',
-        border: 'border-green-200',
-        icon: 'text-green-500',
-        text: 'text-green-800'
+        bg: 'bg-white',
+        border: 'border-acid/20',
+        icon: 'text-acid',
+        text: 'text-steel'
     },
     error: {
-        bg: 'bg-red-50',
-        border: 'border-red-200',
-        icon: 'text-red-500',
-        text: 'text-red-800'
+        bg: 'bg-white',
+        border: 'border-red-500/20',
+        icon: 'text-red-600',
+        text: 'text-steel'
     },
     warning: {
-        bg: 'bg-yellow-50',
-        border: 'border-yellow-200',
-        icon: 'text-yellow-500',
-        text: 'text-yellow-800'
+        bg: 'bg-white',
+        border: 'border-orange-500/20',
+        icon: 'text-orange-600',
+        text: 'text-steel'
     },
     info: {
-        bg: 'bg-blue-50',
-        border: 'border-blue-200',
-        icon: 'text-blue-500',
-        text: 'text-blue-800'
+        bg: 'bg-white',
+        border: 'border-plasma/20',
+        icon: 'text-plasma',
+        text: 'text-steel'
     }
 }
 
@@ -43,14 +43,15 @@ function ToastItem({ toast }: { toast: ToastType }) {
 
     return (
         <div
-            className={`flex items-center gap-3 p-4 rounded-lg border shadow-lg ${style.bg} ${style.border} animate-slide-in`}
+            className={`flex items-center gap-3 p-4 rounded-xl border shadow-xl ${style.bg} ${style.border} animate-slide-in relative overflow-hidden group`}
             role="alert"
         >
-            <Icon className={`w-5 h-5 flex-shrink-0 ${style.icon}`} />
-            <p className={`text-sm font-medium flex-1 ${style.text}`}>{toast.message}</p>
+            <div className={`absolute inset-y-0 left-0 w-1 ${style.icon} bg-current opacity-50`} />
+            <Icon className={`w-5 h-5 flex-shrink-0 ${style.icon} group-hover:scale-110 transition-transform`} />
+            <p className={`text-sm font-bold flex-1 ${style.text}`}>{toast.message}</p>
             <button
                 onClick={() => removeToast(toast.id)}
-                className={`p-1 rounded hover:bg-white/50 transition-colors ${style.text}`}
+                className={`p-1 rounded-lg hover:bg-steel/5 transition-colors text-steel-dim hover:text-steel`}
             >
                 <X className="w-4 h-4" />
             </button>

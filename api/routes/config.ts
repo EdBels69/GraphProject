@@ -5,9 +5,10 @@ import { configService } from '../services/configService'
 const router = express.Router()
 
 // GET /api/config/ontology
-router.get('/ontology', async (req, res) => {
+router.get('/ontology', async (req: any, res) => {
     try {
-        const ontology = await configService.getOntology()
+        const userId = req.user.id
+        const ontology = await configService.getOntology(userId)
         res.json(ontology)
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch ontology' })
@@ -15,10 +16,11 @@ router.get('/ontology', async (req, res) => {
 })
 
 // POST /api/config/ontology
-router.post('/ontology', async (req, res) => {
+router.post('/ontology', async (req: any, res) => {
     try {
+        const userId = req.user.id
         const config = req.body
-        await configService.saveOntology(config)
+        await configService.saveOntology(userId, config)
         res.json({ success: true })
     } catch (error) {
         res.status(500).json({ error: 'Failed to save ontology' })
@@ -26,9 +28,10 @@ router.post('/ontology', async (req, res) => {
 })
 
 // GET /api/config/prompts
-router.get('/prompts', async (req, res) => {
+router.get('/prompts', async (req: any, res) => {
     try {
-        const prompts = await configService.getPrompts()
+        const userId = req.user.id
+        const prompts = await configService.getPrompts(userId)
         res.json(prompts)
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch prompts' })
@@ -36,10 +39,11 @@ router.get('/prompts', async (req, res) => {
 })
 
 // POST /api/config/prompts
-router.post('/prompts', async (req, res) => {
+router.post('/prompts', async (req: any, res) => {
     try {
+        const userId = req.user.id
         const config = req.body
-        await configService.savePrompts(config)
+        await configService.savePrompts(userId, config)
         res.json({ success: true })
     } catch (error) {
         res.status(500).json({ error: 'Failed to save prompts' })

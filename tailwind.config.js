@@ -12,34 +12,34 @@ export default {
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       colors: {
-        void: '#050505',   // Deepest background
-        space: '#0A0A0F',  // Secondary background
-        glass: '#141419',  // Card base
+        void: 'hsl(var(--void) / <alpha-value>)',
+        space: 'hsl(var(--space) / <alpha-value>)',
+        glass: 'hsl(var(--glass) / <alpha-value>)',
 
         // Accents
         acid: {
-          DEFAULT: '#CCFF00', // Primary Action
-          dim: '#8db300',
-          500: '#CCFF00'      // Fallback for some components
+          DEFAULT: 'hsl(var(--acid) / <alpha-value>)',
+          dim: 'hsl(var(--acid-dim) / <alpha-value>)',
+          500: 'hsl(var(--acid) / <alpha-value>)'
         },
         plasma: {
-          DEFAULT: '#7000FF', // Secondary Depth
-          light: '#9D4DFF'
+          DEFAULT: 'hsl(var(--plasma) / <alpha-value>)',
+          light: 'hsl(var(--plasma-light) / <alpha-value>)'
         },
 
         // Semantic
         steel: {
-          DEFAULT: '#E0E0E0',
-          dim: '#A0A0A0'
+          DEFAULT: 'hsl(var(--steel) / <alpha-value>)',
+          dim: 'hsl(var(--steel-dim) / <alpha-value>)'
         },
-        ash: '#404040'
+        ash: 'hsl(var(--ash) / <alpha-value>)'
       },
       backgroundImage: {
         'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")",
       },
       boxShadow: {
-        'glow-acid': '0 0 20px rgba(204, 255, 0, 0.35)',
-        'glow-plasma': '0 0 30px rgba(112, 0, 255, 0.25)',
+        'glow-acid': '0 0 20px rgba(255, 102, 0, 0.25)', // Orange glow
+        'glow-plasma': '0 0 25px rgba(100, 80, 200, 0.15)', // Softer, subtler violet glow
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out forwards',

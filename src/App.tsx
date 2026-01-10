@@ -24,39 +24,51 @@ import SearchPage from '@/pages/SearchPage'
 import ResearchPage from '@/pages/ResearchPage'
 import HealthDashboardPage from '@/pages/HealthDashboardPage'
 
+import { AuthProvider } from '@/contexts/AuthContext'
+import ProtectedRoute from '@/components/ProtectedRoute'
+import LoginPage from '@/pages/LoginPage'
+
 function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
-        <div className="relative">
-          <ErrorBoundary>
-            <AppHealthCheck />
-            <Routes>
-              {/* Unified Bio-Digital Layout */}
-              <Route element={<Layout />}>
-                {/* Core Flows */}
-                <Route path="/" element={<HomePage />} />
-                <Route path="/research/:id/papers" element={<PapersPage />} />
-                <Route path="/research/:id/config" element={<AnalysisConfigPage />} />
-                <Route path="/research/:id/graph" element={<GraphViewPage />} />
-                <Route path="/research/:id/ai" element={<AIAnalysisPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
+        <AuthProvider>
+          <div className="relative">
+            <ErrorBoundary>
+              <AppHealthCheck />
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
 
-                {/* Main Utilities */}
-                <Route path="/upload" element={<FileUploadPage />} />
-                <Route path="/ai-assistant" element={<AIAssistantPage />} />
-                <Route path="/works" element={<WorkListPage />} />
-                <Route path="/analysis" element={<GraphAnalysisPage />} />
-                <Route path="/analysis/data/:id?" element={<GraphDataPage />} />
-                <Route path="/report/:id?" element={<ReportPage />} />
-                <Route path="/search" element={<SearchPage />} />
-                <Route path="/research" element={<ResearchPage />} />
-                <Route path="/health" element={<HealthDashboardPage />} />
-              </Route>
-            </Routes>
-          </ErrorBoundary>
-          <ToastContainer />
-        </div>
+                {/* Unified Bio-Digital Layout */}
+                <Route element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }>
+                  {/* Core Flows */}
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/research/:id/papers" element={<PapersPage />} />
+                  <Route path="/research/:id/config" element={<AnalysisConfigPage />} />
+                  <Route path="/research/:id/graph" element={<GraphViewPage />} />
+                  <Route path="/research/:id/ai" element={<AIAnalysisPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+
+                  {/* Main Utilities */}
+                  <Route path="/upload" element={<FileUploadPage />} />
+                  <Route path="/ai-assistant" element={<AIAssistantPage />} />
+                  <Route path="/works" element={<WorkListPage />} />
+                  <Route path="/analysis" element={<GraphAnalysisPage />} />
+                  <Route path="/analysis/data/:id?" element={<GraphDataPage />} />
+                  <Route path="/report/:id?" element={<ReportPage />} />
+                  <Route path="/search" element={<SearchPage />} />
+                  <Route path="/research" element={<ResearchPage />} />
+                  <Route path="/health" element={<HealthDashboardPage />} />
+                </Route>
+              </Routes>
+            </ErrorBoundary>
+            <ToastContainer />
+          </div>
+        </AuthProvider>
       </ToastProvider>
     </BrowserRouter>
   )

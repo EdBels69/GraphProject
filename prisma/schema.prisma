@@ -17,6 +17,7 @@ datasource db {
 
 model ResearchJob {
   id                String   @id
+  userId            String
   topic             String
   mode              String
   status            String
@@ -41,10 +42,13 @@ model ResearchJob {
   
   graphId           String?
   graph             Graph?  @relation(fields: [graphId], references: [id])
+
+  @@index([userId])
 }
 
 model Article {
   id              String   @id
+  userId          String
   jobId           String
   job             ResearchJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
   
@@ -68,10 +72,14 @@ model Article {
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([jobId])
 }
 
 model Graph {
   id          String   @id
+  userId      String
   name        String
   description String?
   version     String   @default("2.0")
@@ -86,6 +94,8 @@ model Graph {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
   
   // Relations
   // Relations
@@ -123,7 +133,11 @@ model GraphEdge {
 
 model SystemConfig {
   id        String   @id @default(uuid())
-  key       String   @unique
+  userId    String   @default("system")
+  key       String
   value     String   // JSON string
   updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId])
 }

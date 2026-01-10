@@ -26,6 +26,9 @@ export interface ResearchJob {
     /** Unique job identifier */
     id: string
 
+    /** User identifier */
+    userId: string
+
     /** Research topic/query */
     topic: string
 

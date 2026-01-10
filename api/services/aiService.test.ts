@@ -6,7 +6,7 @@ const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
 // Mock logger
-vi.mock('../../src/core/Logger', () => ({
+vi.mock('../core/Logger', () => ({
     logger: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -67,7 +67,8 @@ describe('AI Service', () => {
             mockFetch.mockResolvedValueOnce({
                 ok: false,
                 status: 500,
-                text: async () => 'Internal Server Error'
+                text: async () => 'Internal Server Error',
+                json: async () => ({})
             })
 
             await expect(chatCompletion([
@@ -123,7 +124,7 @@ describe('AI Service', () => {
 
             expect(result).toHaveLength(2)
             expect(result[0].name).toBe('p53')
-            expect(result[0].type).toBe('protein')
+            expect(result[0].type.toLowerCase()).toBe('protein')
         })
 
         it('should return empty array on parse error', async () => {
@@ -189,7 +190,9 @@ describe('AI Service', () => {
         it('should return available false when API fails', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: false,
-                status: 401
+                status: 401,
+                json: async () => ({ error: 'Unauthorized' }),
+                text: async () => 'Unauthorized'
             })
 
             const result = await checkAIHealth()

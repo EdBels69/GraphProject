@@ -10,7 +10,7 @@ import {
   ConnectivityResult,
   GraphStatistics
 } from './contracts/analysis'
-import { cacheManager } from '../src/core/CacheManager'
+import { cacheManager } from '../api/core/CacheManager'
 
 export class GraphAnalyzer {
   private graph: Graph

@@ -1,0 +1,143 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider   = "prisma-client-js"
+  output     = "../src/core/prisma"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model ResearchJob {
+  id                String    @id
+  userId            String
+  topic             String
+  mode              String
+  status            String
+  progress          Int
+  error             String?
+  queries           String // Stored as JSON string
+  articlesFound     Int
+  articlesProcessed Int
+  startTime         DateTime?
+  endTime           DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  articles Article[]
+
+  // JSON fields for complex data
+  includedIds      String? // JSON array
+  excludedIds      String? // JSON array
+  exclusionReasons String? // JSON object
+  reviewText       String?
+
+  graphId String?
+  graph   Graph?  @relation(fields: [graphId], references: [id])
+
+  @@index([userId])
+}
+
+model Article {
+  id     String      @id
+  userId String
+  jobId  String
+  job    ResearchJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  doi      String?
+  title    String
+  authors  String // JSON array
+  year     Int?
+  abstract String?
+  url      String?
+  pdfUrl   String?
+  source   String
+  status   String
+
+  // Screening
+  screeningStatus String?
+  extractedData   String? // JSON object
+
+  // Relations/Graph
+  entities  String? // JSON object (extracted entities)
+  relations String? // JSON object (extracted relations)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([jobId])
+}
+
+model Graph {
+  id          String  @id
+  userId      String
+  name        String
+  description String?
+  version     String  @default("2.0")
+  directed    Boolean @default(false)
+
+  // JSON Data
+  nodes    String // JSON
+  edges    String // JSON
+  metrics  String? // JSON
+  sources  String? // JSON
+  metadata String? // JSON
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  // Relations
+  jobs ResearchJob[]
+
+  // Relational Storage (New)
+  detailedNodes GraphNode[]
+  detailedEdges GraphEdge[]
+
+  @@index([userId])
+}
+
+model GraphNode {
+  id      String @id @default(uuid())
+  graphId String
+  graph   Graph  @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  label   String
+  name    String
+  data    String // JSON props
+
+  @@index([graphId])
+}
+
+model GraphEdge {
+  id       String @id @default(uuid())
+  graphId  String
+  graph    Graph  @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  source   String
+  target   String
+  relation String
+  data     String // JSON props
+
+  @@index([graphId])
+  @@index([source])
+  @@index([target])
+}
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  userId    String   @default("system")
+  key       String
+  value     String // JSON string
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId])
+}

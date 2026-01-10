@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, Activity, Database, Cpu, HardDrive, Zap, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Activity, Database, Cpu, HardDrive, Zap, AlertTriangle, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
@@ -73,7 +73,7 @@ export default function HealthDashboardPage() {
     const formatUptime = (seconds: number) => {
         const hours = Math.floor(seconds / 3600)
         const minutes = Math.floor((seconds % 3600) / 60)
-        return `${hours}ч ${minutes}м`
+        return `${hours}H ${minutes}M`
     }
 
     const getStatusColor = (status: string) => {
@@ -95,173 +95,207 @@ export default function HealthDashboardPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-6xl mx-auto space-y-6">
+        <div className="min-h-screen bg-void p-6 animate-fade-in">
+            <div className="max-w-6xl mx-auto space-y-8">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+                    <div className="flex items-center gap-6">
                         <Link to="/">
-                            <Button variant="ghost">
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                На главную
+                            <Button variant="ghost" size="sm" className="font-bold text-[10px] tracking-widest text-steel-dim">
+                                <ArrowLeft className="w-3 h-3 mr-2" />
+                                ВЕРНУТЬСЯ НА ГЛАВНУЮ
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Health Dashboard</h1>
-                            <p className="text-sm text-gray-500">
-                                Последнее обновление: {lastRefresh.toLocaleTimeString()}
+                            <h1 className="text-4xl font-display font-bold text-steel tracking-tight mb-2">
+                                Состояние системы
+                            </h1>
+                            <p className="text-sm font-bold text-steel-dim uppercase tracking-widest">
+                                ПОСЛЕДНЕЕ СКАНИРОВАНИЕ: {lastRefresh.toLocaleTimeString()}
                             </p>
                         </div>
                     </div>
-                    <Button onClick={fetchHealth} disabled={loading}>
-                        <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                        Обновить
+                    <Button
+                        variant="secondary"
+                        onClick={fetchHealth}
+                        disabled={loading}
+                        className="font-mono text-xs tracking-widest"
+                    >
+                        <RefreshCw className={`w-3 h-3 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        RESCAN_SYSTEM
                     </Button>
                 </div>
 
                 {/* Main Status Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {/* System Health Card */}
-                    <Card className="p-6">
-                        <div className="flex items-center justify-between mb-4">
+                    <Card className="p-8 group hover:border-acid/20 transition-all duration-500 bg-white shadow-lg">
+                        <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 rounded-lg">
-                                    <Cpu className="w-6 h-6 text-blue-600" />
+                                <div className="p-2 bg-void rounded-lg border border-ash/20 text-steel-dim group-hover:text-acid group-hover:border-acid/30 transition-colors">
+                                    <Cpu className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-lg font-semibold">Система</h3>
+                                <h3 className="text-sm font-display font-bold text-steel tracking-widest uppercase">Сервер (Core)</h3>
                             </div>
                             {systemHealth && getStatusIcon(systemHealth.status)}
                         </div>
+                        <p className="text-[10px] text-steel-dim font-bold uppercase mb-4 opacity-60">Мониторинг ресурсов Node.js</p>
                         {systemHealth ? (
-                            <div className="space-y-3">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Статус</span>
-                                    <span className={`font-medium ${getStatusColor(systemHealth.status)}`}>
-                                        {systemHealth.status === 'healthy' ? 'Здоров' :
-                                            systemHealth.status === 'degraded' ? 'Деградация' : 'Недоступен'}
+                            <div className="space-y-4 font-mono">
+                                <div className="flex justify-between items-center group/item">
+                                    <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Статус ядра</span>
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded bg-void border border-ash/10 ${getStatusColor(systemHealth.status)}`}>
+                                        {systemHealth.status === 'healthy' ? 'СТАБИЛЬНО' :
+                                            systemHealth.status === 'degraded' ? 'ЗАМЕДЛЕН' : 'КРИТИЧЕСКАЯ ОШИБКА'}
                                     </span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Uptime</span>
-                                    <span className="font-medium">{formatUptime(systemHealth.uptime)}</span>
+                                <div className="flex justify-between items-center group/item">
+                                    <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Время работы</span>
+                                    <span className="text-sm text-steel font-bold">{formatUptime(systemHealth.uptime)}</span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Heap Memory</span>
-                                    <span className="font-medium">
+                                <div className="flex justify-between items-center group/item">
+                                    <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Память (Heap)</span>
+                                    <span className="text-sm text-steel font-bold">
                                         {formatBytes(systemHealth.memory.heapUsed)} / {formatBytes(systemHealth.memory.heapTotal)}
                                     </span>
                                 </div>
                                 {systemHealth.issues.length > 0 && (
-                                    <div className="mt-3 p-2 bg-yellow-50 rounded text-xs text-yellow-800">
-                                        {systemHealth.issues.join(', ')}
+                                    <div className="mt-4 p-3 bg-plasma/10 border border-plasma/20 rounded text-[10px] text-plasma font-bold uppercase tracking-widest">
+                                        ANOMALY_DETECTED: {systemHealth.issues.join(', ')}
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <div className="text-gray-400 text-sm">Загрузка...</div>
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <Loader2 className="w-8 h-8 text-white/10 animate-spin mb-2" />
+                                <p className="text-[10px] font-mono text-steel/40 italic">AWAITING_CORE_STREAM...</p>
+                            </div>
                         )}
                     </Card>
 
                     {/* AI Service Card */}
-                    <Card className="p-6">
-                        <div className="flex items-center justify-between mb-4">
+                    <Card className="p-8 group hover:border-plasma/20 transition-all duration-500 bg-white shadow-lg">
+                        <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-purple-100 rounded-lg">
-                                    <Zap className="w-6 h-6 text-purple-600" />
+                                <div className="p-2 bg-void rounded-lg border border-ash/20 text-steel-dim group-hover:text-plasma group-hover:border-plasma/30 transition-colors">
+                                    <Zap className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-lg font-semibold">AI Сервис</h3>
+                                <h3 className="text-sm font-display font-bold text-steel tracking-widest uppercase">Интеллект (AI)</h3>
                             </div>
                             {aiHealth && (aiHealth.available ?
-                                <CheckCircle className="w-6 h-6 text-green-500" /> :
-                                <XCircle className="w-6 h-6 text-red-500" />
+                                <CheckCircle className="w-6 h-6 text-green-500 shadow-glow-green" /> :
+                                <XCircle className="w-6 h-6 text-red-500 shadow-glow-red" />
                             )}
                         </div>
+                        <p className="text-[10px] text-steel-dim font-bold uppercase mb-4 opacity-60">Доступность LLM сервисов</p>
                         {aiHealth ? (
-                            <div className="space-y-3">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Статус</span>
-                                    <span className={`font-medium ${aiHealth.available ? 'text-green-500' : 'text-red-500'}`}>
-                                        {aiHealth.available ? 'Доступен' : 'Недоступен'}
+                            <div className="space-y-4 font-mono">
+                                <div className="flex justify-between items-center group/item">
+                                    <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Доступность</span>
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded bg-void border border-ash/10 ${aiHealth.available ? 'text-green-600' : 'text-red-500'}`}>
+                                        {aiHealth.available ? 'ОНЛАЙН' : 'ОФФЛАЙН'}
                                     </span>
                                 </div>
                                 {aiHealth.model && (
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-500">Модель</span>
-                                        <span className="font-medium font-mono text-xs">{aiHealth.model}</span>
+                                    <div className="flex justify-between items-center group/item">
+                                        <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Активная модель</span>
+                                        <span className="text-sm text-steel font-bold bg-void px-2 py-0.5 rounded border border-ash/10 uppercase tracking-tighter">
+                                            {aiHealth.model}
+                                        </span>
                                     </div>
                                 )}
                                 {aiHealth.error && (
-                                    <div className="mt-3 p-2 bg-red-50 rounded text-xs text-red-800">
-                                        {aiHealth.error}
+                                    <div className="mt-4 p-3 bg-plasma/10 border border-plasma/20 rounded text-[10px] text-plasma font-bold uppercase tracking-widest leading-relaxed">
+                                        CORE_ERROR: {aiHealth.error}
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <div className="text-gray-400 text-sm">Загрузка...</div>
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <Loader2 className="w-8 h-8 text-white/10 animate-spin mb-2" />
+                                <p className="text-[10px] font-mono text-steel/40 italic">AWAITING_AI_SYNC...</p>
+                            </div>
                         )}
                     </Card>
 
                     {/* Cache Stats Card */}
-                    <Card className="p-6">
-                        <div className="flex items-center justify-between mb-4">
+                    <Card className="p-8 group hover:border-acid/20 transition-all duration-500 bg-white shadow-lg">
+                        <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-100 rounded-lg">
-                                    <Database className="w-6 h-6 text-green-600" />
+                                <div className="p-2 bg-void rounded-lg border border-ash/20 text-steel-dim group-hover:text-acid group-hover:border-acid/30 transition-colors">
+                                    <Database className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-lg font-semibold">Кэш</h3>
+                                <h3 className="text-sm font-display font-bold text-steel tracking-widest uppercase">Кэш-память</h3>
                             </div>
-                            <HardDrive className="w-6 h-6 text-gray-400" />
+                            <HardDrive className="w-6 h-6 text-ash/30" />
                         </div>
+                        <p className="text-[10px] text-steel-dim font-bold uppercase mb-4 opacity-60">Оптимизация повторных запросов</p>
                         {cacheStats ? (
-                            <div className="space-y-3">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Записей</span>
-                                    <span className="font-medium">{cacheStats.size}</span>
+                            <div className="space-y-4 font-mono">
+                                <div className="flex justify-between items-center group/item">
+                                    <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Записей</span>
+                                    <span className="text-sm text-steel font-bold">{cacheStats.size} OBJ</span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Hit Rate</span>
-                                    <span className="font-medium text-green-600">{cacheStats.hitRate}</span>
+                                <div className="flex justify-between items-center group/item">
+                                    <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Эффективность</span>
+                                    <span className="text-sm text-acid font-bold bg-acid/5 px-2 py-0.5 rounded border border-acid/10">{cacheStats.hitRate}</span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Hits / Misses</span>
-                                    <span className="font-medium">{cacheStats.hits} / {cacheStats.misses}</span>
+                                <div className="flex justify-between items-center group/item">
+                                    <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Попадания / Пропуски</span>
+                                    <span className="text-sm text-steel font-bold">{cacheStats.hits} / {cacheStats.misses}</span>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Размер</span>
-                                    <span className="font-medium">{formatBytes(cacheStats.sizeInBytes)}</span>
+                                <div className="flex justify-between items-center group/item pt-2 border-t border-ash/10">
+                                    <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Вес реестра</span>
+                                    <span className="text-sm text-steel font-bold">{formatBytes(cacheStats.sizeInBytes)}</span>
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-gray-400 text-sm">Загрузка...</div>
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <Loader2 className="w-8 h-8 text-white/10 animate-spin mb-2" />
+                                <p className="text-[10px] font-mono text-steel/40 italic">AWAITING_REGISTRY_LOCK...</p>
+                            </div>
                         )}
                     </Card>
                 </div>
 
                 {/* Memory Usage Bar */}
                 {systemHealth && (
-                    <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Использование памяти</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <div className="flex justify-between text-sm mb-1">
-                                    <span>Heap Used</span>
-                                    <span>{formatBytes(systemHealth.memory.heapUsed)} / {formatBytes(systemHealth.memory.heapTotal)}</span>
+                    <Card className="p-8 border-ash/20 bg-white shadow-lg">
+                        <h3 className="text-sm font-display font-bold text-steel tracking-widest uppercase mb-4 flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-acid" /> Телеметрия оперативной памяти
+                        </h3>
+                        <p className="text-[10px] text-steel-dim font-bold uppercase mb-8 opacity-60">
+                            Критический мониторинг для рендеринга больших графов и PDF-парсинга
+                        </p>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 font-mono">
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Нагрузка Heap</span>
+                                        <span className="text-xs text-steel font-bold">Node.js Isolate Runtime</span>
+                                    </div>
+                                    <span className="text-[10px] text-steel-dim font-bold">
+                                        {formatBytes(systemHealth.memory.heapUsed)} / {formatBytes(systemHealth.memory.heapTotal)}
+                                    </span>
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-3">
+                                <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden border border-white/5">
                                     <div
-                                        className="bg-blue-500 h-3 rounded-full transition-all"
+                                        className="bg-acid h-full rounded-full transition-all duration-1000 shadow-glow-acid"
                                         style={{ width: `${(systemHealth.memory.heapUsed / systemHealth.memory.heapTotal) * 100}%` }}
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <div className="flex justify-between text-sm mb-1">
-                                    <span>RSS (Total)</span>
-                                    <span>{formatBytes(systemHealth.memory.rss)}</span>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-steel-dim uppercase tracking-widest font-bold">Resident Set Size (RSS)</span>
+                                        <span className="text-xs text-steel font-bold">Общее резервирование системы</span>
+                                    </div>
+                                    <span className="text-[10px] text-steel-dim font-bold">{formatBytes(systemHealth.memory.rss)}</span>
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-3">
+                                <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden border border-white/5">
                                     <div
-                                        className="bg-purple-500 h-3 rounded-full transition-all"
+                                        className="bg-purple-500 h-full rounded-full transition-all duration-1000 shadow-glow-purple"
                                         style={{ width: `${Math.min(100, (systemHealth.memory.rss / (1024 * 1024 * 512)) * 100)}%` }}
                                     />
                                 </div>

@@ -1,6 +1,25 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
-import axios from 'axios'
+import { useToast } from '@/contexts/ToastContext'
+import { useApi } from '@/hooks/useApi'
+import { API_ENDPOINTS } from '@/api/endpoints'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import {
+  Search,
+  FlaskConical,
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  FileText,
+  ArrowLeft,
+  Info,
+  Layers,
+  Zap,
+  ShieldCheck,
+  BookOpen,
+  X
+} from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 interface ResearchGap {
   id: string;
@@ -13,41 +32,43 @@ interface ResearchGap {
 }
 
 export default function ResearchGapsPage() {
+  const { addToast } = useToast()
+
   const [gaps, setGaps] = useState<ResearchGap[]>([
     {
       id: '1',
-      area: 'Механизм связи P53 с метаболизмом в раке',
+      area: 'P53-Metabolism Linkage in Oncogenesis',
       priority: 'high',
       confidence: 0.78,
       supportingEvidence: 12,
-      recommendation: 'Провести мета-анализ существующих исследований по метаболической репрограммированию опухолей с участием P53. Исследовать роль P53 в регуляции ключевых метаболических путей (glycolysis, TCA cycle, fatty acid oxidation) и выявить потенциальные точки терапевтического вмешательства.',
+      recommendation: 'Initiate meta-analysis on metabolic reprogramming in P53-driven tumors. Investigate P53 regulation of glycolysis, TCA cycle, and fatty acid oxidation to identify therapeutic vulnerabilities.',
       createdAt: '2024-12-15'
     },
     {
       id: '2',
-      area: 'Перекрестные механизмы резистентности между MAPK и PI3K путями',
+      area: 'MAPK/PI3K Cross-Resistance Mechanisms',
       priority: 'critical',
       confidence: 0.85,
       supportingEvidence: 23,
-      recommendation: 'Исследовать компенсаторные механизмы активации PI3K при ингибировании MAPK пути. Идентифицировать общие downstream мишени и оценить синергетические эффекты комбинационной терапии.',
+      recommendation: 'Investigate compensatory PI3K activation during MAPK pathway inhibition. Identify shared downstream targets and evaluate synergistic effects of combination therapies.',
       createdAt: '2024-12-15'
     },
     {
       id: '3',
-      area: 'Роль некодирующей РНК в регуляции апоптоза опухолей',
+      area: 'Non-coding RNA in Apoptosis Regulation',
       priority: 'medium',
       confidence: 0.62,
       supportingEvidence: 8,
-      recommendation: 'Провести систематический анализ miRNA и lncRNA, нацеленных на апоптоз. Выявить miRNAs, которые одновременно регулируют несколько про- и анти-апоптотических генов. Разработать модель интегральной регуляции.',
+      recommendation: 'Systematic analysis of miRNA and lncRNA targeting apoptotic pathways. Identify miRNAs co-regulating multiple pro- and anti-apoptotic genes for integral regulation models.',
       createdAt: '2024-12-15'
     },
     {
       id: '4',
-      area: 'Молекулярные механизмы иммунной эволюции опухолей',
+      area: 'Molecular Mechanisms of Immune Evolution',
       priority: 'high',
       confidence: 0.71,
       supportingEvidence: 15,
-      recommendation: 'Исследовать динамику изменения экспрессии иммунных чекпоинтов (PD-1, PD-L1, CTLA-4) под действием различных терапевтических агентов. Оценить возможность сочетания иммунотерапии с таргетной терапией для усиления иммунного ответа.',
+      recommendation: 'Analyze dynamics of immune checkpoint expression (PD-1, PD-L1) under selective pressure. Evaluate combination of immunotherapy with targeted agents.',
       createdAt: '2024-12-15'
     },
   ])
@@ -58,17 +79,17 @@ export default function ResearchGapsPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
 
   const priorityColors = {
-    low: 'bg-gray-100 text-gray-800',
-    medium: 'bg-blue-100 text-blue-800',
-    high: 'bg-orange-100 text-orange-800',
-    critical: 'bg-red-100 text-red-800',
+    low: 'bg-white/5 text-steel/60 border-white/10',
+    medium: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    high: 'bg-plasma/10 text-plasma border-plasma/20',
+    critical: 'bg-red-500/10 text-red-500 border-red-500/20',
   }
 
   const priorityLabels = {
-    low: 'Низкий',
-    medium: 'Средний',
-    high: 'Высокий',
-    critical: 'Критический',
+    low: 'LOW_PRIORITY',
+    medium: 'STANDARD_PRIORITY',
+    high: 'HIGH_PRIORITY',
+    critical: 'CRITICAL_FAILURE_RISK',
   }
 
   const filteredGaps = gaps.filter(gap => {
@@ -88,84 +109,91 @@ export default function ResearchGapsPage() {
   })
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Research Gaps - Пробелы в исследованиях
-        </h1>
-        
-        <div className="flex space-x-4">
+    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+        <div>
+          <h1 className="text-4xl font-display font-bold text-white uppercase tracking-tight mb-2">
+            RESEARCH_GAPS_IDENTIFIED
+          </h1>
+          <p className="text-sm font-mono text-steel/60 italic uppercase tracking-widest">Knowledge Incompleteness Audit Alpha</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as typeof filter)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+            className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-acid outline-none transition-all"
           >
-            <option value="all">Все приоритеты</option>
-            <option value="high">Высокий и выше</option>
-            <option value="critical">Только критические</option>
+            <option value="all" className="bg-void">ALL_PRIORITIES</option>
+            <option value="high" className="bg-void">HIGH_AND_CRITICAL</option>
+            <option value="critical" className="bg-void">CRITICAL_ONLY</option>
           </select>
-          
+
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as typeof sort)}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500"
+            className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-acid outline-none transition-all"
           >
-            <option value="priority">По приоритету</option>
-            <option value="confidence">По уверенности</option>
-            <option value="evidence">По доказательствам</option>
+            <option value="priority" className="bg-void">BY_PRIORITY</option>
+            <option value="confidence" className="bg-void">BY_CONFIDENCE</option>
+            <option value="evidence" className="bg-void">BY_EVIDENCE_COUNT</option>
           </select>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sortedGaps.map(gap => (
-          <div key={gap.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${priorityColors[gap.priority]}`}>
+          <Card key={gap.id} className="p-8 group hover:border-white/20 transition-all duration-500 bg-white/5 backdrop-blur-md">
+            <div className="flex items-center justify-between mb-6">
+              <span className={`px-2 py-0.5 rounded border text-[10px] font-bold font-mono tracking-widest ${priorityColors[gap.priority]}`}>
                 {priorityLabels[gap.priority]}
               </span>
-              <span className="text-sm text-gray-500">{gap.createdAt}</span>
+              <span className="text-[10px] font-mono text-steel/40">{gap.createdAt}</span>
             </div>
-            
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+
+            <h3 className="text-lg font-display font-bold text-white mb-4 leading-tight group-hover:text-acid transition-colors uppercase tracking-tight">
               {gap.area}
             </h3>
-            
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Уверенность:</span>
-                <span className="font-semibold text-gray-900">
+
+            <div className="space-y-3 mb-6 font-mono">
+              <div className="flex justify-between items-center group/item">
+                <span className="text-[10px] text-steel/30 uppercase tracking-widest group-hover/item:text-steel/50 transition-colors">CONFIDENCE_INDEX</span>
+                <span className="text-sm text-white font-bold bg-white/5 px-2 py-0.5 rounded">
                   {(gap.confidence * 100).toFixed(0)}%
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Доказательства:</span>
-                <span className="font-semibold text-gray-900">
-                  {gap.supportingEvidence} статей
+              <div className="flex justify-between items-center group/item">
+                <span className="text-[10px] text-steel/30 uppercase tracking-widest group-hover/item:text-steel/50 transition-colors">EVIDENCE_PROVENANCE</span>
+                <span className="text-sm text-white font-bold bg-white/5 px-2 py-0.5 rounded">
+                  {gap.supportingEvidence} SOURCES
                 </span>
               </div>
             </div>
-            
-            <div className="bg-gray-50 rounded-md p-4">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">
-                Рекомендация:
+
+            <div className="bg-void/40 rounded-lg p-5 border border-white/5 group-hover:border-white/10 transition-colors">
+              <h4 className="text-[10px] font-mono font-bold text-acid/60 mb-3 tracking-widest flex items-center gap-2">
+                <Zap className="w-3 h-3" /> PROTOCOL_RECO
               </h4>
-              <p className="text-sm text-gray-700 leading-relaxed">
+              <p className="text-xs text-steel/80 leading-relaxed italic">
                 {gap.recommendation}
               </p>
             </div>
 
-            <div className="flex space-x-2 mt-4">
-              <button 
+            <div className="flex gap-2 mt-6 pt-6 border-t border-white/5">
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   setSelectedGap(gap)
                   setShowDetailsModal(true)
                 }}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="flex-1 font-mono text-[10px] tracking-widest"
               >
-                📖 Подробнее
-              </button>
-              <button 
+                <BookOpen className="w-3 h-3 mr-2" /> DETAIL
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   try {
                     const blob = new Blob([JSON.stringify(gaps.filter(g => g.priority !== 'low'), null, 2)], { type: 'application/json' })
@@ -177,86 +205,105 @@ export default function ResearchGapsPage() {
                     a.click()
                     document.body.removeChild(a)
                     URL.revokeObjectURL(url)
-                    toast.success('Пробелы успешно экспортированы')
+                    addToast('Gaps successfully exported to secure storage', 'success')
                   } catch (error) {
                     console.error('Export error:', error)
-                    toast.error('Не удалось экспортировать пробелы')
+                    addToast('Export sequence failed', 'error')
                   }
                 }}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+                className="flex-1 font-mono text-[10px] tracking-widest"
               >
-                📥 Экспорт
-              </button>
+                <Download className="w-3 h-3 mr-2" /> EXPORT
+              </Button>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
-      <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-r-md">
-        <h3 className="font-semibold text-blue-900 mb-2">💡 Подсказка</h3>
-        <ul className="list-disc list-inside text-blue-800 space-y-1">
-          <li>Используйте фильтры для поиска наиболее важных пробелов</li>
-          <li>Сортировка поможет приоритизировать направления исследований</li>
-          <li>Критические пробелы требуют немедленного внимания</li>
-          <li>Рекомендации включают конкретные экспериментальные подходы</li>
+      <div className="bg-acid/5 border-l-2 border-acid p-8 rounded-r-xl backdrop-blur-sm">
+        <h3 className="font-display font-bold text-white mb-4 tracking-widest uppercase flex items-center gap-2">
+          <Info className="w-5 h-5 text-acid" /> AUDIT_INSIGHTS
+        </h3>
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-steel/80">
+          <li className="flex items-start gap-2">
+            <span className="text-acid">/</span> Use filters to isolate high-impact knowledge gaps.
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-acid">/</span> Sorting prioritization based on statistical confidence.
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-acid">/</span> Critical risks signify immediate experimental requirements.
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-acid">/</span> Recommendations provide targeted biochemical protocols.
+          </li>
         </ul>
       </div>
 
       {showDetailsModal && selectedGap && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {selectedGap.area}
-              </h2>
-              <button 
+        <div className="fixed inset-0 bg-void/90 backdrop-blur-xl flex items-center justify-center z-50 p-6 animate-fade-in">
+          <Card className="max-w-2xl w-full border-white/10 shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-start p-8 border-b border-white/5 bg-white/5">
+              <div>
+                <h2 className="text-3xl font-display font-bold text-white uppercase tracking-tight mb-2">
+                  {selectedGap.area}
+                </h2>
+                <p className="text-[10px] font-mono text-steel/40 tracking-widest uppercase">Entity Connectivity Audit</p>
+              </div>
+              <button
                 onClick={() => setShowDetailsModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-3xl"
+                className="text-steel/40 hover:text-white transition-colors p-2"
               >
-                ×
+                <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <span className="text-sm text-gray-600">Приоритет:</span>
-                <span className={`ml-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                  selectedGap.priority === 'critical' ? 'bg-red-100 text-red-800' :
-                  selectedGap.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                  selectedGap.priority === 'medium' ? 'bg-blue-100 text-blue-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {selectedGap.priority === 'critical' ? '🔴 Критический' :
-                   selectedGap.priority === 'high' ? '🟠 Высокий' :
-                   selectedGap.priority === 'medium' ? '🔵 Средний' : '⚪ Низкий'}
-                </span>
+
+            <div className="p-8 space-y-8 overflow-y-auto max-h-[60vh]">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-mono text-steel/40 uppercase tracking-widest mb-1">PRIORITY_RANK</span>
+                    <span className={`w-fit px-3 py-1 rounded border text-[10px] font-bold font-mono tracking-widest ${priorityColors[selectedGap.priority]}`}>
+                      {priorityLabels[selectedGap.priority]}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-mono text-steel/40 uppercase tracking-widest mb-1">DATE_RECORDED</span>
+                    <span className="text-sm text-white font-mono">{selectedGap.createdAt}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-mono text-steel/40 uppercase tracking-widest mb-1">CONFIDENCE_SCORE</span>
+                    <span className="text-sm text-white font-mono font-bold">{(selectedGap.confidence * 100).toFixed(1)}%</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-mono text-steel/40 uppercase tracking-widest mb-1">EVIDENCE_WEIGHT</span>
+                    <span className="text-sm text-white font-mono font-bold">{selectedGap.supportingEvidence} SOURCES</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="text-sm text-gray-600">Уверенность:</span>
-                <span className="ml-2 font-semibold text-gray-900">{(selectedGap.confidence * 100).toFixed(1)}%</span>
-              </div>
-              <div>
-                <span className="text-sm text-gray-600">Подтверждающие доказательства:</span>
-                <span className="ml-2 font-semibold text-gray-900">{selectedGap.supportingEvidence}</span>
-              </div>
-              <div>
-                <span className="text-sm text-gray-600">Дата создания:</span>
-                <span className="ml-2 font-semibold text-gray-900">{selectedGap.createdAt}</span>
-              </div>
-              <div>
-                <span className="text-sm text-gray-600 block mb-2">Рекомендация:</span>
-                <p className="text-gray-800 bg-gray-50 p-4 rounded-lg">
+
+              <div className="pt-8 border-t border-white/5">
+                <h4 className="text-[10px] font-mono font-bold text-acid mb-4 tracking-widest uppercase flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" /> RECOMMENDED_PROTOCOL
+                </h4>
+                <div className="bg-void/40 p-6 rounded-xl border border-white/5 italic text-sm text-steel leading-relaxed">
                   {selectedGap.recommendation}
-                </p>
+                </div>
               </div>
             </div>
-            <div className="flex justify-end p-6 border-t space-x-3">
-              <button 
+
+            <div className="flex justify-end p-8 border-t border-white/5 bg-void/50 gap-4">
+              <Button
+                variant="secondary"
                 onClick={() => setShowDetailsModal(false)}
-                className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                className="font-mono text-xs tracking-widest"
               >
-                Закрыть
-              </button>
-              <button 
+                ABORT_INSPECTION
+              </Button>
+              <Button
                 onClick={() => {
                   try {
                     const blob = new Blob([JSON.stringify(selectedGap, null, 2)], { type: 'application/json' })
@@ -268,19 +315,19 @@ export default function ResearchGapsPage() {
                     a.click()
                     document.body.removeChild(a)
                     URL.revokeObjectURL(url)
-                    toast.success('Детали пробела экспортированы')
+                    addToast('Individual gap profile exported', 'success')
                     setShowDetailsModal(false)
                   } catch (error) {
                     console.error('Export error:', error)
-                    toast.error('Не удалось экспортировать пробел')
+                    addToast('Export sequence failed', 'error')
                   }
                 }}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="font-mono text-xs tracking-widest bg-acid text-void"
               >
-                📥 Экспортировать пробел
-              </button>
+                <Download className="w-3 h-3 mr-2" /> EXPORT_OBJECT
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>

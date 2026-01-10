@@ -93,11 +93,11 @@ export async function exportToWord(
     // Title
     children.push(
         new Paragraph({
-            text: `Отчёт по графу: ${graph.name}`,
+            text: `GRAPH_ANALYSIS_REPORT: ${graph.name}`,
             heading: HeadingLevel.HEADING_1,
         }),
         new Paragraph({
-            text: `Дата создания: ${new Date().toLocaleDateString('ru-RU')}`,
+            text: `Generated: ${new Date().toLocaleDateString('en-US')}`,
             spacing: { after: 200 },
         })
     )
@@ -106,30 +106,30 @@ export async function exportToWord(
     if (includeStatistics) {
         children.push(
             new Paragraph({
-                text: 'Статистика графа',
+                text: 'NETWORK_METRICS',
                 heading: HeadingLevel.HEADING_2,
             }),
             new Paragraph({
                 children: [
-                    new TextRun({ text: 'Количество узлов: ', bold: true }),
+                    new TextRun({ text: 'Node Count: ', bold: true }),
                     new TextRun(String(stats.nodeCount)),
                 ],
             }),
             new Paragraph({
                 children: [
-                    new TextRun({ text: 'Количество связей: ', bold: true }),
+                    new TextRun({ text: 'Edge Count: ', bold: true }),
                     new TextRun(String(stats.edgeCount)),
                 ],
             }),
             new Paragraph({
                 children: [
-                    new TextRun({ text: 'Плотность графа: ', bold: true }),
+                    new TextRun({ text: 'Graph Density: ', bold: true }),
                     new TextRun(`${stats.density}%`),
                 ],
             }),
             new Paragraph({
                 children: [
-                    new TextRun({ text: 'Средняя степень: ', bold: true }),
+                    new TextRun({ text: 'Average Degree: ', bold: true }),
                     new TextRun(stats.avgDegree),
                 ],
                 spacing: { after: 200 },
@@ -146,7 +146,7 @@ export async function exportToWord(
 
         children.push(
             new Paragraph({
-                text: `Топ-${topNodesCount} узлов по весу`,
+                text: `TOP_${topNodesCount}_CENTRALITY_NODES`,
                 heading: HeadingLevel.HEADING_2,
             }),
             new Table({
@@ -154,11 +154,11 @@ export async function exportToWord(
                 rows: [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: '№', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'RANK', bold: true })] })] }),
                             new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'ID', bold: true })] })] }),
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Название', bold: true })] })] }),
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Вес', bold: true })] })] }),
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Степень', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'LABEL', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'WEIGHT', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'DEGREE', bold: true })] })] }),
                         ],
                     }),
                     ...topNodes.map((node, i) =>
@@ -183,7 +183,7 @@ export async function exportToWord(
     if (includeEdgesList) {
         children.push(
             new Paragraph({
-                text: 'Список связей',
+                text: 'BOND_RELATIONSHIPS',
                 heading: HeadingLevel.HEADING_2,
             }),
             new Table({
@@ -191,9 +191,9 @@ export async function exportToWord(
                 rows: [
                     new TableRow({
                         children: [
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Источник', bold: true })] })] }),
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Цель', bold: true })] })] }),
-                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Вес', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'SOURCE', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'TARGET', bold: true })] })] }),
+                            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'WEIGHT', bold: true })] })] }),
                         ],
                     }),
                     ...graph.edges.slice(0, 50).map(edge =>
@@ -212,7 +212,7 @@ export async function exportToWord(
         if (graph.edges.length > 50) {
             children.push(
                 new Paragraph({
-                    children: [new TextRun({ text: `... и ещё ${graph.edges.length - 50} связей`, italics: true })],
+                    children: [new TextRun({ text: `... and ${graph.edges.length - 50} additional links`, italics: true })],
                 })
             )
         }
@@ -251,27 +251,27 @@ export async function exportToPDF(
 
     // Title
     doc.setFontSize(18)
-    doc.text(`Отчёт по графу: ${graph.name}`, 20, y)
+    doc.text(`GRAPH_ANALYSIS_REPORT: ${graph.name}`, 20, y)
     y += 10
 
     doc.setFontSize(10)
-    doc.text(`Дата: ${new Date().toLocaleDateString('ru-RU')}`, 20, y)
+    doc.text(`Date: ${new Date().toLocaleDateString('en-US')}`, 20, y)
     y += 15
 
     // Statistics
     if (includeStatistics) {
         doc.setFontSize(14)
-        doc.text('Статистика графа', 20, y)
+        doc.text('NETWORK_METRICS', 20, y)
         y += 8
 
         doc.setFontSize(10)
-        doc.text(`Узлов: ${stats.nodeCount}`, 25, y)
+        doc.text(`Nodes: ${stats.nodeCount}`, 25, y)
         y += 6
-        doc.text(`Связей: ${stats.edgeCount}`, 25, y)
+        doc.text(`Bonds: ${stats.edgeCount}`, 25, y)
         y += 6
-        doc.text(`Плотность: ${stats.density}%`, 25, y)
+        doc.text(`Density: ${stats.density}%`, 25, y)
         y += 6
-        doc.text(`Средняя степень: ${stats.avgDegree}`, 25, y)
+        doc.text(`Average Degree: ${stats.avgDegree}`, 25, y)
         y += 15
     }
 
@@ -283,7 +283,7 @@ export async function exportToPDF(
             .slice(0, topNodesCount)
 
         doc.setFontSize(14)
-        doc.text(`Топ-${topNodesCount} узлов`, 20, y)
+        doc.text(`TOP_${topNodesCount}_CENTRALITY_NODES`, 20, y)
         y += 8
 
         doc.setFontSize(9)
@@ -292,7 +292,7 @@ export async function exportToPDF(
                 doc.addPage()
                 y = 20
             }
-            doc.text(`${i + 1}. ${node.label} (вес: ${node.weight || 0})`, 25, y)
+            doc.text(`${i + 1}. ${node.label} (weight: ${node.weight || 0})`, 25, y)
             y += 5
         })
     }

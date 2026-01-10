@@ -10,15 +10,15 @@ import GraphAssistant from '@/components/GraphAssistant'
 import GraphDataTable from '@/components/GraphDataTable'
 import SavedGraphsList from '@/components/SavedGraphsList'
 import { ResearchPanel } from '@/components/ResearchPanel'
+import { exportToWord, exportToPDF, downloadBlob } from '@/services/exportService'
+import { useApi } from '@/hooks/useApi'
+import { API_ENDPOINTS } from '@/api/endpoints'
 import {
   Graph,
   GraphNode,
   GraphEdge,
-  createGraph,
-  createNode,
-  createEdge
+  createGraph
 } from '../../shared/contracts/graph'
-import { exportToWord, exportToPDF, downloadBlob } from '@/services/exportService'
 
 // Demo graph data for testing
 const DEMO_GRAPH: Graph = createGraph('DEMO_SEQUENCE_ALPHA', false)
@@ -59,70 +59,57 @@ export default function GraphAnalysisPage() {
   const [graph, setGraph] = useState<Graph | null>(null)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null)
-  const [loading, setLoading] = useState(false)
+
+  const graphId = searchParams.get('graphId')
+  const { data: fetchedGraph, loading, refetch: refetchGraph } = useApi<Graph>(
+    graphId ? API_ENDPOINTS.GRAPHS.BY_ID(graphId) : '',
+    null,
+    !!graphId
+  )
 
   // Right panel state
   const [activeTab, setActiveTab] = useState<'chat' | 'stats' | 'data' | 'list' | 'research'>('stats')
   const [isPanelOpen, setIsPanelOpen] = useState(true)
+  const [actionLoading, setActionLoading] = useState(false)
 
   // Load graph from navigation state, URL params, or use demo
   useEffect(() => {
-    const loadGraph = async () => {
-      // 1. Try location state (from upload)
-      const stateGraph = location.state?.graph
-      if (stateGraph) {
-        // Convert knowledge graph from upload to Graph type
-        const nodes: GraphNode[] = stateGraph.graph?.nodes?.map((n: any) => ({
-          id: n.id,
-          label: n.data?.label || n.label || n.id,
-          weight: n.data?.mentions || 1,
-          type: n.data?.type || 'entity'
-        })) || []
+    if (fetchedGraph) {
+      setGraph(fetchedGraph)
+      return
+    }
 
-        const edges: GraphEdge[] = stateGraph.graph?.edges?.map((e: any) => ({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          weight: e.data?.confidence || 1
-        })) || []
+    // Try location state (from upload fallback)
+    const stateGraph = location.state?.graph
+    if (stateGraph && !graphId) {
+      // ... conversion logic ...
+      const nodes: GraphNode[] = stateGraph.graph?.nodes?.map((n: any) => ({
+        id: n.id,
+        label: n.data?.label || n.label || n.id,
+        weight: n.data?.mentions || 1,
+        type: n.data?.type || 'entity'
+      })) || []
 
-        if (nodes.length > 0) {
-          const newGraph = createGraph('Uploaded Graph', false)
-          newGraph.nodes = nodes
-          newGraph.edges = edges
-          setGraph(newGraph)
-          return
-        }
-      }
+      const edges: GraphEdge[] = stateGraph.graph?.edges?.map((e: any) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        weight: e.data?.confidence || 1
+      })) || []
 
-      // 2. Try URL query param
-      const graphId = searchParams.get('graphId')
-      if (graphId) {
-        setLoading(true)
-        try {
-          const response = await fetch(`/api/graphs/${graphId}`)
-          if (response.ok) {
-            const result = await response.json()
-            if (result.success && result.data) {
-              setGraph(result.data)
-              setLoading(false)
-              return
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load graph:', error)
-        }
-        setLoading(false)
-      }
-
-      // 3. Fallback to demo
-      if (!graph) {
-        setGraph(DEMO_GRAPH)
+      if (nodes.length > 0) {
+        const newGraph = createGraph('Uploaded Graph', false)
+        newGraph.nodes = nodes
+        newGraph.edges = edges
+        setGraph(newGraph)
+        return
       }
     }
 
-    loadGraph()
-  }, [location.state, searchParams])
+    if (!graphId && !graph) {
+      setGraph(DEMO_GRAPH)
+    }
+  }, [fetchedGraph, location.state, graphId])
 
   const handleNodeSelect = (node: GraphNode) => {
     setSelectedNode(node)
@@ -148,10 +135,10 @@ export default function GraphAnalysisPage() {
   }
 
   const loadDemoGraph = () => {
-    setLoading(true)
+    setActionLoading(true)
     setTimeout(() => {
       setGraph(DEMO_GRAPH)
-      setLoading(false)
+      setActionLoading(false)
     }, 500)
   }
 
@@ -170,7 +157,7 @@ export default function GraphAnalysisPage() {
     <div className="fixed inset-0 bg-void flex flex-col font-sans overflow-hidden">
 
       {/* Top Glass Bar */}
-      <div className="h-16 flex items-center justify-between px-6 z-30 border-b border-white/5 bg-void/80 backdrop-blur-md">
+      <div className="h-16 flex items-center justify-between px-6 z-30 border-b border-ash/20 bg-void/90 backdrop-blur-md">
         <div className="flex items-center gap-6">
           <Link to="/upload" className="flex items-center gap-2 text-steel/60 hover:text-acid transition-colors group">
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
@@ -179,7 +166,7 @@ export default function GraphAnalysisPage() {
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-acid animate-pulse-slow shadow-glow-acid" />
             <div>
-              <h1 className="text-lg font-bold font-display text-white tracking-wide uppercase">{graph.name}</h1>
+              <h1 className="text-lg font-bold font-display text-steel tracking-wide uppercase">{graph.name}</h1>
               <div className="flex items-center gap-3 text-[10px] font-mono text-steel/60">
                 <span>NODES: {graph.nodes.length}</span>
                 <span>EDGES: {graph.edges.length}</span>
@@ -191,18 +178,18 @@ export default function GraphAnalysisPage() {
 
         <div className="flex items-center gap-3">
           {/* Toolbar Actions */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/5">
-            <button title="Demo Reload" onClick={loadDemoGraph} className="p-2 hover:bg-white/10 rounded text-steel hover:text-white transition-colors">
+          <div className="flex items-center gap-1 bg-steel/5 rounded-lg p-1 border border-ash/10">
+            <button title="Demo Reload" onClick={loadDemoGraph} className="p-2 hover:bg-steel/10 rounded text-steel hover:text-black transition-colors">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button title="Export JSON" onClick={handleExportJSON} className="p-2 hover:bg-white/10 rounded text-steel hover:text-white transition-colors">
+            <button title="Export JSON" onClick={handleExportJSON} className="p-2 hover:bg-steel/10 rounded text-steel hover:text-black transition-colors">
               <Download className="w-4 h-4" />
             </button>
             <button title="Export Docx" onClick={async () => {
               if (!graph) return
               const blob = await exportToWord(graph)
               downloadBlob(blob, `${graph.name}.docx`)
-            }} className="p-2 hover:bg-white/10 rounded text-steel hover:text-white transition-colors">
+            }} className="p-2 hover:bg-steel/10 rounded text-steel hover:text-black transition-colors">
               <FileText className="w-4 h-4" />
             </button>
           </div>
@@ -229,6 +216,8 @@ export default function GraphAnalysisPage() {
         <div className="absolute inset-0 z-0">
           <GraphViewerWebGL
             graph={graph}
+            selectedNode={selectedNode}
+            selectedEdge={selectedEdge}
             onNodeSelect={handleNodeSelect}
             onEdgeSelect={handleEdgeSelect}
           />
@@ -236,19 +225,19 @@ export default function GraphAnalysisPage() {
 
         {/* Right Panel (Sliding Glass Sidebar) */}
         <div className={`
-             absolute top-0 right-0 bottom-0 h-full z-20 transition-all duration-500 ease-in-out border-l border-white/10 bg-void/80 backdrop-blur-xl shadow-2xl flex flex-col
+             absolute top-0 right-0 bottom-0 h-full z-20 transition-all duration-500 ease-in-out border-l border-ash/20 bg-void/90 backdrop-blur-xl shadow-2xl flex flex-col
              ${isPanelOpen ? 'w-[450px] translate-x-0' : 'w-[450px] translate-x-full'}
         `}>
           {/* Sidebar Toggle */}
           <button
             onClick={() => setIsPanelOpen(false)}
-            className="absolute -left-10 top-4 p-2 bg-void/80 border border-white/10 border-r-0 rounded-l text-steel hover:text-white hover:bg-white/10"
+            className="absolute -left-10 top-4 p-2 bg-void border border-ash/20 border-r-0 rounded-l text-steel hover:text-black hover:bg-steel/5"
           >
             <ArrowLeft className="w-4 h-4 rotate-180" />
           </button>
 
           {/* Tabs Header */}
-          <div className="flex items-center gap-1 p-2 border-b border-white/5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1 p-2 border-b border-ash/10 overflow-x-auto no-scrollbar">
             {[
               { id: 'stats', icon: BarChart3, label: 'METRICS' },
               { id: 'chat', icon: MessageCircle, label: 'AI_ANALYST' },
@@ -263,7 +252,7 @@ export default function GraphAnalysisPage() {
                             flex items-center gap-2 px-3 py-2 rounded text-[10px] font-bold tracking-wider font-display transition-all whitespace-nowrap
                             ${activeTab === tab.id
                     ? 'bg-acid text-void shadow-glow-acid'
-                    : 'text-steel hover:bg-white/5 hover:text-white'}
+                    : 'text-steel hover:bg-steel/5 hover:text-black'}
                         `}
               >
                 <tab.icon className="w-3 h-3" />
@@ -287,7 +276,7 @@ export default function GraphAnalysisPage() {
 
             {/* Metrics */}
             <div className={`absolute inset-0 overflow-y-auto p-6 transition-opacity duration-300 ${activeTab === 'stats' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-              <h2 className="text-xl font-display font-bold text-white mb-6 flex items-center gap-2">
+              <h2 className="text-xl font-display font-bold text-steel mb-6 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-acid" /> NETWORK_METRICS
               </h2>
               <AnalyticsPanel graph={graph} />
@@ -298,19 +287,15 @@ export default function GraphAnalysisPage() {
               {graph && (
                 <ResearchPanel
                   graphId={graph.id}
-                  onGraphUpdate={() => {
-                    fetch(`/api/graphs/${graph.id}`)
-                      .then(r => r.json())
-                      .then(d => { if (d.success) setGraph(d.data) })
-                  }}
+                  onGraphUpdate={refetchGraph}
                 />
               )}
             </div>
 
             {/* Data Table */}
             <div className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${activeTab === 'data' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-              <div className="p-4 border-b border-white/5">
-                <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
+              <div className="p-4 border-b border-ash/10">
+                <h2 className="text-xl font-display font-bold text-steel flex items-center gap-2">
                   <Database className="w-5 h-5 text-plasma" /> RAW_DATA
                 </h2>
               </div>
@@ -321,16 +306,16 @@ export default function GraphAnalysisPage() {
 
             {/* Saved Graphs */}
             <div className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${activeTab === 'list' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-              <div className="p-4 border-b border-white/5">
-                <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
-                  <Share2 className="w-5 h-5 text-indigo-400" /> GRAPH_LIBRARY
+              <div className="p-4 border-b border-ash/10">
+                <h2 className="text-xl font-display font-bold text-steel flex items-center gap-2">
+                  <Share2 className="w-5 h-5 text-indigo-500" /> GRAPH_LIBRARY
                 </h2>
               </div>
               <div className="flex-1 overflow-y-auto p-4">
                 <SavedGraphsList
                   currentGraphId={graph?.id}
                   onLoadGraph={(id) => {
-                    setLoading(true)
+                    setActionLoading(true)
                     setSearchParams({ graphId: id })
                     setActiveTab('stats')
                   }}

@@ -1,9 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search, FileText, Activity, Trash2, ArrowRight,
   Loader2, Filter, Database, Clock, Sparkles, FileUp
 } from 'lucide-react'
+import { useApi, useApiPost, useApiDelete } from '@/hooks/useApi'
+import { API_ENDPOINTS } from '@/api/endpoints'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Card } from '@/components/ui/Card'
 
 interface ResearchJob {
   id: string
@@ -30,8 +35,6 @@ const currentYear = new Date().getFullYear()
 export default function HomePage() {
   const navigate = useNavigate()
   const [topic, setTopic] = useState('')
-  const [recentJobs, setRecentJobs] = useState<ResearchJob[]>([])
-  const [isLoading, setIsLoading] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [options, setOptions] = useState<SearchOptions>({
     mode: 'research',
@@ -41,63 +44,46 @@ export default function HomePage() {
     sources: { pubmed: true, crossref: true }
   })
 
-  useEffect(() => {
-    fetchRecentJobs()
-  }, [])
+  const { data: jobsData, loading: listLoading, refetch: fetchRecentJobs } = useApi<{ jobs: ResearchJob[] }>(API_ENDPOINTS.RESEARCH.JOBS_LIST)
+  const recentJobs = jobsData?.jobs || []
 
-  const fetchRecentJobs = async () => {
-    try {
-      const response = await fetch('/api/research/jobs')
-      if (response.ok) {
-        const data = await response.json()
-        setRecentJobs(data.jobs || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch jobs:', error)
-    }
-  }
+  const { postData: startResearch, loading: postLoading } = useApiPost<{ job: { id: string } }>(API_ENDPOINTS.RESEARCH.JOBS_LIST)
+  const { deleteData: deleteJob } = useApiDelete<any>((id: string) => API_ENDPOINTS.RESEARCH.JOBS(id))
+
+  const isLoading = listLoading || postLoading
+
 
   const handleStartResearch = async () => {
     if (!topic.trim()) return
-    setIsLoading(true)
 
     const sources: string[] = []
     if (options.sources.pubmed) sources.push('pubmed')
     if (options.sources.crossref) sources.push('crossref')
 
     try {
-      const response = await fetch('/api/research/jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic,
-          mode: options.mode,
-          maxArticles: options.maxArticles,
-          yearFrom: options.yearFrom,
-          yearTo: options.yearTo,
-          sources
-        })
+      const data = await startResearch({
+        topic,
+        mode: options.mode,
+        maxArticles: options.maxArticles,
+        yearFrom: options.yearFrom,
+        yearTo: options.yearTo,
+        sources
       })
-      const data = await response.json()
-      if (data.job?.id) {
+      if (data?.job?.id) {
         navigate(`/research/${data.job.id}/papers`)
       }
     } catch (error) {
       console.error('Failed to start research:', error)
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const handleDeleteJob = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!window.confirm('Delete this investigation record?')) return
+    if (!window.confirm('Удалить эту запись исследования?')) return
 
     try {
-      const response = await fetch(`/api/research/jobs/${id}`, { method: 'DELETE' })
-      if (response.ok) {
-        setRecentJobs(prev => prev.filter(job => job.id !== id))
-      }
+      await deleteJob(id)
+      fetchRecentJobs()
     } catch (error) {
       console.error('Failed to delete job:', error)
     }
@@ -116,40 +102,38 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       {/* Hero Section */}
-      <div className="text-center space-y-6 py-8 animate-fade-in">
-        <h2 className="text-5xl lg:text-7xl font-display font-bold text-white tracking-tight leading-none pointer-events-none select-none">
-          KNOWLEDGE <span className="text-acid text-glow">SYNTHESIS</span>
+      <div className="text-center space-y-6 py-12 animate-fade-in">
+        <h2 className="text-5xl lg:text-8xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-b from-steel to-steel/40 tracking-tighter leading-none pointer-events-none select-none">
+          СИНТЕЗ <span className="text-acid text-glow">ЗНАНИЙ</span>
         </h2>
-        <p className="text-lg text-steel/60 max-w-2xl mx-auto font-light tracking-wide">
-          Construct semantic graphs from scientific literature.
-          Analyze relationships with neural precision.
+        <p className="text-lg text-steel-dim max-w-2xl mx-auto font-light tracking-widest uppercase">
+          Построение семантических графов из научной литературы.
+          Анализ связей с нейронной точностью.
         </p>
       </div>
 
       {/* Main Actions Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
         {/* Research Card */}
-        <div className="glass-panel p-8 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:border-acid/30">
-          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-acid/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="glass-panel p-8 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:border-acid/30 hover:shadow-glow-acid/5">
+          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-acid/5 rounded-full blur-3xl pointer-events-none group-hover:bg-acid/10 transition-colors" />
 
           <div className="relative z-10 flex flex-col h-full">
-            <div className="w-12 h-12 rounded-lg bg-acid/10 border border-acid/20 flex items-center justify-center mb-6">
+            <div className="w-14 h-14 rounded-xl bg-acid/10 border border-acid/20 flex items-center justify-center mb-8 group-hover:shadow-glow-acid transition-all">
               <Search className="w-6 h-6 text-acid" />
             </div>
 
-            <h3 className="text-2xl font-display font-bold text-white mb-2">NEW INVESTIGATION</h3>
-            <p className="text-gray-400 mb-8 text-sm">
-              Initiate a deep search across PubMed & CrossRef databases.
+            <h3 className="text-2xl font-display font-bold text-steel mb-2 tracking-widest">НОВОЕ ИССЛЕДОВАНИЕ</h3>
+            <p className="text-steel-dim mb-10 text-xs tracking-wider uppercase">
+              Запуск глубокого поиска по базам PubMed и CrossRef.
             </p>
 
-            <div className="space-y-5 mt-auto">
-              <input
-                type="text"
+            <div className="space-y-6 mt-auto">
+              <Input
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !showAdvanced && handleStartResearch()}
-                placeholder="Enter research topic (e.g., 'CRISPR applications')..."
-                className="w-full bg-void/50 border border-white/10 rounded-xl px-5 py-4 text-white placeholder-gray-600 focus:border-acid focus:ring-1 focus:ring-acid outline-none transition-all font-mono text-sm"
+                placeholder="Введите тему исследования (например, 'Применение CRISPR')..."
               />
 
               {/* Mode Selectors */}
@@ -157,46 +141,46 @@ export default function HomePage() {
                 <button
                   onClick={() => setOptions(o => ({ ...o, mode: 'quick' }))}
                   className={`p-4 rounded-xl border transition-all text-left relative overflow-hidden ${options.mode === 'quick'
-                      ? 'bg-acid/10 border-acid text-white'
-                      : 'bg-void/30 border-white/5 text-gray-500 hover:bg-white/5 hover:border-white/10'
+                    ? 'bg-acid/10 border-acid text-steel'
+                    : 'bg-void border-ash/20 text-steel-dim hover:bg-white hover:border-ash/40'
                     }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Sparkles className={`w-4 h-4 ${options.mode === 'quick' ? 'text-acid' : ''}`} />
-                    <span className="font-display font-bold text-sm tracking-wider">QUICK</span>
+                    <span className="font-display font-bold text-sm tracking-wider">БЫСТРЫЙ</span>
                   </div>
-                  <div className="text-[10px] opacity-60">Automated Pipeline</div>
+                  <div className="text-[10px] opacity-60">Автоматический пайплайн</div>
                 </button>
 
                 <button
                   onClick={() => setOptions(o => ({ ...o, mode: 'research' }))}
                   className={`p-4 rounded-xl border transition-all text-left relative overflow-hidden ${options.mode === 'research'
-                      ? 'bg-plasma/10 border-plasma text-white'
-                      : 'bg-void/30 border-white/5 text-gray-500 hover:bg-white/5 hover:border-white/10'
+                    ? 'bg-plasma/10 border-plasma text-steel'
+                    : 'bg-void border-ash/20 text-steel-dim hover:bg-white hover:border-ash/40'
                     }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <Database className={`w-4 h-4 ${options.mode === 'research' ? 'text-plasma-light' : ''}`} />
-                    <span className="font-display font-bold text-sm tracking-wider">RESEARCH</span>
+                    <Database className={`w-4 h-4 ${options.mode === 'research' ? 'text-plasma' : ''}`} />
+                    <span className="font-display font-bold text-sm tracking-wider">ИССЛЕДОВАНИЕ</span>
                   </div>
-                  <div className="text-[10px] opacity-60">Manual Screening</div>
+                  <div className="text-[10px] opacity-60">Ручной отбор</div>
                 </button>
               </div>
 
               {/* Advanced Options Toggle */}
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-xs text-gray-500 hover:text-white transition-colors w-full justify-center py-2"
+                className="flex items-center gap-2 text-xs text-steel-dim hover:text-steel transition-colors w-full justify-center py-2"
               >
                 <Filter className="w-3 h-3" />
-                {showAdvanced ? 'HIDE OPTIONS' : 'ADVANCED CONFIGURATION'}
+                {showAdvanced ? 'СКРЫТЬ ОПЦИИ' : 'РАСШИРЕННЫЕ НАСТРОЙКИ'}
               </button>
 
               {showAdvanced && (
-                <div className="p-4 bg-void/40 rounded-xl border border-white/5 space-y-4 animate-fade-in text-sm">
+                <div className="p-4 bg-void border border-ash/20 rounded-xl space-y-4 animate-fade-in text-sm text-steel">
                   {/* Simplified advanced options for UI cleanliness */}
-                  <div className="flex justify-between items-center text-gray-400">
-                    <span>Article Limit: <span className="text-white">{options.maxArticles}</span></span>
+                  <div className="flex justify-between items-center text-steel-dim">
+                    <span>Лимит статей: <span className="text-steel font-bold">{options.maxArticles}</span></span>
                     <input
                       type="range" min="10" max="200" step="10"
                       value={options.maxArticles}
@@ -207,44 +191,48 @@ export default function HomePage() {
                 </div>
               )}
 
-              <button
+              <Button
+                variant="primary"
+                size="lg"
                 onClick={handleStartResearch}
                 disabled={isLoading || !topic.trim()}
-                className="w-full bg-acid text-void font-display font-bold tracking-widest text-sm py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-glow-acid"
+                className="w-full shadow-glow-acid/20"
               >
-                {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : <>INITIALIZE <ArrowRight className="w-5 h-5 ml-1" /></>}
-              </button>
+                {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : <>ЗАПУСТИТЬ <ArrowRight className="w-5 h-5 ml-1" /></>}
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Upload Card */}
-        <div className="glass-panel p-8 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:border-white/20">
-          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-plasma/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="glass-panel p-8 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:border-white/20">
+          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-plasma/10 rounded-full blur-3xl pointer-events-none group-hover:bg-plasma/20 transition-colors" />
 
           <div className="relative z-10 flex flex-col h-full">
-            <div className="w-12 h-12 rounded-lg bg-plasma/10 border border-plasma/20 flex items-center justify-center mb-6">
+            <div className="w-14 h-14 rounded-xl bg-plasma/10 border border-plasma/20 flex items-center justify-center mb-8 group-hover:shadow-glow-plasma transition-all">
               <FileUp className="w-6 h-6 text-plasma-light" />
             </div>
 
-            <h3 className="text-2xl font-display font-bold text-white mb-2">DATA INGESTION</h3>
-            <p className="text-gray-400 mb-8 text-sm">
-              Upload PDF or Text documents to the secure vault for analysis.
+            <h3 className="text-2xl font-display font-bold text-steel mb-2 tracking-widest">ЗАГРУЗКА ДАННЫХ</h3>
+            <p className="text-steel-dim mb-10 text-xs tracking-wider uppercase">
+              Загрузка PDF или текстовых документов для анализа.
             </p>
 
-            <div className="mt-auto border-2 border-dashed border-white/10 rounded-2xl h-48 flex flex-col items-center justify-center gap-4 group-hover:border-plasma/30 transition-colors cursor-pointer bg-void/20" onClick={() => navigate('/upload')}>
-              <div className="p-4 rounded-full bg-void border border-white/5 group-hover:scale-110 transition-transform duration-300">
-                <FileUp className="w-6 h-6 text-gray-400 group-hover:text-plasma-light" />
+            <div className="mt-auto border-2 border-dashed border-ash/30 rounded-3xl h-48 flex flex-col items-center justify-center gap-4 group-hover:border-plasma transition-all cursor-pointer bg-void" onClick={() => navigate('/upload')}>
+              <div className="p-5 rounded-full bg-white border border-ash/10 group-hover:scale-110 group-hover:shadow-glow-plasma/20 transition-all duration-500">
+                <FileUp className="w-8 h-8 text-steel/20 group-hover:text-plasma" />
               </div>
-              <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">Drop files or click</span>
+              <span className="text-xs font-mono text-steel-dim uppercase tracking-widest group-hover:text-steel">Перетащите файлы или кликните</span>
             </div>
 
-            <button
+            <Button
+              variant="secondary"
+              size="lg"
               onClick={() => navigate('/upload')}
-              className="w-full mt-5 bg-white/5 hover:bg-white/10 text-white font-display font-bold tracking-widest text-sm py-4 rounded-xl transition-all border border-white/5"
+              className="mt-6 w-full"
             >
-              OPEN UPLOADER
-            </button>
+              ОТКРЫТЬ ЗАГРУЗЧИК
+            </Button>
           </div>
         </div>
       </div>
@@ -253,11 +241,11 @@ export default function HomePage() {
       {recentJobs.length > 0 && (
         <div className="max-w-6xl mx-auto pt-8">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="font-display font-bold text-white tracking-widest flex items-center gap-2">
+            <h3 className="font-display font-bold text-steel tracking-widest flex items-center gap-2">
               <Activity className="w-4 h-4 text-acid" />
-              SYSTEM ACTIVITY
+              АКТИВНОСТЬ СИСТЕМЫ
             </h3>
-            <span className="text-xs font-mono text-gray-500">{recentJobs.length} RECORDS</span>
+            <span className="text-xs font-mono text-steel-dim">{recentJobs.length} ЗАПИСЕЙ</span>
           </div>
 
           <div className="glass-panel rounded-xl overflow-hidden">
@@ -274,12 +262,12 @@ export default function HomePage() {
                 <div className="flex items-center gap-4">
                   <div className={`w-2 h-2 rounded-full ${job.status === 'completed' ? 'bg-acid shadow-glow-acid' : 'bg-plasma animate-pulse'}`} />
                   <div>
-                    <h4 className="font-medium text-white group-hover:text-acid transition-colors">{job.topic}</h4>
+                    <h4 className="font-medium text-steel group-hover:text-acid transition-colors">{job.topic}</h4>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs font-mono text-gray-500 flex items-center gap-1">
-                        <Database className="w-3 h-3" /> {job.articlesFound} items
+                      <span className="text-xs font-mono text-steel-dim flex items-center gap-1">
+                        <Database className="w-3 h-3" /> {job.articlesFound} записей
                       </span>
-                      <span className="text-xs font-mono text-gray-500 flex items-center gap-1">
+                      <span className="text-xs font-mono text-steel-dim flex items-center gap-1">
                         <Clock className="w-3 h-3" /> {new Date(job.createdAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -290,7 +278,7 @@ export default function HomePage() {
                   <button
                     onClick={(e) => handleDeleteJob(job.id, e)}
                     className="p-2 text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Delete"
+                    title="Удалить"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

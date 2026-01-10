@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { chatCompletion } from './aiService'
 import { ArticleSource } from '../../shared/contracts/research'
-import { logger } from '../../src/core/Logger'
+import { logger } from '../core/Logger'
 
 // Contract for Column Schema
 export interface ColumnDefinition {

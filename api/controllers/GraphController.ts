@@ -6,13 +6,15 @@ import {
     createEdge
 } from '../../shared/contracts/graph'
 import { graphRuntime } from '../services/GraphRuntimeService'
-import { databaseManager } from '../../src/core/Database'
+import { databaseManager } from '../../api/core/Database'
 import GraphStorage from '../../shared/graphStorage'
 import { validateGraph, validateFileUpload } from '../../src/utils/validators'
-import { logger } from '../../src/core/Logger'
-import { generateGEXF, generatePDF } from '../utils/graphExports'
 import { parseCSV, parseBibTeX } from '../utils/fileParsing'
 import { researchAgent } from '../services/ResearchAgentService'
+import { ApiResponse } from '../utils/response'
+import { AppError, ErrorCode } from '../utils/errors'
+import { logger } from '../../api/core/Logger'
+import { generateGEXF, generatePDF } from '../utils/graphExports'
 
 function buildGraphFromData(data: any, filename: string): Graph {
     const graph = createGraph(filename.split('.')[0] || 'Uploaded Graph', false)
@@ -49,154 +51,174 @@ function buildGraphFromData(data: any, filename: string): Graph {
 
 export class GraphController {
 
-    static async getAll(req: Request, res: Response) {
-        try {
-            const dbGraphs = await databaseManager.getAllGraphs()
-            dbGraphs.forEach(g => graphRuntime.setGraph(g))
-            res.json({ success: true, data: dbGraphs, count: dbGraphs.length })
-        } catch (error) {
-            logger.error('GraphController', 'Failed to fetch graphs', { error })
-            res.status(500).json({ success: false, error: 'Failed to fetch graphs' })
-        }
+    static async getAll(req: any, res: Response) {
+        const userId = req.user.id
+        const dbGraphs = await graphRuntime.getAllGraphs(userId)
+        return ApiResponse.success(res, dbGraphs, 200, { count: dbGraphs.length })
     }
 
-    static async getById(req: Request, res: Response) {
+    static async getById(req: any, res: Response) {
         const { id } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(id)
-        if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
-        res.json({ success: true, data: graph })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+        return ApiResponse.success(res, graph)
     }
 
-    static async create(req: Request, res: Response) {
+    static async create(req: any, res: Response) {
         const { name, directed = false } = req.body
-        if (!name || typeof name !== 'string') return res.status(400).json({ success: false, error: 'Name required' })
+        const userId = req.user.id
+        if (!name || typeof name !== 'string') throw AppError.badRequest('Name required')
+
         const graph = createGraph(name, directed)
+            ; (graph as any).userId = userId
+
         graphRuntime.setGraph(graph)
         GraphStorage.save(graph)
         databaseManager.saveGraphToDb(graph).catch(err => logger.error('GraphController', 'DB Save failed', { error: err }))
-        res.status(201).json({ success: true, data: graph })
+        return ApiResponse.success(res, graph, 201)
     }
 
-    static async update(req: Request, res: Response) {
+    static async update(req: any, res: Response) {
         const { id } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(id)
-        if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+
         const { name, directed } = req.body
         if (name !== undefined) graph.name = name
         if (directed !== undefined) graph.directed = directed
         graph.updatedAt = new Date().toISOString()
+
         graphRuntime.setGraph(graph)
         GraphStorage.save(graph)
         databaseManager.saveGraphToDb(graph).catch(err => logger.error('GraphController', 'DB Update failed', { error: err }))
-        res.json({ success: true, data: graph })
+        return ApiResponse.success(res, graph)
     }
 
-    static async delete(req: Request, res: Response) {
+    static async delete(req: any, res: Response) {
         const { id } = req.params
+        const userId = req.user.id
+
+        // Ensure ownership before delete
+        await graphRuntime.getOrLoadGraph(id, userId)
+
         const deleted = graphRuntime.deleteGraph(id)
         if (deleted) {
             GraphStorage.delete(id)
-            databaseManager.deleteGraph(id).catch(err => logger.error('GraphController', 'DB Delete failed', { error: err }))
-            res.json({ success: true, message: 'Deleted' })
+            databaseManager.deleteGraph(id, userId).catch(err => logger.error('GraphController', 'DB Delete failed', { error: err }))
+            return ApiResponse.success(res, { message: 'Deleted' })
         } else {
-            res.status(404).json({ success: false, error: 'Graph not found' })
+            throw AppError.notFound(`Graph ${id} not found`)
         }
     }
 
     // --- Nodes & Edges ---
-    static async getNodes(req: Request, res: Response) {
+    static async getNodes(req: any, res: Response) {
         const { id } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(id)
-        if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
-        res.json({ success: true, data: graph.nodes, count: graph.nodes.length })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+        return ApiResponse.success(res, graph.nodes, 200, { count: graph.nodes.length })
     }
 
-    static async addNode(req: Request, res: Response) {
+    static async addNode(req: any, res: Response) {
         const { id } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(id)
-        if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+
         const { label, weight } = req.body
-        if (!label || typeof label !== 'string') return res.status(400).json({ success: false, error: 'Label required' })
+        if (!label || typeof label !== 'string') throw AppError.badRequest('Label required')
+
         const nodeId = `node-${Date.now()}`
         const node = createNode(nodeId, label, 'concept', {}, weight)
         graph.nodes.push(node)
         graph.updatedAt = new Date().toISOString()
+
         graphRuntime.setGraph(graph)
         GraphStorage.save(graph)
         databaseManager.saveGraphToDb(graph)
-        res.status(201).json({ success: true, data: node })
+        return ApiResponse.success(res, node, 201)
     }
 
-    static async deleteNode(req: Request, res: Response) {
+    static async deleteNode(req: any, res: Response) {
         const { graphId, nodeId } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(graphId)
-        if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(graphId, userId)
+
         const initial = graph.nodes.length
         graph.nodes = graph.nodes.filter(n => n.id !== nodeId)
-        if (graph.nodes.length === initial) return res.status(404).json({ success: false, error: 'Node not found' })
+        if (graph.nodes.length === initial) throw AppError.notFound(`Node ${nodeId} not found`)
+
         // Also remove incident edges
         graph.edges = graph.edges.filter(e => e.source !== nodeId && e.target !== nodeId)
         graph.updatedAt = new Date().toISOString()
+
         graphRuntime.setGraph(graph)
         GraphStorage.save(graph)
         databaseManager.saveGraphToDb(graph)
-        res.json({ success: true, message: 'Node deleted' })
+        return ApiResponse.success(res, { message: 'Node deleted' })
     }
 
-    static async getEdges(req: Request, res: Response) {
+    static async getEdges(req: any, res: Response) {
         const { id } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(id)
-        if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
-        res.json({ success: true, data: graph.edges, count: graph.edges.length })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+        return ApiResponse.success(res, graph.edges, 200, { count: graph.edges.length })
     }
 
-    static async addEdge(req: Request, res: Response) {
+    static async addEdge(req: any, res: Response) {
         const { id } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(id)
-        if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+
         const { source, target, weight } = req.body
-        if (!source || !target) return res.status(400).json({ success: false, error: 'Source/Target required' })
+        if (!source || !target) throw AppError.badRequest('Source/Target required')
+
         const edgeId = `edge-${Date.now()}`
         const edge = createEdge(edgeId, source, target, weight)
         graph.edges.push(edge)
         graph.updatedAt = new Date().toISOString()
+
         graphRuntime.setGraph(graph)
         GraphStorage.save(graph)
         databaseManager.saveGraphToDb(graph)
-        res.status(201).json({ success: true, data: edge })
+        return ApiResponse.success(res, edge, 201)
     }
 
-    static async deleteEdge(req: Request, res: Response) {
+    static async deleteEdge(req: any, res: Response) {
         const { graphId, edgeId } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(graphId)
-        if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(graphId, userId)
+
         const initial = graph.edges.length
         graph.edges = graph.edges.filter(e => e.id !== edgeId)
-        if (graph.edges.length === initial) return res.status(404).json({ success: false, error: 'Edge not found' })
+        if (graph.edges.length === initial) throw AppError.notFound(`Edge ${edgeId} not found`)
+
         graph.updatedAt = new Date().toISOString()
         graphRuntime.setGraph(graph)
         GraphStorage.save(graph)
         databaseManager.saveGraphToDb(graph)
-        res.json({ success: true, message: 'Edge deleted' })
+        return ApiResponse.success(res, { message: 'Edge deleted' })
     }
 
     // --- Analysis ---
-    static async getCentrality(req: Request, res: Response) {
+    static async getCentrality(req: any, res: Response) {
         const { id } = req.params
-        const analyzer = graphRuntime.getAnalyzer(id)
-        if (!analyzer) return res.status(404).json({ success: false, error: 'Graph not found' })
-        res.json({ success: true, data: analyzer.calculateCentrality() })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+        const analyzer = graphRuntime.getAnalyzer(graph.id)
+        return ApiResponse.success(res, analyzer.calculateCentrality())
     }
 
-    static async getShortestPath(req: Request, res: Response) {
+    static async getShortestPath(req: any, res: Response) {
         const { id } = req.params
+        const userId = req.user.id
         const { source, target } = req.query
-        if (!source || !target) return res.status(400).json({ success: false, error: 'Params required' })
-        const analyzer = graphRuntime.getAnalyzer(id)
-        if (!analyzer) return res.status(404).json({ success: false, error: 'Graph not found' })
+        if (!source || !target) throw AppError.badRequest('Params source and target required')
+
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+        const analyzer = graphRuntime.getAnalyzer(graph.id)
         const result = analyzer.findShortestPath(source as string, target as string)
-        if (!result) return res.status(404).json({ success: false, error: 'No path' })
-        res.json({ success: true, data: result })
+        if (!result) throw AppError.notFound('No path found')
+        return ApiResponse.success(res, result)
     }
 
     static async getAllShortestPaths(req: Request, res: Response) {
@@ -213,38 +235,38 @@ export class GraphController {
         res.json({ success: true, data: analyzer.checkConnectivity() })
     }
 
-    static async getStatistics(req: Request, res: Response) {
+    static async getStatistics(req: any, res: Response) {
         const { id } = req.params
-        const analyzer = graphRuntime.getAnalyzer(id)
-        if (!analyzer) return res.status(404).json({ success: false, error: 'Graph not found' })
-        res.json({ success: true, data: analyzer.calculateStatistics() })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+        const analyzer = graphRuntime.getAnalyzer(graph.id)
+        return ApiResponse.success(res, analyzer.calculateStatistics())
     }
 
-    static async validate(req: Request, res: Response) {
+    static async validate(req: any, res: Response) {
         const { id } = req.params
-        const analyzer = graphRuntime.getAnalyzer(id)
-        if (!analyzer) return res.status(404).json({ success: false, error: 'Graph not found' })
-        res.json({ success: true, data: analyzer.validate() })
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+        const analyzer = graphRuntime.getAnalyzer(graph.id)
+        return ApiResponse.success(res, analyzer.validate())
     }
 
-    static async research(req: Request, res: Response) {
+    static async research(req: any, res: Response) {
         const { id } = req.params
+        const userId = req.user.id
         const { query } = req.body
-        if (!query) return res.status(400).json({ success: false, error: 'Query required' })
+        if (!query) throw AppError.badRequest('Query required')
 
-        try {
-            const result = await researchAgent.researchTopic(id, query)
-            res.json({ success: true, data: result })
-        } catch (error) {
-            logger.error('GraphController', 'Research failed', { error })
-            res.status(500).json({ success: false, error: 'Research failed' })
-        }
+        await graphRuntime.getOrLoadGraph(id, userId)
+        const result = await researchAgent.researchTopic(id, query, userId)
+        return ApiResponse.success(res, result)
     }
 
     // --- Exports ---
-    static async exportGEXF(req: Request, res: Response) {
+    static async exportGEXF(req: any, res: Response) {
         const { id } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(id)
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
         if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
         const gexf = generateGEXF(graph)
         res.setHeader('Content-Type', 'application/xml')
@@ -252,64 +274,61 @@ export class GraphController {
         res.send(gexf)
     }
 
-    static async exportPDF(req: Request, res: Response) {
+    static async exportPDF(req: any, res: Response) {
         const { id } = req.params
-        const graph = await graphRuntime.getOrLoadGraph(id)
-        if (!graph) return res.status(404).json({ success: false, error: 'Graph not found' })
-        try {
-            const pdfBuffer = await generatePDF(graph)
-            res.setHeader('Content-Type', 'application/pdf')
-            res.setHeader('Content-Disposition', `attachment; filename="${graph.name}.pdf"`)
-            res.send(pdfBuffer)
-        } catch (error) {
-            logger.error('GraphController', 'PDF Gen failed', { error })
-            res.status(500).json({ success: false, error: 'PDF Generation failed' })
-        }
+        const userId = req.user.id
+        const graph = await graphRuntime.getOrLoadGraph(id, userId)
+
+        const pdfBuffer = await generatePDF(graph)
+        res.setHeader('Content-Type', 'application/pdf')
+        res.setHeader('Content-Disposition', `attachment; filename="${graph.name}.pdf"`)
+        res.send(pdfBuffer)
     }
 
     // --- Upload ---
     static async upload(req: any, res: Response) {
-        try {
-            if (!req.file) return res.status(400).json({ success: false, error: 'No file' })
-            const file = req.file
-            const validation = validateFileUpload(file)
-            if (!validation.valid) return res.status(400).json({ success: false, errors: validation.errors })
+        const userId = req.user.id
+        if (!req.file) throw AppError.badRequest('No file uploaded')
 
-            const content = file.buffer.toString('utf-8')
-            let parsedData
-            const ext = file.originalname.split('.').pop()?.toLowerCase() || ''
+        const file = req.file
+        const validation = validateFileUpload(file)
+        if (!validation.valid) throw AppError.validation(JSON.stringify(validation.errors))
 
-            if (ext === 'json') parsedData = JSON.parse(content)
-            else if (ext === 'csv') parsedData = parseCSV(content)
-            else if (['bib', 'txt'].includes(ext)) parsedData = parseBibTeX(content)
-            else return res.status(400).json({ success: false, error: 'Unsupported format' })
+        const content = file.buffer.toString('utf-8')
+        let parsedData
+        let graph: Graph
+        const ext = file.originalname.split('.').pop()?.toLowerCase() || ''
 
-            let graph: Graph
-            if (parsedData.nodes && parsedData.edges) {
-                graph = {
-                    ...createGraph(file.originalname.split('.')[0] || 'Imported', false),
-                    nodes: parsedData.nodes,
-                    edges: parsedData.edges,
-                    directed: parsedData.directed || false,
-                    metadata: parsedData.metadata
-                }
-                const gVal = validateGraph(graph)
-                if (!gVal.valid) return res.status(400).json({ success: false, errors: gVal.errors })
-            } else {
-                graph = buildGraphFromData(parsedData, file.originalname)
-            }
+        if (ext === 'json') parsedData = JSON.parse(content)
+        else if (ext === 'csv') parsedData = parseCSV(content)
+        else if (['bib', 'txt'].includes(ext)) parsedData = parseBibTeX(content)
+        else throw AppError.badRequest('Unsupported format')
 
-            graphRuntime.setGraph(graph)
-            GraphStorage.save(graph)
-            await databaseManager.saveGraphToDb(graph)
-
-            res.status(201).json({
-                success: true,
-                data: { graph, stats: { totalNodes: graph.nodes.length, totalEdges: graph.edges.length } }
-            })
-        } catch (error) {
-            logger.error('GraphController', 'Upload failed', { error })
-            res.status(500).json({ success: false, error: 'Internal server error' })
+        if (parsedData.nodes && parsedData.edges) {
+            const graphId = `graph-${Date.now()}`
+            graph = {
+                ...createGraph(file.originalname.split('.')[0] || 'Imported', false),
+                id: graphId,
+                nodes: parsedData.nodes,
+                edges: parsedData.edges,
+                directed: parsedData.directed || false,
+                metadata: parsedData.metadata || {}
+            } as Graph
+                ; (graph as any).userId = userId
+            const gVal = validateGraph(graph)
+            if (!gVal.valid) throw AppError.validation(JSON.stringify(gVal.errors))
+        } else {
+            graph = buildGraphFromData(parsedData, file.originalname)
+                ; (graph as any).userId = userId
         }
+
+        graphRuntime.setGraph(graph)
+        GraphStorage.save(graph)
+        await databaseManager.saveGraphToDb(graph)
+
+        return ApiResponse.success(res, {
+            graph,
+            stats: { totalNodes: graph.nodes.length, totalEdges: graph.edges.length }
+        }, 201)
     }
 }

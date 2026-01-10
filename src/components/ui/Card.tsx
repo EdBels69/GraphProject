@@ -6,18 +6,17 @@ interface CardProps {
   className?: string
   hover?: boolean
   onClick?: () => void
+  variant?: 'glass' | 'default'
 }
 
-export function Card({ children, className, hover = false, onClick }: CardProps) {
+export function Card({ children, className, hover = false, onClick, variant = 'default' }: CardProps) {
   return (
     <div
       className={twMerge(
-        clsx(
-          'bg-white rounded-xl shadow-sm border border-gray-200',
-          hover && 'hover:shadow-md transition-shadow duration-200 cursor-pointer',
-          onClick && 'cursor-pointer',
-          className
-        )
+        'glass-panel rounded-xl overflow-hidden',
+        hover && 'hover:border-acid/30 transition-all duration-300 cursor-pointer',
+        onClick && 'cursor-pointer',
+        className
       )}
       onClick={onClick}
     >
@@ -35,7 +34,7 @@ interface CardHeaderProps {
 export function CardHeader({ children, className, onClick }: CardHeaderProps) {
   return (
     <div
-      className={twMerge(clsx('p-6 border-b border-gray-200', className))}
+      className={twMerge('p-6 border-b border-ash/10 bg-void', className)}
       onClick={onClick}
     >
       {children}
@@ -63,7 +62,7 @@ interface CardFooterProps {
 
 export function CardFooter({ children, className }: CardFooterProps) {
   return (
-    <div className={twMerge(clsx('p-6 border-t border-gray-200', className))}>
+    <div className={twMerge('p-6 border-t border-ash/10 bg-void', className)}>
       {children}
     </div>
   )

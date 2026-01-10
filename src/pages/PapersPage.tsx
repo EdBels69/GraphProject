@@ -6,7 +6,9 @@ import {
     ArrowLeft, Check, X, RotateCcw, Download, FileText,
     Settings, GripVertical, CheckCircle2, AlertCircle, Loader2
 } from 'lucide-react'
-
+import { useApi, useApiPost } from '@/hooks/useApi'
+import { API_ENDPOINTS } from '@/api/endpoints'
+import { supabase } from '../../supabase/client'
 interface Article {
     id: string
     title: string
@@ -33,11 +35,31 @@ interface ResearchJob {
 export default function PapersPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const [job, setJob] = useState<ResearchJob | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
-    const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
-    const [selectedIndex, setSelectedIndex] = useState(0)
     const { addToast } = useToast()
+
+    // Core data fetching
+    const { data: jobData, loading: initialLoading, refetch } = useApi<{ job: ResearchJob }>(API_ENDPOINTS.RESEARCH.JOBS(id || ''))
+
+    const [job, setJob] = useState<ResearchJob | null>(null)
+    const [selectedIndex, setSelectedIndex] = useState(0)
+    const [actionLoading, setActionLoading] = useState(false)
+
+    useEffect(() => {
+        if (jobData?.job) {
+            setJob(jobData.job)
+        }
+    }, [jobData])
+
+    // Polling logic
+    useEffect(() => {
+        if (!id) return
+        const interval = setInterval(() => {
+            if (job && isInProgress(job.status)) {
+                refetch()
+            }
+        }, 3000)
+        return () => clearInterval(interval)
+    }, [id, job?.status])
 
     // Column config
     type ColumnId = 'checkbox' | 'title' | 'year' | 'source' | 'status'
@@ -150,33 +172,6 @@ export default function PapersPage() {
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [job?.articles, selectedIndex])
 
-    useEffect(() => {
-        fetchJob()
-        const interval = setInterval(fetchJob, 3000)
-        setPollingInterval(interval)
-        return () => clearInterval(interval)
-    }, [id])
-
-    useEffect(() => {
-        if (job && !isInProgress(job.status) && pollingInterval) {
-            clearInterval(pollingInterval)
-        }
-    }, [job?.status])
-
-    const fetchJob = async () => {
-        try {
-            const response = await fetch(`/api/research/jobs/${id}`)
-            if (response.ok) {
-                const data = await response.json()
-                setJob(data.job)
-            }
-        } catch (error) {
-            console.error('Failed to fetch job:', error)
-            addToast('Connection error', 'error')
-        } finally {
-            setIsLoading(false)
-        }
-    }
 
     const handleContinue = () => {
         if (job?.graphId) {
@@ -186,7 +181,9 @@ export default function PapersPage() {
         }
     }
 
-    if (isLoading || !job) {
+    const isLoading = initialLoading && !job
+
+    if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-void">
                 <Loader2 className="w-12 h-12 text-acid animate-spin" />
@@ -197,37 +194,37 @@ export default function PapersPage() {
     return (
         <div className="space-y-8 pb-32 animate-fade-in">
             {/* Header */}
-            <div className="border-b border-white/5 pb-6">
+            <div className="border-b border-ash/10 pb-6">
                 <button
                     onClick={() => navigate('/')}
-                    className="flex items-center gap-2 text-steel/60 hover:text-acid mb-4 transition-colors font-mono text-xs tracking-widest"
+                    className="flex items-center gap-2 text-steel-dim hover:text-acid mb-4 transition-colors font-bold text-[10px] tracking-widest uppercase"
                 >
-                    <ArrowLeft className="w-3 h-3" /> SYSTEM_ROOT
+                    <ArrowLeft className="w-3 h-3" /> Назад
                 </button>
 
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl font-display font-bold text-white uppercase tracking-tight mb-2">
-                            DATA STREAM: <span className="text-acid text-glow">{job.topic}</span>
+                        <h1 className="text-4xl font-display font-bold text-steel tracking-tight mb-2">
+                            Тема исследования: <span className="text-acid text-glow">{job?.topic}</span>
                         </h1>
-                        <div className="flex items-center gap-4 text-sm font-mono text-gray-400">
-                            <span className="bg-white/5 px-2 py-1 rounded text-xs border border-white/10 uppercase">{job.status}</span>
-                            <span>{job.articlesFound} RECORDS FOUND</span>
+                        <div className="flex items-center gap-4 text-sm font-bold text-steel-dim uppercase tracking-tight">
+                            <span className="bg-void px-2 py-1 rounded text-[10px] border border-ash/10">{job?.status === 'completed' ? 'ЗАВЕРШЕНО' : 'В ПРОЦЕССЕ'}</span>
+                            <span className="text-[10px] tracking-widest">{job?.articlesFound} СТАТЕЙ НАЙДЕНО</span>
                         </div>
                     </div>
 
                     {/* Filter Tabs */}
-                    <div className="flex p-1 bg-white/5 rounded-lg border border-white/5">
+                    <div className="flex p-1 bg-void rounded-lg border border-ash/20 shadow-sm">
                         {(['all', 'pending', 'included', 'excluded'] as const).map(f => (
                             <button
                                 key={f}
                                 onClick={() => setCurrentFilter(f)}
                                 className={`
-                                  px-4 py-2 rounded-md text-xs font-bold font-display tracking-wider transition-all
-                                  ${currentFilter === f ? 'bg-acid text-void shadow-glow-acid' : 'text-gray-500 hover:text-white'}
+                                  px-4 py-2 rounded-md text-[10px] font-bold font-display tracking-widest transition-all uppercase
+                                  ${currentFilter === f ? 'bg-acid text-void shadow-glow-acid' : 'text-steel-dim hover:text-steel'}
                                 `}
                             >
-                                {f.toUpperCase()}
+                                {f === 'all' ? 'Все' : f === 'pending' ? 'Ожидают' : f === 'included' ? 'Выбраны' : 'Исключены'}
                             </button>
                         ))}
                     </div>
@@ -235,45 +232,45 @@ export default function PapersPage() {
             </div>
 
             {/* Progress Section */}
-            {isInProgress(job.status) && (
-                <div className="glass-panel p-8 rounded-xl space-y-6">
-                    <ThinkingTerminal jobId={job.id} status={job.status} />
-                    <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+            {isInProgress(job?.status || '') && (
+                <div className="glass-panel border-ash/20 p-8 rounded-xl space-y-6">
+                    <ThinkingTerminal jobId={job?.id || ''} status={job?.status || ''} />
+                    <div className="h-2 w-full bg-steel/10 rounded-full overflow-hidden">
                         <div
                             className="h-full bg-acid shadow-glow-acid transition-all duration-300 relative"
-                            style={{ width: `${job.progress || 10}%` }}
+                            style={{ width: `${job?.progress || 10}%` }}
                         >
-                            <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/50 blur-[2px]" />
+                            <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/30 blur-[1px]" />
                         </div>
                     </div>
                 </div>
             )}
 
             {/* Main Data Table */}
-            {job.articles && (
-                <div className="glass-panel rounded-xl overflow-hidden shadow-2xl border border-white/10">
+            {job?.articles && (
+                <div className="glass-panel rounded-xl overflow-hidden shadow-xl border border-ash/20 bg-void">
                     {/* Toolbar */}
-                    <div className="p-4 border-b border-white/5 bg-black/20 flex flex-wrap gap-4 justify-between items-center">
+                    <div className="p-4 border-b border-ash/10 bg-steel/5 flex flex-wrap gap-4 justify-between items-center">
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setJob({ ...job, articles: job.articles!.map(a => ({ ...a, screeningStatus: 'included' })) })}
-                                className="px-3 py-1.5 bg-acid/10 border border-acid/20 text-acid rounded text-xs font-bold hover:bg-acid/20 transition-colors flex items-center gap-2"
+                                className="px-3 py-1.5 bg-acid/10 border border-acid/20 text-acid rounded text-[10px] font-bold hover:bg-acid/20 transition-colors flex items-center gap-2 uppercase tracking-widest"
                             >
-                                <CheckCircle2 className="w-3 h-3" /> INCLUDE ALL
+                                <CheckCircle2 className="w-3 h-3" /> ВКЛЮЧИТЬ ВСЕ
                             </button>
                             <button
                                 onClick={() => setJob({ ...job, articles: job.articles!.map(a => ({ ...a, screeningStatus: 'excluded' })) })}
-                                className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded text-xs font-bold hover:bg-red-500/20 transition-colors flex items-center gap-2"
+                                className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded text-[10px] font-bold hover:bg-red-500/20 transition-colors flex items-center gap-2 uppercase tracking-widest"
                             >
-                                <AlertCircle className="w-3 h-3" /> EXCLUDE ALL
+                                <AlertCircle className="w-3 h-3" /> ИСКЛЮЧИТЬ ВСЕ
                             </button>
                         </div>
 
                         <div className="flex gap-2">
-                            <a href={`/api/research/jobs/${id}/export/csv`} className="px-3 py-1.5 bg-white/5 text-gray-400 hover:text-white rounded text-xs flex items-center gap-2 transition-colors">
-                                <Download className="w-3 h-3" /> CSV
+                            <a href={`/api/research/jobs/${id}/export/csv`} className="px-3 py-1.5 bg-white border border-ash/10 text-steel-dim hover:text-steel rounded text-[10px] font-bold flex items-center gap-2 transition-colors uppercase tracking-widest">
+                                <Download className="w-3 h-3" /> ЭКСПОРТ CSV
                             </a>
-                            <a href={`/api/research/jobs/${id}/export/bibtex`} className="px-3 py-1.5 bg-white/5 text-gray-400 hover:text-white rounded text-xs flex items-center gap-2 transition-colors">
+                            <a href={`/api/research/jobs/${id}/export/bibtex`} className="px-3 py-1.5 bg-white border border-ash/10 text-steel-dim hover:text-steel rounded text-[10px] flex items-center gap-2 transition-colors font-bold uppercase tracking-widest">
                                 <FileText className="w-3 h-3" /> BIBTEX
                             </a>
                         </div>
@@ -282,7 +279,7 @@ export default function PapersPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-white/10 bg-black/40 text-gray-500 font-display text-[10px] tracking-widest uppercase">
+                                <tr className="border-b border-ash/10 bg-steel/5 text-steel-dim font-display text-[10px] tracking-widest uppercase font-bold">
                                     {columns.map((col) => (
                                         <th
                                             key={col.id}
@@ -302,8 +299,8 @@ export default function PapersPage() {
                                             }}
                                             className={`
                                                 p-4 select-none
-                                                ${col.id !== 'checkbox' ? 'cursor-grab active:cursor-grabbing hover:text-white transition-colors' : ''}
-                                                ${draggingColumn === col.id ? 'bg-white/5' : ''}
+                                                ${col.id !== 'checkbox' ? 'cursor-grab active:cursor-grabbing hover:text-steel transition-colors' : ''}
+                                                ${draggingColumn === col.id ? 'bg-steel/10' : ''}
                                             `}
                                             style={{ width: col.width }}
                                         >
@@ -315,9 +312,9 @@ export default function PapersPage() {
                                     ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/5 font-mono text-sm">
-                                {job.articles
-                                    .filter(article => {
+                            <tbody className="divide-y divide-ash/10 font-mono text-sm">
+                                {job?.articles
+                                    ?.filter(article => {
                                         if (currentFilter === 'all') return true
                                         if (currentFilter === 'pending') return article.screeningStatus === 'pending' || !article.screeningStatus
                                         return article.screeningStatus === currentFilter
@@ -332,8 +329,8 @@ export default function PapersPage() {
                                                 key={article.id}
                                                 onClick={() => setSelectedIndex(index)}
                                                 className={`
-                                                    group transition-all duration-150 cursor-pointer text-gray-300
-                                                    ${isSelected ? 'bg-acid/5 shadow-[inset_2px_0_0_0_#CCFF00]' : 'hover:bg-white/5'}
+                                                    group transition-all duration-150 cursor-pointer text-steel
+                                                    ${isSelected ? 'bg-acid/5 shadow-[inset_2px_0_0_0_#CCFF00]' : 'hover:bg-steel/5'}
                                                     ${isExcluded ? 'opacity-40 grayscale' : ''}
                                                 `}
                                             >
@@ -345,9 +342,9 @@ export default function PapersPage() {
                                                                     <div
                                                                         onClick={(e) => {
                                                                             e.stopPropagation()
-                                                                            const newStatus = isIncluded ? 'pending' : 'included'
-                                                                            const updated = job.articles!.map(a => a.id === article.id ? { ...a, screeningStatus: newStatus } : a)
-                                                                            setJob({ ...job, articles: updated }) // @ts-ignore
+                                                                            const newStatus: 'pending' | 'included' = isIncluded ? 'pending' : 'included'
+                                                                            const updated = job!.articles!.map(a => a.id === article.id ? { ...a, screeningStatus: newStatus } : a)
+                                                                            setJob({ ...job!, articles: updated })
                                                                         }}
                                                                         className={`
                                                                         w-5 h-5 rounded border flex items-center justify-center transition-all cursor-pointer
@@ -363,16 +360,16 @@ export default function PapersPage() {
                                                         case 'title':
                                                             return (
                                                                 <td key={col.id} className="p-4 min-w-[300px]">
-                                                                    <div className={`font-body font-medium text-base mb-1 group-hover:text-white transition-colors ${isIncluded ? 'text-acid' : ''}`}>
+                                                                    <div className={`font-body font-medium text-base mb-1 group-hover:text-black transition-colors ${isIncluded ? 'text-acid' : ''}`}>
                                                                         {article.title}
                                                                     </div>
-                                                                    <div className="text-xs text-gray-500 truncate max-w-[500px]">
+                                                                    <div className="text-xs text-steel-dim truncate max-w-[500px] font-bold">
                                                                         {article.authors?.join(', ')}
                                                                     </div>
                                                                     {article.abstract && (
-                                                                        <details className="mt-2 text-xs text-gray-500 open:text-gray-300">
-                                                                            <summary className="cursor-pointer hover:text-acid transition-colors select-none">VIEW ABSTRACT</summary>
-                                                                            <p className="mt-2 leading-relaxed pl-2 border-l border-white/10 font-sans opacity-80">
+                                                                        <details className="mt-2 text-xs text-steel-dim open:text-steel">
+                                                                            <summary className="cursor-pointer hover:text-acid transition-colors select-none font-bold uppercase tracking-tighter">Аннотация</summary>
+                                                                            <p className="mt-2 leading-relaxed pl-3 border-l-2 border-acid/30 font-sans">
                                                                                 {article.abstract}
                                                                             </p>
                                                                         </details>
@@ -381,7 +378,7 @@ export default function PapersPage() {
                                                             )
                                                         case 'year':
                                                             return (
-                                                                <td key={col.id} className="p-4 text-gray-500 group-hover:text-gray-300">
+                                                                <td key={col.id} className="p-4 text-steel-dim group-hover:text-steel font-bold">
                                                                     {article.year}
                                                                 </td>
                                                             )
@@ -389,10 +386,10 @@ export default function PapersPage() {
                                                             return (
                                                                 <td key={col.id} className="p-4">
                                                                     <span className={`
-                                                                        text-[10px] px-2 py-1 rounded border uppercase tracking-wider
+                                                                        text-[10px] px-2 py-1 rounded border uppercase tracking-wider font-bold
                                                                         ${article.source === 'pubmed'
-                                                                            ? 'border-blue-500/30 text-blue-400 bg-blue-500/10'
-                                                                            : 'border-orange-500/30 text-orange-400 bg-orange-500/10'}
+                                                                            ? 'border-blue-500/30 text-blue-600 bg-blue-500/5'
+                                                                            : 'border-orange-500/30 text-orange-600 bg-orange-500/5'}
                                                                     `}>
                                                                         {article.source}
                                                                     </span>
@@ -406,10 +403,10 @@ export default function PapersPage() {
                                                                             <button
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation()
-                                                                                    const updated = job.articles!.map(a => a.id === article.id ? { ...a, screeningStatus: 'excluded' as const } : a)
-                                                                                    setJob({ ...job, articles: updated })
+                                                                                    const updated = job!.articles!.map(a => a.id === article.id ? { ...a, screeningStatus: 'excluded' as const } : a)
+                                                                                    setJob({ ...job!, articles: updated })
                                                                                 }}
-                                                                                className="p-1.5 rounded hover:bg-white/10 text-gray-600 hover:text-red-400 transition-colors"
+                                                                                className="p-1.5 rounded hover:bg-steel/5 text-steel-dim hover:text-red-500 transition-colors"
                                                                                 title="Exclude"
                                                                             >
                                                                                 <X className="w-4 h-4" />
@@ -419,10 +416,10 @@ export default function PapersPage() {
                                                                             <button
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation()
-                                                                                    const updated = job.articles!.map(a => a.id === article.id ? { ...a, screeningStatus: 'pending' as const } : a)
-                                                                                    setJob({ ...job, articles: updated })
+                                                                                    const updated = job!.articles!.map(a => a.id === article.id ? { ...a, screeningStatus: 'pending' as const } : a)
+                                                                                    setJob({ ...job!, articles: updated })
                                                                                 }}
-                                                                                className="p-1.5 rounded hover:bg-white/10 text-red-500 hover:text-white transition-colors"
+                                                                                className="p-1.5 rounded hover:bg-steel/5 text-red-600 hover:text-red-800 transition-colors"
                                                                                 title="Restore"
                                                                             >
                                                                                 <RotateCcw className="w-4 h-4" />
@@ -444,11 +441,11 @@ export default function PapersPage() {
             )}
 
             {/* Bottom Actions */}
-            {job.status === 'completed' && (
+            {job?.status === 'completed' && (
                 <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-void via-void/90 to-transparent pointer-events-none flex justify-center lg:justify-end lg:pr-12 gap-4">
                     <button
                         onClick={async () => {
-                            setIsLoading(true);
+                            setActionLoading(true);
                             // Logic (save screening)
                             const includedIds = job.articles!.filter(a => a.screeningStatus === 'included').map(a => a.id)
                             const excludedIds = job.articles!.filter(a => a.screeningStatus === 'excluded').map(a => a.id)
@@ -462,18 +459,18 @@ export default function PapersPage() {
                             } catch (e) {
                                 console.error(e)
                             } finally {
-                                setIsLoading(false)
+                                setActionLoading(false)
                             }
                         }}
-                        disabled={!job.articles?.some(a => a.screeningStatus === 'included')}
+                        disabled={actionLoading || !job.articles?.some(a => a.screeningStatus === 'included')}
                         className={`
                             pointer-events-auto px-8 py-4 rounded-xl font-display font-bold tracking-widest text-lg shadow-2xl transition-all hover:scale-105 active:scale-95
                             ${job.articles?.some(a => a.screeningStatus === 'included')
                                 ? 'bg-acid text-void shadow-glow-acid'
-                                : 'bg-white/10 text-gray-500 cursor-not-allowed'}
+                                : 'bg-steel/10 text-steel-dim cursor-not-allowed'}
                         `}
                     >
-                        INITIALIZE CONFIGURATION →
+                        ПРОДОЛЖИТЬ →
                     </button>
                 </div>
             )}

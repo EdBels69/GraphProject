@@ -1,7 +1,8 @@
 import { Graph } from '../../shared/contracts/graph'
 import { GraphAnalyzer } from '../../shared/graphAlgorithms'
-import { databaseManager } from '../../src/core/Database'
-import { logger } from '../../src/core/Logger'
+import { databaseManager } from '../core/Database'
+import { logger } from '../core/Logger'
+import { AppError } from '../utils/errors'
 
 class GraphRuntimeService {
     private static instance: GraphRuntimeService
@@ -23,14 +24,12 @@ class GraphRuntimeService {
 
         // Ensure DB is initialized
         await databaseManager.initialize()
-
-        await this.loadGraphsFromDb()
         this.isInitialized = true
     }
 
-    private async loadGraphsFromDb() {
+    private async loadGraphsFromDb(userId: string) {
         try {
-            const graphs = await databaseManager.getAllGraphs()
+            const graphs = await databaseManager.getAllGraphs(userId)
             graphs.forEach(graph => {
                 this.graphsStore.set(graph.id, graph)
                 const analyzer = new GraphAnalyzer(graph)
@@ -46,15 +45,24 @@ class GraphRuntimeService {
         return this.graphsStore.get(id)
     }
 
-    async getOrLoadGraph(id: string): Promise<Graph | undefined> {
+    async getOrLoadGraph(id: string, userId: string): Promise<Graph> {
         let graph = this.graphsStore.get(id)
+
+        // If graph is in memory, verify owner
+        if (graph && (graph as any).userId !== userId) {
+            logger.warn('GraphRuntime', `Access denied to graph ${id} for user ${userId}`)
+            throw AppError.forbidden('Access to this graph is denied')
+        }
+
         if (!graph) {
-            // Try DB fallback (lazy load if not in memory)
-            const fromDb = await databaseManager.getGraphFromDb(id)
-            if (fromDb) {
-                this.setGraph(fromDb)
-                graph = fromDb
+            // Lazy load from DB
+            const fromDb = await databaseManager.getGraphFromDb(id, userId)
+            if (!fromDb) {
+                logger.warn('GraphRuntime', `Graph ${id} not found in DB for user ${userId}`)
+                throw AppError.notFound(`Graph ${id} not found`)
             }
+            this.setGraph(fromDb)
+            graph = fromDb
         }
         return graph
     }
@@ -73,21 +81,25 @@ class GraphRuntimeService {
         return deleted
     }
 
-    getAnalyzer(id: string): GraphAnalyzer | undefined {
-        // Ensure analyzer exists if graph exists
+    getAnalyzer(id: string): GraphAnalyzer {
         let analyzer = this.analyzers.get(id)
         if (!analyzer) {
             const graph = this.graphsStore.get(id)
-            if (graph) {
-                analyzer = new GraphAnalyzer(graph)
-                this.analyzers.set(id, analyzer)
+            if (!graph) {
+                throw AppError.internal(`Graph ${id} must be loaded before accessing analyzer`)
             }
+            analyzer = new GraphAnalyzer(graph)
+            this.analyzers.set(id, analyzer)
         }
         return analyzer
     }
 
-    getAllGraphs(): Graph[] {
-        return Array.from(this.graphsStore.values())
+    async getAllGraphs(userId: string): Promise<Graph[]> {
+        // Return from memory if all graphs for this user are already there?
+        // Simpler for now: just fetch from DB to be safe, or filter memory.
+        const dbGraphs = await databaseManager.getAllGraphs(userId)
+        dbGraphs.forEach(g => this.setGraph(g))
+        return dbGraphs
     }
 }
 

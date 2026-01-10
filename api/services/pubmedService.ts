@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { logger } from '../../src/core/Logger';
+import { logger } from '../core/Logger';
 
 export interface PubMedArticle {
   uid: string;

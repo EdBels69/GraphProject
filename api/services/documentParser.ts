@@ -26,11 +26,18 @@ export interface ParsedTable {
 
 export class DocumentParser {
   private pool: Piscina
+  private workerPath: string
 
   constructor() {
-    const ext = path.extname(__filename)
+    // Fix for ESM __filename
+    const currentFile = import.meta.url
+    const isTs = currentFile.endsWith('.ts')
+
+    // Correct path based on file system search: api/workers/parser.worker.ts
+    this.workerPath = path.resolve(process.cwd(), isTs ? 'api/workers/parser.worker.ts' : 'dist/api/workers/parser.worker.js')
+
     this.pool = new Piscina({
-      filename: path.resolve(__dirname, `../workers/parser.worker${ext}`)
+      filename: this.workerPath
     })
   }
 

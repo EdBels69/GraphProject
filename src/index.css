@@ -1,9 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  /* Light Mode Palette - ENHANCED CONTRAST */
+  color-scheme: light;
+
+  /* HSL Values for Tailwind compatibility (space-separated) */
+  --void: 220 15% 92%;
+  /* Slightly darker base gray */
+  --space: 220 15% 85%;
+  /* Darker secondary gray */
+  --glass: 0 0% 100%;
+  /* Pure White Panels */
+
+  /* ACCENT: Juicy Strict Orange */
+  --acid: 24 95% 45%;
+  /* Slightly darker orange for better contrast on light bg */
+  --acid-dim: 24 95% 90%;
+
+  /* SECONDARY: Soft Violet */
+  --plasma: 250 60% 55%;
+  --plasma-light: 250 60% 80%;
+
+  /* TEXT & BORDERS */
+  --steel: 220 25% 12%;
+  /* Darker primary text */
+  --steel-dim: 220 15% 40%;
+  /* More visible secondary text */
+  --ash: 220 15% 70%;
+  /* Darker border gray */
 }
 
 body {
@@ -40,12 +67,17 @@ h3,
 h4,
 h5,
 h6 {
-  @apply font-display tracking-wider font-bold;
+  @apply font-display tracking-widest font-bold uppercase;
 }
 
 /* Utility Classes */
 .glass-panel {
-  @apply bg-glass/60 backdrop-blur-md border border-white/10 shadow-lg;
+  @apply bg-glass/60 backdrop-blur-xl border border-ash/50 shadow-sm;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.glass-panel-heavy {
+  @apply bg-glass/80 backdrop-blur-2xl border border-white/20 shadow-xl;
 }
 
 .text-glow {

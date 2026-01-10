@@ -14,15 +14,16 @@ const router = express.Router()
  * POST /api/research/jobs
  * Start a new research job
  */
-router.post('/jobs', async (req, res) => {
+router.post('/jobs', async (req: any, res) => {
     try {
+        const userId = req.user.id
         const request: ResearchJobRequest = req.body
 
         if (!request.topic || typeof request.topic !== 'string') {
             return res.status(400).json({ error: 'Topic is required' })
         }
 
-        const job = await literatureAgent.startJob(request)
+        const job = await literatureAgent.startJob(request, userId)
 
         res.status(201).json({
             job,
@@ -38,9 +39,10 @@ router.post('/jobs', async (req, res) => {
  * GET /api/research/jobs
  * List all research jobs
  */
-router.get('/jobs', async (req, res) => {
+router.get('/jobs', async (req: any, res) => {
     try {
-        const jobs = literatureAgent.getAllJobs()
+        const userId = req.user.id
+        const jobs = literatureAgent.getAllJobs(userId)
 
         res.json({
             total: jobs.length,
@@ -69,10 +71,11 @@ router.get('/jobs', async (req, res) => {
  * GET /api/research/jobs/:id
  * Get research job status
  */
-router.get('/jobs/:id', async (req, res) => {
+router.get('/jobs/:id', async (req: any, res) => {
     try {
         const { id } = req.params
-        const job = literatureAgent.getJob(id)
+        const userId = req.user.id
+        const job = literatureAgent.getJob(id, userId)
 
         if (!job) {
             return res.status(404).json({ error: 'Job not found' })
@@ -89,9 +92,15 @@ router.get('/jobs/:id', async (req, res) => {
  * GET /api/research/jobs/:id/logs
  * Get live logs for a research job (Glass Box AI)
  */
-router.get('/jobs/:id/logs', async (req, res) => {
+router.get('/jobs/:id/logs', async (req: any, res) => {
     try {
         const { id } = req.params
+        const userId = req.user.id
+
+        // Ownership check
+        const job = literatureAgent.getJob(id, userId)
+        if (!job) return res.status(404).json({ error: 'Job not found' })
+
         const logs = literatureAgent.getJobLogs(id)
         res.json(logs)
     } catch (error) {
@@ -104,9 +113,10 @@ router.get('/jobs/:id/logs', async (req, res) => {
  * PATCH /api/research/jobs/:id/screening
  * Update screening decisions (include/exclude papers)
  */
-router.patch('/jobs/:id/screening', async (req, res) => {
+router.patch('/jobs/:id/screening', async (req: any, res) => {
     try {
         const { id } = req.params
+        const userId = req.user.id
         const { includedIds, excludedIds, exclusionReasons } = req.body
 
         if (!Array.isArray(includedIds) || !Array.isArray(excludedIds)) {
@@ -117,7 +127,7 @@ router.patch('/jobs/:id/screening', async (req, res) => {
             includedIds,
             excludedIds,
             exclusionReasons
-        })
+        }, userId)
 
         if (!updatedJob) {
             return res.status(404).json({ error: 'Job not found' })
@@ -156,13 +166,14 @@ router.get('/schema', async (req, res) => {
  * POST /api/research/jobs/:id/analyze
  * Trigger detailed analysis on selected papers
  */
-router.post('/jobs/:id/analyze', async (req, res) => {
+router.post('/jobs/:id/analyze', async (req: any, res) => {
     try {
         const { id } = req.params
+        const userId = req.user.id
         const config = req.body
 
         // Trigger async analysis
-        literatureAgent.analyzeJob(id, config)
+        literatureAgent.analyzeJob(id, config, userId)
 
         res.status(202).json({
             message: 'Analysis started',
@@ -179,10 +190,11 @@ router.post('/jobs/:id/analyze', async (req, res) => {
  * DELETE /api/research/jobs/:id
  * Cancel a research job
  */
-router.delete('/jobs/:id', async (req, res) => {
+router.delete('/jobs/:id', async (req: any, res) => {
     try {
         const { id } = req.params
-        const deleted = await literatureAgent.deleteJob(id)
+        const userId = req.user.id
+        const deleted = await literatureAgent.deleteJob(id, userId)
 
         if (!deleted) {
             return res.status(404).json({ error: 'Job not found' })
@@ -203,10 +215,11 @@ router.delete('/jobs/:id', async (req, res) => {
  * GET /api/research/jobs/:id/entities
  * Get extracted entities preview for a job
  */
-router.get('/jobs/:id/entities', async (req, res) => {
+router.get('/jobs/:id/entities', async (req: any, res) => {
     try {
         const { id } = req.params
-        const job = literatureAgent.getJob(id)
+        const userId = req.user.id
+        const job = literatureAgent.getJob(id, userId)
 
         if (!job) {
             return res.status(404).json({ error: 'Job not found' })
@@ -241,12 +254,13 @@ router.get('/jobs/:id/entities', async (req, res) => {
  * POST /api/research/jobs/:id/build-graph
  * Build knowledge graph with specified configuration
  */
-router.post('/jobs/:id/build-graph', async (req, res) => {
+router.post('/jobs/:id/build-graph', async (req: any, res) => {
     try {
         const { id } = req.params
+        const userId = req.user.id
         const { config } = req.body
 
-        const job = literatureAgent.getJob(id)
+        const job = literatureAgent.getJob(id, userId)
 
         if (!job) {
             return res.status(404).json({ error: 'Job not found' })
@@ -265,7 +279,7 @@ router.post('/jobs/:id/build-graph', async (req, res) => {
         }
 
         // Build graph using literature agent
-        const graphId = await literatureAgent.buildGraphFromJob(id, config)
+        const graphId = await literatureAgent.buildGraphFromJob(id, userId, config)
 
         res.json({
             graphId,
@@ -281,10 +295,11 @@ router.post('/jobs/:id/build-graph', async (req, res) => {
  * GET /api/research/jobs/:id/export/csv
  * Export screening table as CSV
  */
-router.get('/jobs/:id/export/csv', async (req, res) => {
+router.get('/jobs/:id/export/csv', async (req: any, res) => {
     try {
         const { id } = req.params
-        const job = literatureAgent.getJob(id)
+        const userId = req.user.id
+        const job = literatureAgent.getJob(id, userId)
 
         if (!job) {
             return res.status(404).json({ error: 'Job not found' })
@@ -320,10 +335,11 @@ router.get('/jobs/:id/export/csv', async (req, res) => {
  * GET /api/research/jobs/:id/export/bibtex
  * Export included articles as BibTeX
  */
-router.get('/jobs/:id/export/bibtex', async (req, res) => {
+router.get('/jobs/:id/export/bibtex', async (req: any, res) => {
     try {
         const { id } = req.params
-        const job = literatureAgent.getJob(id)
+        const userId = req.user.id
+        const job = literatureAgent.getJob(id, userId)
 
         if (!job) {
             return res.status(404).json({ error: 'Job not found' })
@@ -358,10 +374,11 @@ router.get('/jobs/:id/export/bibtex', async (req, res) => {
  * GET /api/research/jobs/:id/export/parquet
  * Export screening table as Parquet format
  */
-router.get('/jobs/:id/export/parquet', async (req, res) => {
+router.get('/jobs/:id/export/parquet', async (req: any, res) => {
     try {
         const { id } = req.params
-        const job = literatureAgent.getJob(id)
+        const userId = req.user.id
+        const job = literatureAgent.getJob(id, userId)
 
         if (!job) {
             return res.status(404).json({ error: 'Job not found' })

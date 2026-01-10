@@ -3,8 +3,8 @@ import { createNode, createEdge, GraphNode, GraphEdge, Graph } from '../../share
 import { graphRuntime } from './GraphRuntimeService'
 import { externalApiService } from './ExternalApiService'
 import { extractEntitiesWithAI } from './aiService'
-import { logger } from '../../src/core/Logger'
-import { databaseManager } from '../../src/core/Database'
+import { logger } from '../core/Logger'
+import { databaseManager } from '../core/Database'
 import GraphStorage from '../../shared/graphStorage'
 
 export class ResearchAgentService {
@@ -19,12 +19,12 @@ export class ResearchAgentService {
         return ResearchAgentService.instance
     }
 
-    async researchTopic(graphId: string, query: string): Promise<{
+    async researchTopic(graphId: string, query: string, userId: string): Promise<{
         articlesFound: number
         entitiesAdded: number
         edgesAdded: number
     }> {
-        const graph = await graphRuntime.getOrLoadGraph(graphId)
+        const graph = await graphRuntime.getOrLoadGraph(graphId, userId)
         if (!graph) throw new Error('Graph not found')
 
         logger.info('ResearchAgent', `Starting research on "${query}" for graph ${graphId}`)

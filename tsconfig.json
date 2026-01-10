@@ -42,7 +42,7 @@
         "./src/utils/*"
       ],
       "@/api/*": [
-        "./api/*"
+        "./src/api/*"
       ],
       "@/shared/*": [
         "./shared/*"

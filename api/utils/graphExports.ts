@@ -1,5 +1,5 @@
 import { Graph } from '../../shared/contracts/graph'
-import { logger } from '../../src/core/Logger'
+import { logger } from '../core/Logger'
 
 export function generateGEXF(graph: Graph): string {
     const escapeXml = (s: string) =>

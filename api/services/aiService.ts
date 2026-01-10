@@ -1,7 +1,7 @@
 import { AI_PROMPTS } from './ai/prompts'
 import { llmProvider } from './ai/llmProvider'
 import type { AIMessage, AIResponse, AICompletionOptions } from './ai/llmProvider'
-import { logger } from '../../src/core/Logger'
+import { logger } from '../core/Logger'
 
 // Re-export types for backward compatibility
 export { AIMessage, AIResponse, AICompletionOptions }
@@ -33,13 +33,13 @@ export async function chatCompletion(
 // 2. Entity Extraction Facade
 import { configService } from './configService'
 
-export async function extractEntitiesWithAI(text: string): Promise<ExtractedEntity[]> {
+export async function extractEntitiesWithAI(text: string, userId: string = 'system'): Promise<ExtractedEntity[]> {
     const chunk = text.slice(0, 150000) // 150k limit for GLM-4.7
 
     try {
         const [prompts, ontology] = await Promise.all([
-            configService.getPrompts(),
-            configService.getOntology()
+            configService.getPrompts(userId),
+            configService.getOntology(userId)
         ])
 
         const promptConfig = prompts['entity_extraction']
@@ -157,11 +157,11 @@ function normalizeEntityType(type: string, validTypes: string[]): string {
 }
 
 // 3. Summarization Facade
-export async function summarizeDocument(text: string, title?: string): Promise<DocumentSummary> {
+export async function summarizeDocument(text: string, userId: string = 'system', title?: string): Promise<DocumentSummary> {
     const chunk = text.slice(0, 150000)
 
     try {
-        const prompts = await configService.getPrompts()
+        const prompts = await configService.getPrompts(userId)
         const promptConfig = prompts['summarization']
 
         let systemPrompt = AI_PROMPTS.SUMMARIZATION.SYSTEM

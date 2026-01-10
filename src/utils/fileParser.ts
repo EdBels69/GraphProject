@@ -9,7 +9,7 @@ export async function parseFile(file: File): Promise<ParsedData> {
   const extension = file.name.split('.').pop()?.toLowerCase();
 
   if (!extension) {
-    throw new Error('Не удалось определить формат файла');
+    throw new Error('Could not determine file format');
   }
 
   const content = await readFile(file);
@@ -23,7 +23,7 @@ export async function parseFile(file: File): Promise<ParsedData> {
     case 'txt':
       return parseBibTeX(content);
     default:
-      throw new Error(`Неподдерживаемый формат файла: ${extension}`);
+      throw new Error(`Unsupported file format: ${extension}`);
   }
 }
 
@@ -31,7 +31,7 @@ function readFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = (e) => reject(new Error('Ошибка чтения файла'));
+    reader.onerror = (e) => reject(new Error('Error reading file'));
     reader.readAsText(file);
   });
 }
@@ -64,9 +64,9 @@ function parseJSON(content: string): ParsedData {
       return { articles, citations };
     }
 
-    throw new Error('Неверный формат JSON: ожидается массив статей');
+    throw new Error('Invalid JSON format: expected an array of articles');
   } catch (error) {
-    throw new Error(`Ошибка парсинга JSON: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    throw new Error(`JSON parse error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -74,7 +74,7 @@ function parseCSV(content: string): ParsedData {
   const lines = content.split('\n').filter(line => line.trim());
 
   if (lines.length < 2) {
-    throw new Error('CSV файл должен содержать заголовок и минимум одну строку данных');
+    throw new Error('CSV file must contain a header and at least one data row');
   }
 
   const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
@@ -82,7 +82,7 @@ function parseCSV(content: string): ParsedData {
   const hasRequiredHeaders = requiredHeaders.every(h => headers.includes(h));
 
   if (!hasRequiredHeaders) {
-    throw new Error(`CSV файл должен содержать заголовки: ${requiredHeaders.join(', ')}`);
+    throw new Error(`CSV file must contain headers: ${requiredHeaders.join(', ')}`);
   }
 
   const articles: Article[] = [];
@@ -162,7 +162,7 @@ function parseBibTeX(content: string): ParsedData {
   const entries = content.split(/@/g).filter(e => e.trim());
 
   if (entries.length === 0) {
-    throw new Error('BibTeX файл не содержит записей');
+    throw new Error('BibTeX file contains no entries');
   }
 
   const articles: Article[] = [];
@@ -233,8 +233,8 @@ function parseBibTeXAuthors(authorString: string): string[] {
 }
 
 export function buildGraphFromParsedData(data: ParsedData): Graph {
-  const nodes = data.articles.map(article => ({
-    id: article.id,
+  const nodes = data.articles.map((article, index) => ({
+    id: article.id || `article_${index}`,
     label: article.title.substring(0, 50) + (article.title.length > 50 ? '...' : ''),
     group: article.id.startsWith('article') ? 'Imported' : 'PubMed',
     attributes: {

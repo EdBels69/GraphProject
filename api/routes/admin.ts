@@ -1,8 +1,8 @@
 import express from 'express'
-import { logger } from '../../src/core/Logger'
-import errorHandler from '../../src/core/ErrorHandler'
-import { sessionManager } from '../../src/core/SessionManager'
-import { databaseManager } from '../../src/core/Database'
+import { logger } from '../core/Logger'
+import errorHandler from '../core/ErrorHandler'
+import { sessionManager } from '../core/SessionManager'
+import { databaseManager } from '../core/Database'
 
 const router = express.Router()
 

@@ -24,7 +24,7 @@ describe('fileParser', () => {
       ]
 
       const file = new File(
-        [JSON.stringify({ articles })],
+        [JSON.stringify(articles)],
         'test.json',
         { type: 'application/json' }
       )
@@ -79,19 +79,19 @@ article-2,"Test Article 2","Author 2",2024,"Test abstract 2","test","article-1"`
     it('should throw error for unsupported file format', async () => {
       const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
 
-      await expect(parseFile(file)).rejects.toThrow('Неподдерживаемый формат файла')
+      await expect(parseFile(file)).rejects.toThrow('Unsupported file format')
     })
 
     it('should throw error for malformed JSON', async () => {
       const file = new File(['{invalid json}'], 'test.json', { type: 'application/json' })
 
-      await expect(parseFile(file)).rejects.toThrow('Ошибка парсинга JSON')
+      await expect(parseFile(file)).rejects.toThrow('JSON parse error')
     })
 
     it('should throw error for empty CSV', async () => {
       const file = new File([''], 'test.csv', { type: 'text/csv' })
 
-      await expect(parseFile(file)).rejects.toThrow('CSV файл должен содержать')
+      await expect(parseFile(file)).rejects.toThrow('CSV file must contain')
     })
   })
 

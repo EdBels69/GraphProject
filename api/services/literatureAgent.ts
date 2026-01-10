@@ -31,10 +31,10 @@ import {
     IKnowledgeGraphBuilder
 } from './interfaces'
 import { chatCompletion, summarizeDocument } from './aiService'
-import { logger } from '../../src/core/Logger'
+import { logger } from '../core/Logger'
 import { isFeatureEnabled } from '../../shared/config/features'
 import axios from 'axios'
-import { databaseManager } from '../../src/core/Database'
+import { databaseManager } from '../core/Database'
 import GraphStorage from '../../shared/graphStorage'
 import { fileStorage } from './fileStorage'
 import { jobLogger } from './jobLogger'
@@ -76,11 +76,12 @@ export class LiteratureAgent extends EventEmitter {
     /**
      * Start a new research job
      */
-    async startJob(request: ResearchJobRequest): Promise<ResearchJob> {
+    async startJob(request: ResearchJobRequest, userId: string): Promise<ResearchJob> {
         const jobId = `research-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
         const job: ResearchJob = {
             id: jobId,
+            userId: userId,
             topic: request.topic,
             mode: request.mode || 'research',  // Default to research mode
             status: 'pending',
@@ -115,6 +116,7 @@ export class LiteratureAgent extends EventEmitter {
         try {
             await databaseManager.saveResearchJob({
                 id: job.id,
+                userId: job.userId,
                 topic: job.topic,
                 mode: job.mode || 'research',
                 status: job.status,
@@ -129,7 +131,7 @@ export class LiteratureAgent extends EventEmitter {
 
             // Also persist articles
             if (job.articles && job.articles.length > 0) {
-                await databaseManager.saveJobArticles(job.id, job.articles)
+                await databaseManager.saveJobArticles(job.id, job.userId, job.articles)
             }
         } catch (e) {
             logger.warn('LiteratureAgent', `Failed to persist job ${job.id}`, { error: e })
@@ -139,20 +141,20 @@ export class LiteratureAgent extends EventEmitter {
     /**
      * Get job by ID
      */
-    getJob(jobId: string): ResearchJob | undefined {
+    getJob(jobId: string, userId: string): ResearchJob | undefined {
         // First check in-memory cache
         const cached = this.jobs.get(jobId)
-        if (cached) return cached
+        if (cached && cached.userId === userId) return cached
 
         // Job not in cache - will be loaded on next sync
         return undefined
     }
 
     /**
-     * Get all jobs (from in-memory cache; DB is synced on startup)
+     * Get all jobs for a user
      */
-    getAllJobs(): ResearchJob[] {
-        return Array.from(this.jobs.values())
+    getAllJobs(userId: string): ResearchJob[] {
+        return Array.from(this.jobs.values()).filter(j => j.userId === userId)
     }
 
     /**
@@ -176,8 +178,9 @@ export class LiteratureAgent extends EventEmitter {
     /**
      * Delete a job permanently (DB + Files)
      */
-    async deleteJob(jobId: string): Promise<boolean> {
+    async deleteJob(jobId: string, userId: string): Promise<boolean> {
         const job = this.jobs.get(jobId)
+        if (job && job.userId !== userId) return false
 
         // 1. Cancel if running
         const activeStatuses: ResearchJobStatus[] = ['searching', 'downloading', 'analyzing']
@@ -187,7 +190,7 @@ export class LiteratureAgent extends EventEmitter {
         }
 
         // 2. Delete from DB
-        const deleted = await databaseManager.deleteResearchJob(jobId)
+        const deleted = await databaseManager.deleteResearchJob(jobId, userId)
         if (!deleted && !job) return false // Not found anywhere
 
         // 3. Remove files
@@ -213,9 +216,9 @@ export class LiteratureAgent extends EventEmitter {
         includedIds: string[],
         excludedIds: string[],
         exclusionReasons?: Record<string, string>
-    }): ResearchJob | null {
+    }, userId: string): ResearchJob | null {
         const job = this.jobs.get(jobId)
-        if (!job) return null
+        if (!job || job.userId !== userId) return null
 
         job.includedIds = updates.includedIds
         job.excludedIds = updates.excludedIds
@@ -249,9 +252,9 @@ export class LiteratureAgent extends EventEmitter {
         extractColumns: boolean
         domain?: string
         columns?: string[]
-    }): Promise<ResearchJob> {
+    }, userId: string): Promise<ResearchJob> {
         const job = this.jobs.get(jobId)
-        if (!job) throw new Error('Job not found')
+        if (!job || job.userId !== userId) throw new Error('Job not found')
 
         job.status = 'analyzing'
         job.progress = 0
@@ -341,21 +344,21 @@ export class LiteratureAgent extends EventEmitter {
             job.completedAt = new Date().toISOString()
             this.emit('job:completed', job)
 
+            return job
         } catch (error) {
             job.status = 'failed'
             job.error = error instanceof Error ? error.message : String(error)
             this.emit('job:failed', job)
+            return job
         }
-
-        return job
     }
 
     /**
      * Build graph from job with user configuration
      */
-    async buildGraphFromJob(jobId: string, config?: any): Promise<string> {
+    async buildGraphFromJob(jobId: string, userId: string, config?: any): Promise<string> {
         const job = this.jobs.get(jobId)
-        if (!job) {
+        if (!job || job.userId !== userId) {
             throw new Error('Job not found')
         }
 

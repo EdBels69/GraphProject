@@ -19,8 +19,8 @@
     "include": [
         "api/**/*",
         "shared/**/*",
-        "src/core/Logger.ts",
-        "src/core/Database.ts"
+        "api/core/Logger.ts",
+        "api/core/Database.ts"
     ],
     "exclude": [
         "src/**/*",

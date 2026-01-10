@@ -1,6 +1,6 @@
 
-import { databaseManager } from '../../src/core/Database'
-import { logger } from '../../src/core/Logger'
+import { databaseManager } from '../core/Database'
+import { logger } from '../core/Logger'
 
 export interface OntologyType {
     id: string
@@ -78,66 +78,72 @@ Return JSON with "entities" and "relations".`
 class ConfigService {
     private cache: Map<string, any> = new Map()
 
-    async getOntology(): Promise<OntologyConfig> {
-        return this.getConfig('ontology', DEFAULT_ONTOLOGY)
+    async getOntology(userId: string): Promise<OntologyConfig> {
+        return this.getConfig(userId, 'ontology', DEFAULT_ONTOLOGY)
     }
 
-    async saveOntology(config: OntologyConfig): Promise<void> {
-        await this.saveConfig('ontology', config)
+    async saveOntology(userId: string, config: OntologyConfig): Promise<void> {
+        await this.saveConfig(userId, 'ontology', config)
     }
 
-    async getPrompts(): Promise<Record<string, PromptConfig>> {
-        return this.getConfig('prompts', DEFAULT_PROMPTS)
+    async getPrompts(userId: string): Promise<Record<string, PromptConfig>> {
+        return this.getConfig(userId, 'prompts', DEFAULT_PROMPTS)
     }
 
-    async savePrompts(config: Record<string, PromptConfig>): Promise<void> {
-        await this.saveConfig('prompts', config)
+    async savePrompts(userId: string, config: Record<string, PromptConfig>): Promise<void> {
+        await this.saveConfig(userId, 'prompts', config)
     }
 
-    private async getConfig<T>(key: string, defaultValue: T): Promise<T> {
+    private async getConfig<T>(userId: string, key: string, defaultValue: T): Promise<T> {
+        const cacheKey = `${userId}:${key}`
         // Check cache first
-        if (this.cache.has(key)) {
-            return this.cache.get(key)
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey)
         }
 
         try {
-            // @ts-ignore - Prisma client type not updated in IDE but exists in runtime
             const prisma = databaseManager.getClient()
-            if (!prisma.systemConfig) return defaultValue // Handle migration case
+            if (!(prisma as any).systemConfig) return defaultValue
 
-            // @ts-ignore
-            const record = await prisma.systemConfig.findUnique({ where: { key } })
+            const record = await (prisma as any).systemConfig.findUnique({
+                where: {
+                    userId_key: { userId, key }
+                }
+            })
 
             if (record) {
                 try {
                     const value = JSON.parse(record.value)
-                    this.cache.set(key, value)
+                    this.cache.set(cacheKey, value)
                     return value
                 } catch (e) {
                     logger.error('ConfigService', `Failed to parse config for ${key}`, { error: e })
                     return defaultValue
                 }
+            } else if (userId !== 'system') {
+                // Fallback to system default if user hasn't customized it
+                return this.getConfig('system', key, defaultValue)
             }
         } catch (e) {
-            // Table might not exist yet if migration pending
             logger.warn('ConfigService', `Failed to fetch config for ${key}`, { error: e })
         }
 
         return defaultValue
     }
 
-    private async saveConfig<T>(key: string, value: T): Promise<void> {
+    private async saveConfig<T>(userId: string, key: string, value: T): Promise<void> {
         const prisma = databaseManager.getClient()
         const json = JSON.stringify(value)
 
-        // @ts-ignore
-        await prisma.systemConfig.upsert({
-            where: { key },
+        await (prisma as any).systemConfig.upsert({
+            where: {
+                userId_key: { userId, key }
+            },
             update: { value: json },
-            create: { key, value: json }
+            create: { userId, key, value: json }
         })
 
-        this.cache.set(key, value)
+        this.cache.set(`${userId}:${key}`, value)
     }
 }
 

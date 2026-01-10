@@ -9,22 +9,25 @@ import {
   Menu,
   Settings,
   User,
-  BookOpen
+  BookOpen,
+  LogOut
 } from 'lucide-react'
 import { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
+  const { user, signOut } = useAuth()
 
   const navItems = [
-    { path: '/', label: 'HOME', icon: Home },
-    { path: '/upload', label: 'INGEST', icon: FileText },
-    { path: '/research', label: 'SEARCH', icon: BookOpen },
-    { path: '/analysis', label: 'GRAPH', icon: Network },
-    { path: '/ai-assistant', label: 'NEURAL', icon: MessageSquare },
-    { path: '/works', label: 'DATABASE', icon: List },
-    { path: '/health', label: 'SYSTEM', icon: Activity },
+    { path: '/', label: 'Главная', icon: Home },
+    { path: '/upload', label: 'Загрузка', icon: FileText },
+    { path: '/research', label: 'Поиск', icon: BookOpen },
+    { path: '/analysis', label: 'Граф', icon: Network },
+    { path: '/ai-assistant', label: 'ИИ Ассистент', icon: MessageSquare },
+    { path: '/works', label: 'База знаний', icon: List },
+    { path: '/health', label: 'Статус систем', icon: Activity },
   ]
 
   const isActive = (path: string) => {
@@ -45,19 +48,19 @@ export default function Layout() {
       {/* Glass Sidebar */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 w-64 bg-glass/80 backdrop-blur-xl border-r border-white/5
+          fixed inset-y-0 left-0 z-50 w-64 glass-panel border-r border-ash/20
           transform transition-transform duration-300 ease-out
           lg:translate-x-0 lg:static lg:inset-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-white/5">
+        <div className="h-16 flex items-center px-6 border-b border-ash/10">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-sm bg-acid/20 border border-acid/50 flex items-center justify-center group-hover:shadow-glow-acid transition-all duration-500">
+            <div className="w-8 h-8 rounded-sm bg-acid/20 border border-acid flex items-center justify-center group-hover:shadow-glow-acid transition-all duration-500">
               <Network className="w-5 h-5 text-acid" />
             </div>
-            <span className="font-display font-bold text-xl tracking-wider text-white group-hover:text-acid transition-colors">
+            <span className="font-display font-bold text-xl tracking-wider text-steel group-hover:text-acid transition-colors">
               CORTEX
             </span>
           </Link>
@@ -74,10 +77,10 @@ export default function Layout() {
                 to={item.path}
                 onClick={() => setSidebarOpen(false)}
                 className={`
-                  flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-300 group relative overflow-hidden
+                  flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group relative overflow-hidden
                   ${active
-                    ? 'text-void bg-acid font-bold shadow-glow-acid'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'text-void bg-acid font-bold shadow-glow-acid/50'
+                    : 'text-steel-dim hover:text-black hover:bg-steel/5'
                   }
                 `}
               >
@@ -94,20 +97,21 @@ export default function Layout() {
         </nav>
 
         {/* User Stats / Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5 bg-black/20">
-          <div className="flex items-center gap-3 p-2 rounded-lg border border-white/5 bg-white/5">
-            <div className="w-8 h-8 rounded bg-plasma/20 flex items-center justify-center border border-plasma/50">
-              <User className="w-4 h-4 text-plasma-light" />
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-ash/10 bg-void shadow-inner">
+          <div className="flex items-center gap-3 p-2 rounded-lg border border-ash/20 bg-void group/user shadow-sm">
+            <div className="w-8 h-8 rounded bg-plasma/10 flex items-center justify-center border border-plasma/30 group-hover/user:border-plasma transition-colors">
+              <User className="w-4 h-4 text-plasma" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-display text-xs text-gray-300 truncate">OPERATOR</p>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-acid animate-pulse"></div>
-                <p className="text-[10px] text-acid">ONLINE</p>
-              </div>
+              <p className="font-display text-[10px] text-steel-dim/60 truncate tracking-tighter uppercase font-bold">ОПЕРАТОР</p>
+              <p className="text-[11px] text-steel truncate font-bold">{user?.email?.split('@')[0] || 'ГОСТЬ'}</p>
             </div>
-            <button className="text-gray-500 hover:text-white transition-colors">
-              <Settings className="w-4 h-4" />
+            <button
+              onClick={() => signOut()}
+              className="p-1.5 text-steel-dim hover:text-acid hover:bg-acid/10 rounded transition-all"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -116,16 +120,16 @@ export default function Layout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Mobile Header */}
-        <header className="lg:hidden h-16 border-b border-white/5 flex items-center justify-between px-4 bg-glass/50 backdrop-blur-md sticky top-0 z-30">
-          <button onClick={() => setSidebarOpen(true)} className="text-white">
+        <header className="lg:hidden h-16 border-b border-ash/20 flex items-center justify-between px-4 bg-void shadow-sm sticky top-0 z-30">
+          <button onClick={() => setSidebarOpen(true)} className="text-steel">
             <Menu />
           </button>
-          <span className="font-display font-bold text-white">CORTEX</span>
+          <span className="font-display font-bold tracking-widest text-steel">CORTEX</span>
           <div className="w-6" /> {/* Spacer */}
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent p-4 lg:p-8 relative">
+        <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-ash/30 scrollbar-track-transparent p-4 lg:p-8 relative">
           {/* Ambient Glows */}
           <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0 opacity-20">
             <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-plasma/30 rounded-full blur-[128px]" />

@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { logger } from '../../src/core/Logger'
+import { logger } from '../core/Logger'
 
 /**
  * Article metadata for smart file naming

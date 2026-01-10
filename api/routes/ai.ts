@@ -12,7 +12,7 @@ import {
     generateResearchRecommendations,
     checkAIHealth
 } from '../services/aiService'
-import { logger } from '../../src/core/Logger'
+import { logger } from '../core/Logger'
 
 const router = Router()
 

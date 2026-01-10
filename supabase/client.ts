@@ -3,11 +3,28 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not found. Please check your .env file.')
+let client: any
+
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === '') {
+  console.warn('[Supabase] Credentials not found. Using MOCK client for Local Mode.')
+  client = {
+    auth: {
+      signOut: async () => { },
+      getSession: async () => ({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } })
+    },
+    from: () => ({
+      select: () => ({ data: [], error: null }),
+      insert: () => ({ data: [], error: null }),
+      update: () => ({ data: [], error: null }),
+      delete: () => ({ data: [], error: null }),
+    })
+  }
+} else {
+  client = createClient(supabaseUrl, supabaseAnonKey)
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = client
 
 export type Tables = {
   articles: {

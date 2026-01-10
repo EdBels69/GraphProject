@@ -6,7 +6,7 @@
 
 import { Chunk } from './chunkingEngine'
 import { searchMeSH, normalizeTerm, MeSHSearchResult } from './meshService'
-import { logger } from '../../src/core/Logger'
+import { logger } from '../core/Logger'
 import { isFeatureEnabled } from '../../shared/config/features'
 import { extractEntitiesWithAI } from './aiService'
 

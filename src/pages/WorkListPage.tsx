@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { FileText, Search, BarChart2, Shield, Trash2, ExternalLink } from 'lucide-react'
-import { useApi } from '@/hooks/useApi'
+import { useApi, useApiDelete } from '@/hooks/useApi'
+import { API_ENDPOINTS } from '@/api/endpoints'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody } from '@/components/ui/Card'
 
@@ -15,13 +16,14 @@ interface Article {
 
 export default function WorkListPage() {
   const navigate = useNavigate()
-  const { data: articles, loading, error, refetch } = useApi<Article[]>('/articles')
+  const { data: articles, loading, error, refetch } = useApi<Article[]>(API_ENDPOINTS.ARTICLES.BASE)
+  const { deleteData } = useApiDelete<any>((id: string) => API_ENDPOINTS.ARTICLES.BY_ID(id))
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Вы уверены, что хотите удалить эту работу?')) return
 
     try {
-      await fetch(`/api/articles/${id}`, { method: 'DELETE' })
+      await deleteData(id)
       refetch()
     } catch (err) {
       console.error('Failed to delete article:', err)

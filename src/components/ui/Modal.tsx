@@ -36,36 +36,34 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-void/80 backdrop-blur-md"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div
         className={twMerge(
-          clsx(
-            'relative bg-white rounded-xl shadow-xl w-full mx-4',
-            sizes[size]
-          )
+          'relative glass-panel-heavy rounded-2xl w-full mx-4 overflow-hidden animate-fade-in',
+          sizes[size]
         )}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
+          <div className="flex items-center justify-between p-6 border-b border-ash/10 bg-void">
+            <h2 className="text-lg font-display font-bold text-steel tracking-widest uppercase mb-0">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-steel/5 rounded-lg transition-colors text-steel-dim hover:text-steel"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         )}
-        
+
         {/* Body */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 max-h-[70vh] overflow-y-auto text-steel">
           {children}
         </div>
       </div>

@@ -5,7 +5,7 @@
 
 import { Router } from 'express'
 import { searchMeSH, normalizeTerm, normalizeTerms, getMeSHCacheStats, clearMeSHCache } from '../services/meshService'
-import { logger } from '../../src/core/Logger'
+import { logger } from '../core/Logger'
 
 const router = Router()
 

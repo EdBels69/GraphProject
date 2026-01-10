@@ -7,7 +7,7 @@
  * Free to use, no API key required
  */
 
-import { logger } from '../../src/core/Logger'
+import { logger } from '../core/Logger'
 
 // Cache for MeSH lookups to reduce API calls
 const meshCache = new Map<string, MeSHDescriptor | null>()

@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { Modal } from '@/components/ui/Modal'
-import { Input } from '@/components/ui/Input'
+import { useState } from 'react'
 import { Trash2, ExternalLink, Calendar, Pencil, Merge, CheckSquare, Square, Share2, Network } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Graph } from '../../shared/contracts/graph'
 import { GraphMergeService } from '../services/graphMergeService'
 import { useToast } from '@/contexts/ToastContext'
+import { useApi, useApiPut, useApiDelete, useApiPost } from '@/hooks/useApi'
+import { API_ENDPOINTS } from '@/api/endpoints'
+import { Button } from './ui/Button'
+import { Input } from './ui/Input'
+import { Modal } from './ui/Modal'
+import { Card } from './ui/Card'
+import { supabase } from '../../supabase/client'
 
 interface SavedGraphsListProps {
     currentGraphId?: string
@@ -15,8 +18,6 @@ interface SavedGraphsListProps {
 }
 
 export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGraphsListProps) {
-    const [graphs, setGraphs] = useState<Graph[]>([])
-    const [isLoading, setIsLoading] = useState(true)
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [renameId, setRenameId] = useState<string | null>(null)
     const [newName, setNewName] = useState('')
@@ -30,38 +31,24 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
     const navigate = useNavigate()
     const { addToast } = useToast()
 
-    useEffect(() => {
-        fetchGraphs()
-    }, [])
+    const { data: graphsData, loading: isLoading, refetch: fetchGraphs } = useApi<Graph[]>(API_ENDPOINTS.GRAPHS.BASE)
+    const graphs = graphsData || []
 
-    const fetchGraphs = async () => {
-        try {
-            const response = await fetch('/api/graphs')
-            if (response.ok) {
-                const data = await response.json()
-                if (data.success && Array.isArray(data.graphs)) {
-                    setGraphs(data.graphs)
-                }
-            }
-        } catch (error) {
-            console.error('Failed to fetch graphs:', error)
-        } finally {
-            setIsLoading(false)
-        }
-    }
+    const { deleteData } = useApiDelete<any>((id: string) => API_ENDPOINTS.GRAPHS.BY_ID(id))
+    const { putData } = useApiPut<Graph, any>((id: string) => API_ENDPOINTS.GRAPHS.BY_ID(id))
+    const { postData: uploadMerge } = useApiPost<any>(API_ENDPOINTS.GRAPHS.UPLOAD)
+
 
     const confirmDelete = async () => {
         if (!deleteId) return
         try {
-            const response = await fetch(`/api/graphs/${deleteId}`, {
-                method: 'DELETE'
-            })
-            if (response.ok) {
-                setGraphs(prev => prev.filter(g => g.id !== deleteId))
-                setDeleteId(null)
-            }
+            await deleteData(deleteId)
+            fetchGraphs()
+            setDeleteId(null)
+            addToast('Graph deleted', 'success')
         } catch (error) {
             console.error('Failed to delete graph:', error)
+            addToast(error instanceof Error ? error.message : 'Delete failed', 'error')
         }
     }
 
@@ -71,18 +58,13 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
             const graph = graphs.find(g => g.id === renameId)
             if (!graph) return
 
-            const response = await fetch(`/api/graphs/${renameId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...graph, name: newName })
-            })
-
-            if (response.ok) {
-                setGraphs(prev => prev.map(g => g.id === renameId ? { ...g, name: newName } : g))
-                setRenameId(null)
-            }
+            await putData({ ...graph, name: newName }, renameId)
+            fetchGraphs()
+            setRenameId(null)
+            addToast('Graph renamed', 'success')
         } catch (error) {
             console.error('Failed to rename graph:', error)
+            addToast(error instanceof Error ? error.message : 'Rename failed', 'error')
         }
     }
 
@@ -114,22 +96,25 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
             const formData = new FormData()
             formData.append('file', file)
 
-            setIsLoading(true)
+            // Special case for FormData - we can't use useApiPost directly with application/json
+            // But we can manually fetch or update useApiPost to support FormData
+            // For now, let's keep it simple and use a manual fetch with session
+            const { data: { session } } = await supabase.auth.getSession()
             const response = await fetch('/api/graphs/upload', {
                 method: 'POST',
+                headers: {
+                    'Authorization': session?.access_token ? `Bearer ${session.access_token}` : ''
+                },
                 body: formData
             })
 
             if (response.ok) {
                 const result = await response.json()
-                // Refresh list
                 await fetchGraphs()
-                // Reset interaction
                 setIsSelectionMode(false)
                 setSelectedIds(new Set())
                 setIsMergeModalOpen(false)
 
-                // Optionally auto-open
                 if (result.data?.graph?.id) {
                     handleLoad(result.data.graph.id)
                 }
@@ -138,8 +123,6 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
         } catch (error) {
             console.error('Merge failed:', error)
             addToast('Merge failed', 'error')
-        } finally {
-            setIsLoading(false)
         }
     }
 
@@ -162,10 +145,10 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
 
     if (graphs.length === 0) {
         return (
-            <div className="p-8 text-center border border-dashed border-white/10 rounded-xl bg-white/5">
-                <Network className="w-8 h-8 text-steel mx-auto mb-3 opacity-50" />
-                <p className="text-steel text-sm">No graphs found in local repository</p>
-            </div>
+            <Card className="p-8 text-center border-dashed border-ash/30 bg-void">
+                <Network className="w-8 h-8 text-steel/20 mx-auto mb-3" />
+                <p className="text-steel-dim text-xs font-display tracking-widest uppercase">No graphs found in local repository</p>
+            </Card>
         )
     }
 
@@ -173,40 +156,44 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
         <div className="space-y-4 font-sans pb-20">
             <div className="flex justify-between items-center px-1">
                 <div className="flex items-center gap-2">
-                    <Share2 className="w-4 h-4 text-white/70" />
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Available Graphs</h3>
-                    <span className="bg-white/10 text-white text-[10px] px-1.5 rounded-sm font-mono">{graphs.length}</span>
+                    <Share2 className="w-4 h-4 text-steel-dim" />
+                    <h3 className="text-xs font-bold text-steel uppercase tracking-wider">Available Graphs</h3>
+                    <span className="bg-steel/10 text-steel text-[10px] px-1.5 rounded-sm font-mono font-bold">{graphs.length}</span>
                 </div>
 
                 <div className="flex gap-2">
                     {isSelectionMode ? (
                         <>
-                            <button
+                            <Button
+                                size="sm"
+                                variant="primary"
                                 disabled={selectedIds.size < 2}
                                 onClick={handleMergeClick}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-acid text-void rounded text-xs font-bold hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-4"
                             >
                                 <Merge className="w-3 h-3" />
                                 MERGE ({selectedIds.size})
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="ghost"
                                 onClick={() => {
                                     setIsSelectionMode(false)
                                     setSelectedIds(new Set())
                                 }}
-                                className="px-3 py-1.5 text-steel hover:text-white text-xs transition-colors"
                             >
                                 CANCEL
-                            </button>
+                            </Button>
                         </>
                     ) : (
-                        <button
+                        <Button
+                            size="sm"
+                            variant="secondary"
                             onClick={() => setIsSelectionMode(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded text-xs transition-colors"
                         >
-                            <CheckSquare className="w-3 h-3 text-steel" />
+                            <CheckSquare className="w-3 h-3 text-acid" />
                             SELECT
-                        </button>
+                        </Button>
                     )}
                 </div>
             </div>
@@ -219,7 +206,7 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
                             relative group p-4 rounded-xl border transition-all cursor-pointer backdrop-blur-sm
                             ${currentGraphId === graph.id
                                 ? 'bg-acid/5 border-acid/50 shadow-glow-acid'
-                                : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/10'}
+                                : 'bg-void border-ash/20 hover:border-ash/40 hover:bg-white'}
                             ${isSelectionMode && selectedIds.has(graph.id) ? 'bg-indigo-500/10 border-indigo-500/50' : ''}
                         `}
                         onClick={() => {
@@ -233,22 +220,22 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
                         {isSelectionMode && (
                             <div className="absolute top-4 right-4 z-10">
                                 {selectedIds.has(graph.id) ? (
-                                    <CheckSquare className="w-5 h-5 text-indigo-400 drop-shadow-lg" />
+                                    <CheckSquare className="w-5 h-5 text-indigo-500 drop-shadow-md" />
                                 ) : (
-                                    <Square className="w-5 h-5 text-white/20" />
+                                    <Square className="w-5 h-5 text-steel/20" />
                                 )}
                             </div>
                         )}
 
                         <div className="flex justify-between items-start mb-3 pr-6">
-                            <h4 className={`font-bold text-sm truncate pr-2 flex-1 ${currentGraphId === graph.id ? 'text-acid' : 'text-white'}`} title={graph.name}>
+                            <h4 className={`font-bold text-sm truncate pr-2 flex-1 ${currentGraphId === graph.id ? 'text-acid' : 'text-steel'}`} title={graph.name}>
                                 {graph.name}
                             </h4>
 
                             {!isSelectionMode && (
-                                <div className="hidden group-hover:flex space-x-1 absolute top-3 right-3 bg-black/50 rounded-lg p-1 backdrop-blur-md border border-white/10">
+                                <div className="hidden group-hover:flex space-x-1 absolute top-3 right-3 bg-white/80 rounded-lg p-1 backdrop-blur-md border border-ash/20 shadow-sm">
                                     <button
-                                        className="text-steel hover:text-white p-1.5 rounded hover:bg-white/10 transition-colors"
+                                        className="text-steel-dim hover:text-steel p-1.5 rounded hover:bg-steel/5 transition-colors"
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             setRenameId(graph.id)
@@ -272,19 +259,19 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
                             )}
                         </div>
 
-                        <div className="flex items-center gap-4 text-[10px] text-steel font-mono mb-3">
-                            <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded">
+                        <div className="flex items-center gap-4 text-[10px] text-steel-dim font-mono mb-3">
+                            <div className="flex items-center gap-1.5 bg-steel/5 px-2 py-1 rounded">
                                 <Network className="w-3 h-3" />
-                                <span className="text-white">{graph.nodes.length}</span> NODES
+                                <span className="text-steel font-bold">{graph.nodes.length}</span> NODES
                             </div>
-                            <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded">
+                            <div className="flex items-center gap-1.5 bg-steel/5 px-2 py-1 rounded">
                                 <Share2 className="w-3 h-3" />
-                                <span className="text-white">{graph.edges.length}</span> EDGES
+                                <span className="text-steel font-bold">{graph.edges.length}</span> EDGES
                             </div>
                         </div>
 
-                        <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                            <div className="flex items-center text-[10px] text-white/40">
+                        <div className="flex justify-between items-center pt-3 border-t border-ash/10">
+                            <div className="flex items-center text-[10px] text-steel-dim/50 font-display tracking-widest uppercase">
                                 <Calendar className="w-3 h-3 mr-1.5" />
                                 {new Date(graph.updatedAt || graph.createdAt).toLocaleDateString()}
                             </div>
@@ -295,7 +282,7 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
                                         e.stopPropagation()
                                         handleLoad(graph.id)
                                     }}
-                                    className="text-[10px] bg-white/5 hover:bg-acid hover:text-void text-steel px-2 py-1 rounded transition-colors"
+                                    className="text-[10px] bg-steel/5 hover:bg-acid hover:text-void text-steel-dim px-3 py-1 rounded-lg transition-all duration-300 font-display font-bold tracking-widest uppercase border border-ash/10"
                                 >
                                     OPEN_GRAPH &rarr;
                                 </button>

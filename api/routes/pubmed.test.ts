@@ -18,7 +18,7 @@ vi.mock('../../shared/graphStorage', () => ({
     }
 }))
 
-vi.mock('../../src/core/Logger', () => ({
+vi.mock('../core/Logger', () => ({
     logger: {
         info: vi.fn(),
         warn: vi.fn(),

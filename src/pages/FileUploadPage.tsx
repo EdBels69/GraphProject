@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Loader2, Layers } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody } from '@/components/ui/Card'
@@ -82,12 +82,12 @@ export default function FileUploadPage() {
     const isValidType = allowedTypes.includes(file.type) || allowedExtensions.includes(ext)
 
     if (!isValidType) {
-      setError('Неподдерживаемый формат файла. Используйте PDF, DOCX или TXT.')
+      setError('Unsupported file format. Please use PDF, DOCX or TXT.')
       return
     }
 
     if (file.size > 50 * 1024 * 1024) {
-      setError('Файл слишком большой. Максимум 50 МБ.')
+      setError('File size exceeds limit. Maximum 50 MB allowed.')
       return
     }
 
@@ -115,14 +115,14 @@ export default function FileUploadPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Ошибка загрузки')
+        throw new Error(errorData.error || 'Upload protocol termination')
       }
 
       const data: UploadResult = await response.json()
       setResult(data)
       setStatus('success')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Произошла ошибка')
+      setError(err instanceof Error ? err.message : 'Unknown sequence failure')
       setStatus('error')
     }
   }
@@ -135,168 +135,190 @@ export default function FileUploadPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Назад
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Загрузка файлов для анализа
-        </h1>
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+        <div className="flex items-center gap-6">
+          <Link to="/">
+            <Button variant="ghost" size="sm" className="font-bold text-[10px] tracking-widest text-steel-dim">
+              <ArrowLeft className="w-3 h-3 mr-2" />
+              ВЕРНУТЬСЯ НА ГЛАВНУЮ
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-4xl font-display font-bold text-steel tracking-tight mb-2">
+              Центр загрузки документов
+            </h1>
+            <p className="text-sm font-bold text-steel-dim uppercase tracking-widest">Извлечение знаний из литературы</p>
+          </div>
+        </div>
       </div>
 
-      {/* Upload Zone */}
-      <Card>
-        <CardBody>
-          <div
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            className={`
-              relative border-2 border-dashed rounded-xl p-12 text-center transition-all
-              ${dragActive
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 hover:border-gray-400'
-              }
-              ${status === 'uploading' || status === 'processing' ? 'opacity-50 pointer-events-none' : ''}
-            `}
-          >
-            <input
-              type="file"
-              id="file-upload"
-              accept=".pdf,.docx,.txt"
-              onChange={handleFileSelect}
-              className="hidden"
-              disabled={status === 'uploading' || status === 'processing'}
-            />
+      <Card className="p-12 relative overflow-hidden group border-ash/20 bg-white shadow-xl">
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          className={`
+            relative border-2 border-dashed rounded-2xl p-16 text-center transition-all duration-500
+            ${dragActive
+              ? 'border-acid bg-acid/5 scale-[1.01]'
+              : 'border-ash/20 hover:border-acid/30 hover:bg-void/50'
+            }
+            ${status === 'uploading' || status === 'processing' ? 'opacity-30 pointer-events-none' : ''}
+          `}
+        >
+          <input
+            type="file"
+            id="file-upload"
+            accept=".pdf,.docx,.txt"
+            onChange={handleFileSelect}
+            className="hidden"
+            disabled={status === 'uploading' || status === 'processing'}
+          />
 
-            {!selectedFile ? (
-              <label htmlFor="file-upload" className="cursor-pointer block">
-                <div className="w-16 h-16 mx-auto bg-blue-100 rounded-2xl flex items-center justify-center mb-4">
-                  <Upload className="w-8 h-8 text-blue-600" />
+          {!selectedFile ? (
+            <label htmlFor="file-upload" className="cursor-pointer block">
+              <div className="w-20 h-20 mx-auto bg-void rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-ash/20 shadow-sm">
+                <Upload className="w-8 h-8 text-acid" />
+              </div>
+              <p className="text-xl font-display font-bold text-steel mb-2 tracking-wide">
+                Перетащите файл сюда
+              </p>
+              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest mb-6">
+                ИЛИ НАЖМИТЕ ДЛЯ ВЫБОРА
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <span className="px-3 py-1 bg-void rounded border border-ash/10 text-[9px] font-bold text-steel-dim uppercase">PDF</span>
+                <span className="px-3 py-1 bg-void rounded border border-ash/10 text-[9px] font-bold text-steel-dim uppercase">DOCX</span>
+                <span className="px-3 py-1 bg-void rounded border border-ash/10 text-[9px] font-bold text-steel-dim uppercase">TXT</span>
+                <span className="px-3 py-1 bg-void rounded border border-ash/10 text-[9px] font-bold text-steel-dim uppercase">MAX 50MB</span>
+              </div>
+            </label>
+          ) : (
+            <div className="space-y-8 py-4">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-24 h-24 bg-acid/10 rounded-full flex items-center justify-center border border-acid/20 shadow-glow-acid">
+                  <FileText className="w-10 h-10 text-acid" />
                 </div>
-                <p className="text-lg font-medium text-gray-900 mb-2">
-                  Перетащите файл сюда или нажмите для выбора
-                </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Поддерживаемые форматы: PDF, DOCX, TXT (до 50 МБ)
-                </p>
-              </label>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-center gap-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">{selectedFile.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} МБ
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex justify-center gap-3">
-                  <Button onClick={resetUpload} variant="secondary">
-                    Выбрать другой
-                  </Button>
-                  <Button onClick={uploadFile} disabled={status === 'uploading' || status === 'processing'}>
-                    {status === 'uploading' || status === 'processing' ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {status === 'uploading' ? 'Загрузка...' : 'Анализ...'}
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Загрузить и анализировать
-                      </>
-                    )}
-                  </Button>
+                <div className="text-center">
+                  <p className="text-lg font-display font-bold text-steel tracking-tight">{selectedFile.name}</p>
+                  <p className="text-[10px] font-bold text-steel-dim mt-1 uppercase">
+                    РАЗМЕР ФАЙЛА: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Error */}
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-red-800">Ошибка</p>
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="flex justify-center gap-4">
+                <Button
+                  onClick={resetUpload}
+                  variant="secondary"
+                  className="font-bold text-[10px] tracking-widest"
+                >
+                  СБРОСИТЬ
+                </Button>
+                <Button
+                  onClick={uploadFile}
+                  disabled={status === 'uploading' || status === 'processing'}
+                  className="font-bold text-[10px] tracking-widest bg-acid text-void"
+                >
+                  {status === 'uploading' || status === 'processing' ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {status === 'uploading' ? 'ЗАГРУЗКА...' : 'АНАЛИЗ...'}
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      НАЧАТЬ АНАЛИЗ
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           )}
-        </CardBody>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mt-8 p-6 bg-red-500/5 border border-red-500/20 rounded-xl flex items-start gap-4 animate-in slide-in-from-top-2">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-display font-bold text-red-600 text-sm uppercase tracking-widest mb-1">ОШИБКА ЗАГРУЗКИ</p>
+              <p className="text-xs text-red-600/80 font-bold italic">{error}</p>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Results */}
       {result && (
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Анализ завершён
-                </h2>
-                <p className="text-sm text-gray-500">
-                  {result.document.fileName}
-                </p>
-              </div>
+        <Card className="p-8 border-acid/20 bg-acid/5 animate-in fade-in zoom-in-95 duration-500">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 bg-acid/20 rounded-2xl flex items-center justify-center shadow-glow-acid">
+              <CheckCircle className="w-7 h-7 text-acid" />
             </div>
+            <div>
+              <h2 className="text-2xl font-display font-bold text-steel tracking-tight">
+                Анализ завершен
+              </h2>
+              <p className="text-[10px] font-bold text-acid uppercase tracking-widest">
+                ОБРАБОТАН ФАЙЛ: {result.document.fileName}
+              </p>
+            </div>
+          </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-blue-50 rounded-lg p-4 text-center">
-                <p className="text-2xl font-bold text-blue-600">{result.entities.totalEntities}</p>
-                <p className="text-sm text-gray-600">Сущностей</p>
-              </div>
-              <div className="bg-purple-50 rounded-lg p-4 text-center">
-                <p className="text-2xl font-bold text-purple-600">{result.relations.totalRelations}</p>
-                <p className="text-sm text-gray-600">Связей</p>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4 text-center">
-                <p className="text-2xl font-bold text-green-600">{result.graph.nodes}</p>
-                <p className="text-sm text-gray-600">Узлов графа</p>
-              </div>
-              <div className="bg-orange-50 rounded-lg p-4 text-center">
-                <p className="text-2xl font-bold text-orange-600">{result.chunks.total}</p>
-                <p className="text-sm text-gray-600">Чанков текста</p>
-              </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-void rounded-xl p-6 border border-ash/10 shadow-sm group hover:border-acid/30 transition-all">
+              <p className="text-3xl font-display font-bold text-steel mb-1">{result.entities.totalEntities}</p>
+              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest">СУЩНОСТЕЙ НАЙДЕНО</p>
             </div>
+            <div className="bg-void rounded-xl p-6 border border-ash/10 shadow-sm group hover:border-acid/30 transition-all">
+              <p className="text-3xl font-display font-bold text-steel mb-1">{result.relations.totalRelations}</p>
+              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest">СВЯЗЕЙ ВЫЯВЛЕНО</p>
+            </div>
+            <div className="bg-void rounded-xl p-6 border border-ash/10 shadow-sm group hover:border-acid/30 transition-all">
+              <p className="text-3xl font-display font-bold text-steel mb-1">{result.graph.nodes}</p>
+              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest">УЗЛОВ ГРАФА</p>
+            </div>
+            <div className="bg-void rounded-xl p-6 border border-ash/10 shadow-sm group hover:border-acid/30 transition-all">
+              <p className="text-3xl font-display font-bold text-steel mb-1">{result.chunks.total}</p>
+              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest">СЕГМЕНТОВ ДАННЫХ</p>
+            </div>
+          </div>
 
-            {/* Entities by type */}
-            <div className="mb-6">
-              <h3 className="font-medium text-gray-900 mb-3">Сущности по типам</h3>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(result.entities.byType).map(([type, count]) => (
-                  <span
-                    key={type}
-                    className="px-3 py-1 bg-gray-100 rounded-full text-sm font-medium text-gray-700"
-                  >
-                    {type}: {count}
-                  </span>
-                ))}
-              </div>
+          {/* Entities by type */}
+          <div className="mb-8">
+            <h3 className="text-[10px] font-bold text-steel-dim mb-4 uppercase tracking-widest flex items-center gap-2">
+              <Layers className="w-4 h-4" /> РАСПРЕДЕЛЕНИЕ СУЩНОСТЕЙ
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(result.entities.byType).map(([type, count]) => (
+                <span
+                  key={type}
+                  className="px-3 py-1 bg-white/5 rounded border border-white/10 text-[9px] font-mono font-bold text-steel hover:text-acid hover:border-acid transition-all cursor-default"
+                >
+                  {type.toUpperCase()}: {count}
+                </span>
+              ))}
             </div>
+          </div>
 
-            <div className="flex gap-3">
-              <Button onClick={() => navigate('/analysis', { state: { graph: result.knowledgeGraph } })}>
-                Перейти к анализу графа
-              </Button>
-              <Button variant="secondary" onClick={resetUpload}>
-                Загрузить ещё файл
-              </Button>
-            </div>
-          </CardBody>
+          <div className="flex gap-4 pt-8 border-t border-ash/10">
+            <Button
+              className="font-bold text-xs tracking-widest bg-acid text-void"
+              onClick={() => navigate('/analysis', { state: { graph: result.knowledgeGraph } })}
+            >
+              ПЕРЕЙТИ К ГРАФУ
+            </Button>
+            <Button
+              variant="secondary"
+              className="font-bold text-xs tracking-widest"
+              onClick={resetUpload}
+            >
+              НОВАЯ ЗАГРУЗКА
+            </Button>
+          </div>
         </Card>
       )}
     </div>

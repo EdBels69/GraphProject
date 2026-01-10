@@ -1,44 +1,33 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import GraphViewer from '@/components/GraphViewer'
 import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
-import { EntityType } from '../../shared/contracts/entities'
+import { useApi } from '@/hooks/useApi'
+import { API_ENDPOINTS } from '@/api/endpoints'
+import { Loader2 } from 'lucide-react'
 
 type ViewMode = 'split' | 'graph' | 'table'
 
 export default function GraphViewPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const [graph, setGraph] = useState<Graph | null>(null)
     const [viewMode, setViewMode] = useState<ViewMode>('split')
     const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [typeFilter, setTypeFilter] = useState<string>('all')
-    const [isLoading, setIsLoading] = useState(true)
 
-    useEffect(() => {
-        fetchGraph()
-    }, [id])
+    // Fetch job details first to get graphId
+    const { data: jobData, loading: jobLoading } = useApi<{ graphId: string }>(`/research/jobs/${id}`)
 
-    const fetchGraph = async () => {
-        try {
-            const response = await fetch(`/api/research/jobs/${id}`)
-            if (response.ok) {
-                const data = await response.json()
-                if (data.job?.graphId) {
-                    const graphResponse = await fetch(`/api/graphs/${data.job.graphId}`)
-                    if (graphResponse.ok) {
-                        const graphData = await graphResponse.json()
-                        setGraph(graphData.graph)
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Failed to fetch graph:', error)
-        } finally {
-            setIsLoading(false)
-        }
-    }
+    // Then fetch graph if graphId is available
+    const { data: graphData, loading: graphLoading } = useApi<Graph>(
+        jobData?.graphId ? API_ENDPOINTS.GRAPHS.BY_ID(jobData.graphId) : '',
+        null,
+        !!jobData?.graphId
+    )
+
+    const graph = graphData
+    const isLoading = jobLoading || graphLoading
 
     const nodeTypes = useMemo(() => {
         if (!graph) return []
@@ -61,10 +50,10 @@ export default function GraphViewPage() {
 
     if (isLoading) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
-                    <div style={{ color: '#64748b' }}>Загрузка графа...</div>
+            <div className="min-h-screen bg-void flex items-center justify-center">
+                <div className="text-center space-y-4">
+                    <Loader2 className="w-12 h-12 text-acid animate-spin mx-auto" />
+                    <p className="text-steel font-mono text-xs tracking-widest">LOADING_GRAPH_DATA...</p>
                 </div>
             </div>
         )

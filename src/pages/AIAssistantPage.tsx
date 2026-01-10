@@ -145,11 +145,11 @@ export default function AIAssistantPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-purple-500" />
+            <h1 className="text-2xl font-bold text-steel flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-plasma" />
               AI-помощник
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-steel-dim font-bold">
               Интеллектуальный анализ биомедицинских данных
             </p>
           </div>
@@ -157,11 +157,11 @@ export default function AIAssistantPage() {
 
         <div className="flex items-center gap-2">
           {/* AI Status indicator */}
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${aiStatus?.available
-              ? 'bg-green-100 text-green-700'
-              : 'bg-red-100 text-red-700'
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-bold ${aiStatus?.available
+            ? 'bg-green-500/10 text-green-700'
+            : 'bg-red-500/10 text-red-700'
             }`}>
-            <div className={`w-2 h-2 rounded-full ${aiStatus?.available ? 'bg-green-500' : 'bg-red-500'
+            <div className={`w-2 h-2 rounded-full ${aiStatus?.available ? 'bg-green-500 shadow-glow-green' : 'bg-red-500 shadow-glow-red'
               }`} />
             {aiStatus?.available ? (aiStatus.model || 'AI активен') : 'AI недоступен'}
           </div>
@@ -183,25 +183,25 @@ export default function AIAssistantPage() {
               className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}
             >
               {message.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-5 h-5 text-purple-600" />
+                <div className="w-8 h-8 rounded-full bg-plasma/10 flex items-center justify-center flex-shrink-0 border border-plasma/20">
+                  <Bot className="w-5 h-5 text-plasma" />
                 </div>
               )}
 
-              <div className={`max-w-[70%] rounded-lg p-3 ${message.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-900'
+              <div className={`max-w-[70%] rounded-lg p-3 shadow-sm ${message.role === 'user'
+                ? 'bg-acid text-void font-bold'
+                : 'bg-white text-steel border border-ash/20'
                 }`}>
-                <p className="whitespace-pre-wrap text-sm">{message.content}</p>
-                <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-blue-200' : 'text-gray-400'
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                <p className={`text-[10px] mt-1 uppercase tracking-tighter font-bold ${message.role === 'user' ? 'text-void/60' : 'text-steel-dim'
                   }`}>
                   {message.timestamp.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
 
               {message.role === 'user' && (
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 rounded-full bg-acid flex items-center justify-center flex-shrink-0 shadow-glow-acid/50">
+                  <User className="w-5 h-5 text-void" />
                 </div>
               )}
             </div>
@@ -209,12 +209,12 @@ export default function AIAssistantPage() {
 
           {loading && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-5 h-5 text-purple-600" />
+              <div className="w-8 h-8 rounded-full bg-plasma/10 flex items-center justify-center flex-shrink-0 border border-plasma/20">
+                <Bot className="w-5 h-5 text-plasma" />
               </div>
-              <div className="bg-gray-100 rounded-lg p-3 flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
-                <span className="text-sm text-gray-500">Думаю...</span>
+              <div className="bg-white border border-ash/20 rounded-lg p-3 flex items-center gap-2 shadow-sm">
+                <Loader2 className="w-4 h-4 animate-spin text-plasma" />
+                <span className="text-sm text-steel-dim font-bold uppercase tracking-widest text-[10px]">Thinking...</span>
               </div>
             </div>
           )}
@@ -223,12 +223,12 @@ export default function AIAssistantPage() {
         </CardBody>
 
         {/* Input area */}
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-ash/10 p-4 bg-void">
           {!aiStatus?.available && (
-            <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 p-2 rounded mb-3">
+            <div className="flex items-center gap-2 text-sm text-orange-700 bg-orange-500/10 border border-orange-500/20 p-2 rounded mb-3 font-bold">
               <AlertCircle className="w-4 h-4" />
               <span>AI сервис недоступен. Проверьте конфигурацию.</span>
-              <Button variant="ghost" size="sm" onClick={checkAIStatus}>
+              <Button variant="ghost" size="sm" onClick={checkAIStatus} className="text-orange-700 hover:text-orange-900">
                 Проверить
               </Button>
             </div>
@@ -241,7 +241,7 @@ export default function AIAssistantPage() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Введите сообщение... (Enter для отправки, Shift+Enter для новой строки)"
-              className="flex-1 resize-none border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 resize-none border border-ash/30 bg-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-plasma/20 focus:border-plasma transition-all text-steel"
               rows={2}
               disabled={loading}
             />

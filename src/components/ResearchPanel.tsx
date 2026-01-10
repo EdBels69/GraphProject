@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Search, Loader2, BookOpen, Network, Atom, Globe } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
+import { useApiPost } from '@/hooks/useApi'
+import { API_ENDPOINTS } from '@/api/endpoints'
+import { Button } from './ui/Button'
+import { Input } from './ui/Input'
 
 interface ResearchPanelProps {
     graphId: string
@@ -12,43 +13,33 @@ interface ResearchPanelProps {
 
 export function ResearchPanel({ graphId, onGraphUpdate }: ResearchPanelProps) {
     const [query, setQuery] = useState('')
-    const [isLoading, setIsLoading] = useState(false)
-    const [result, setResult] = useState<{ articlesFound: number, entitiesAdded: number, edgesAdded: number } | null>(null)
     const { addToast } = useToast()
+
+    const { data: result, loading: isLoading, postData } = useApiPost<{
+        articlesFound: number,
+        entitiesAdded: number,
+        edgesAdded: number
+    }>(API_ENDPOINTS.GRAPHS.RESEARCH(graphId))
 
     const handleResearch = async () => {
         if (!query.trim()) return
 
-        setIsLoading(true)
-        setResult(null)
         try {
-            const res = await fetch(`/api/graphs/${graphId}/research`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query })
-            })
-
-            if (res.ok) {
-                const json = await res.json()
-                setResult(json.data)
+            const data = await postData({ query })
+            if (data) {
                 onGraphUpdate()
-                addToast(`Research complete: ${json.data.articlesFound} documents analyzed`, 'success')
-            } else {
-                console.error('Research failed')
-                addToast('Research sequence failed. Check system logs.', 'error')
+                addToast(`Research complete: ${data.articlesFound} documents analyzed`, 'success')
             }
         } catch (error) {
             console.error(error)
-            addToast('Network Error: Research modules unreachable', 'error')
-        } finally {
-            setIsLoading(false)
+            addToast('Research sequence failed. Check system logs.', 'error')
         }
     }
 
     return (
         <div className="h-full flex flex-col p-4 space-y-6 font-sans">
             <div className="space-y-1">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-steel flex items-center gap-2">
                     <Atom className="w-4 h-4 text-plasma" />
                     AUTONOMOUS_RESEARCHER
                 </h3>
@@ -57,27 +48,28 @@ export function ResearchPanel({ graphId, onGraphUpdate }: ResearchPanelProps) {
                 </p>
             </div>
 
-            <div className="p-4 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm space-y-4">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-acid tracking-widest uppercase">Target Topic</label>
+            <div className="glass-panel border-ash/20 p-4 rounded-xl space-y-4">
+                <div className="space-y-3">
+                    <label className="text-[10px] font-display font-bold text-acid tracking-widest uppercase mb-1 block">Target Topic</label>
                     <div className="flex gap-2">
                         <div className="relative flex-1">
-                            <Globe className="absolute left-3 top-2.5 w-4 h-4 text-steel/50" />
-                            <input
+                            <Globe className="absolute left-3 top-2.5 w-4 h-4 text-steel/30 z-10" />
+                            <Input
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder="e.g. 'CRISPR off-target effects'"
-                                className="w-full bg-black/40 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm text-white placeholder:text-steel/40 focus:outline-none focus:border-acid/50 focus:ring-1 focus:ring-acid/20 font-mono transition-all"
+                                className="pl-10 py-2"
                                 onKeyDown={(e) => e.key === 'Enter' && handleResearch()}
                             />
                         </div>
-                        <button
+                        <Button
                             onClick={handleResearch}
                             disabled={isLoading || !query.trim()}
-                            className="bg-acid text-void hover:bg-white transition-colors px-4 rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-glow-acid"
+                            variant="primary"
+                            className="px-6 h-[46px]"
                         >
                             {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <Search className="w-4 h-4" />}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -96,26 +88,26 @@ export function ResearchPanel({ graphId, onGraphUpdate }: ResearchPanelProps) {
             )}
 
             {result && (
-                <div className="p-1 rounded-xl bg-gradient-to-br from-acid/20 to-plasma/20 border border-white/10 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="bg-black/80 backdrop-blur-xl rounded-lg p-5">
-                        <h4 className="font-bold text-white text-sm mb-4 flex items-center gap-2">
+                <div className="glass-panel border-ash/20 p-1 rounded-xl animate-in fade-in slide-in-from-bottom-4">
+                    <div className="bg-void rounded-lg p-5">
+                        <h4 className="font-display font-bold text-steel text-xs tracking-widest mb-4 flex items-center gap-2">
                             <Network className="w-4 h-4 text-acid" />
                             MISSION_COMPLETE
                         </h4>
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xl font-bold text-white font-mono">{result.articlesFound}</div>
-                                <div className="text-[10px] text-steel uppercase tracking-wider flex items-center justify-center gap-1 mt-1">
-                                    <BookOpen className="w-3 h-3" /> Papers
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                            <div className="p-3 bg-steel/5 rounded-xl border border-ash/10">
+                                <div className="text-xl font-display font-bold text-steel tracking-widest">{result.articlesFound}</div>
+                                <div className="text-[9px] text-steel-dim uppercase tracking-tighter flex items-center justify-center gap-1 mt-1 font-bold">
+                                    <BookOpen className="w-2.5 h-2.5" /> Papers
                                 </div>
                             </div>
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xl font-bold text-acid font-mono">+{result.entitiesAdded}</div>
-                                <div className="text-[10px] text-steel uppercase tracking-wider mt-1">New Nodes</div>
+                            <div className="p-3 bg-steel/5 rounded-xl border border-ash/10">
+                                <div className="text-xl font-display font-bold text-acid tracking-widest">+{result.entitiesAdded}</div>
+                                <div className="text-[9px] text-steel-dim uppercase tracking-tighter mt-1 font-bold">Nodes</div>
                             </div>
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xl font-bold text-plasma font-mono">+{result.edgesAdded}</div>
-                                <div className="text-[10px] text-steel uppercase tracking-wider mt-1">New Edges</div>
+                            <div className="p-3 bg-steel/5 rounded-xl border border-ash/10">
+                                <div className="text-xl font-display font-bold text-plasma tracking-widest">+{result.edgesAdded}</div>
+                                <div className="text-[9px] text-steel-dim uppercase tracking-tighter mt-1 font-bold">Edges</div>
                             </div>
                         </div>
                     </div>

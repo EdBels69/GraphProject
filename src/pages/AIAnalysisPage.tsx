@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Graph } from '../../shared/types'
+import { Graph } from '../../shared/contracts/graph'
+import { useApi, useApiPost } from '@/hooks/useApi'
+import { API_ENDPOINTS } from '@/api/endpoints'
 
 type AnalysisMode = 'graph' | 'edge' | 'metrics'
 
@@ -18,17 +20,24 @@ export default function AIAnalysisPage() {
     const navigate = useNavigate()
 
     const [mode, setMode] = useState<AnalysisMode>('graph')
-    const [graph, setGraph] = useState<Graph | null>(null)
     const [messages, setMessages] = useState<Message[]>([])
     const [inputValue, setInputValue] = useState('')
-    const [isLoading, setIsLoading] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     const preselectedNode = searchParams.get('node')
 
-    useEffect(() => {
-        fetchGraph()
-    }, [id])
+    // Fetch job then graph
+    const { data: jobData, loading: jobLoading } = useApi<{ graphId: string }>(API_ENDPOINTS.RESEARCH.JOBS(id || ''))
+    const { data: graphData, loading: graphLoading } = useApi<Graph>(
+        jobData?.graphId ? API_ENDPOINTS.GRAPHS.BY_ID(jobData.graphId) : '',
+        null,
+        !!jobData?.graphId
+    )
+    const graph = graphData
+
+    const { postData: askGraph, loading: askLoading } = useApiPost<{ answer: string }>(API_ENDPOINTS.AI.ASK_GRAPH)
+
+    const isLoading = jobLoading || graphLoading || askLoading
 
     useEffect(() => {
         if (preselectedNode && graph) {
@@ -44,24 +53,6 @@ export default function AIAnalysisPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
 
-    const fetchGraph = async () => {
-        try {
-            const response = await fetch(`/api/research/jobs/${id}`)
-            if (response.ok) {
-                const data = await response.json()
-                if (data.job?.graphId) {
-                    const graphResponse = await fetch(`/api/graphs/${data.job.graphId}`)
-                    if (graphResponse.ok) {
-                        const graphData = await graphResponse.json()
-                        setGraph(graphData.graph)
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Failed to fetch graph:', error)
-        }
-    }
-
     const handleSend = async () => {
         if (!inputValue.trim() || isLoading) return
 
@@ -75,7 +66,6 @@ export default function AIAnalysisPage() {
 
         setMessages(prev => [...prev, userMessage])
         setInputValue('')
-        setIsLoading(true)
 
         try {
             const graphContext = graph ? {
@@ -87,28 +77,23 @@ export default function AIAnalysisPage() {
                 edges: graph.edges.slice(0, 500).map(e => ({
                     source: e.source,
                     target: e.target,
-                    relation: e.relation
+                    // @ts-ignore - backward compatibility for relations
+                    relation: e.relation || ''
                 })),
                 nodeCount: graph.nodes.length,
                 edgeCount: graph.edges.length
             } : null
 
-            const response = await fetch('/api/ai/ask-graph', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    question: inputValue,
-                    graphContext,
-                    analysisMode: mode
-                })
+            const data = await askGraph({
+                question: userMessage.content,
+                graphContext,
+                analysisMode: mode
             })
-
-            const data = await response.json()
 
             const assistantMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: data.answer || 'Не удалось получить ответ',
+                content: data?.answer || 'Не удалось получить ответ',
                 timestamp: new Date()
             }
 
@@ -122,8 +107,6 @@ export default function AIAnalysisPage() {
                 timestamp: new Date()
             }
             setMessages(prev => [...prev, errorMessage])
-        } finally {
-            setIsLoading(false)
         }
     }
 
