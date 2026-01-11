@@ -27,8 +27,8 @@ router.get('/', async (req, res) => {
       query: q,
       sources: sourceArray as Array<'scholar' | 'pubmed' | 'crossref' | 'arxiv'>,
       maxResults: maxResults ? parseInt(maxResults as string) : 20,
-      yearFrom: yearFrom ? parseInt(yearFrom as string) : undefined,
-      yearTo: yearTo ? parseInt(yearTo as string) : undefined,
+      fromDate: yearFrom ? `${yearFrom as string}-01-01` : undefined,
+      toDate: yearTo ? `${yearTo as string}-12-31` : undefined,
       sortBy: ((sortBy as string) || 'relevance') as 'relevance' | 'date' | 'citations'
     })
 
@@ -55,8 +55,8 @@ router.post('/advanced', async (req, res) => {
       query,
       sources,
       maxResults,
-      yearFrom,
-      yearTo,
+      fromDate: yearFrom ? `${yearFrom}-01-01` : undefined,
+      toDate: yearTo ? `${yearTo}-12-31` : undefined,
       sortBy,
       fields,
       hasAbstract,

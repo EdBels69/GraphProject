@@ -178,7 +178,38 @@ export class FileStorage {
 
         return { folders: folders.length, files, sizeBytes }
     }
+
+    /**
+     * Save text content to file
+     */
+    async saveText(topic: string, metadata: ArticleMetadata, content: string): Promise<string> {
+        const folderName = this.generateFolderName(topic)
+        const topicDir = path.join(this.baseDir, folderName)
+        this.ensureDir(topicDir)
+
+        const fileName = this.generateFileName(metadata).replace('.pdf', '.txt')
+        const filePath = path.join(topicDir, fileName)
+
+        await fs.promises.writeFile(filePath, content, 'utf-8')
+        logger.info('FileStorage', `Saved text to ${filePath}`)
+
+        return filePath
+    }
+
+    /**
+     * Get list of text files for a topic
+     */
+    async getTextFiles(topic: string): Promise<string[]> {
+        const folderName = this.generateFolderName(topic)
+        const topicDir = path.join(this.baseDir, folderName)
+
+        if (!fs.existsSync(topicDir)) return []
+
+        const files = await fs.promises.readdir(topicDir)
+        return files
+            .filter(f => f.endsWith('.txt'))
+            .map(f => path.join(topicDir, f))
+    }
 }
 
 export const fileStorage = new FileStorage()
-

@@ -40,8 +40,8 @@ describe('ErrorBoundary', () => {
             </ErrorBoundary>
         )
 
-        expect(getByText('SYSTEM_INTEGRITY_COMPROMISED')).toBeInTheDocument()
-        expect(getByText(/unexpected neural collision/i)).toBeInTheDocument()
+        expect(getByText('error_boundary.title')).toBeInTheDocument()
+        expect(getByText('error_boundary.subtitle')).toBeInTheDocument()
     })
 
     it('should display fault details in expandable section', () => {
@@ -51,7 +51,7 @@ describe('ErrorBoundary', () => {
             </ErrorBoundary>
         )
 
-        expect(getByText('FAULT_DETAILS_STREAM')).toBeInTheDocument()
+        expect(getByText('error_boundary.fault_details')).toBeInTheDocument()
         expect(getByText(/Test error message/)).toBeInTheDocument()
     })
 
@@ -62,7 +62,7 @@ describe('ErrorBoundary', () => {
             </ErrorBoundary>
         )
 
-        const rebootButton = getByText('REBOOT_SESSION')
+        const rebootButton = getByText('error_boundary.reboot')
         expect(rebootButton).toBeInTheDocument()
         expect(rebootButton.tagName).toBe('BUTTON')
     })

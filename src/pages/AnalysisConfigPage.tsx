@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Play, Network, TableProperties, ShieldCheck, Database, Loader2, Check } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
+import { Button } from '@/components/ui/Button'
 
 interface ColumnDefinition {
     id: string
@@ -122,21 +123,23 @@ export default function AnalysisConfigPage() {
         <div className="max-w-4xl mx-auto pb-32 animate-fade-in space-y-8">
             {/* Header */}
             <div className="flex flex-col gap-4">
-                <button
+                <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => navigate(`/research/${id}/papers`)}
-                    className="flex items-center gap-2 text-steel-dim hover:text-acid w-fit transition-colors font-bold text-[10px] tracking-widest uppercase"
+                    className="flex items-center gap-2 text-steel-dim hover:text-acid w-fit transition-colors font-medium mb-4"
                 >
-                    <ArrowLeft className="w-3 h-3" /> Назад к статьям
-                </button>
+                    <ArrowLeft className="w-4 h-4" /> Назад к статьям
+                </Button>
 
                 <div>
                     <div>
-                        <h1 className="text-4xl font-display font-bold text-steel tracking-tight mb-2">
+                        <h1 className="text-4xl font-semibold text-steel mb-4">
                             Настройка анализа
                         </h1>
-                        <div className="flex items-center gap-4 text-sm font-bold text-steel-dim uppercase tracking-tight">
-                            <span className="bg-void px-2 py-1 rounded text-[10px] border border-ash/10">ЭТАП: КОНФИГУРАЦИЯ</span>
-                            <span className="text-[10px]">ВЫБРАНО: <span className="text-acid">{includedCount} ДОКУМЕНТОВ</span></span>
+                        <div className="flex items-center gap-4 text-sm font-medium text-steel-dim">
+                            <span className="bg-zinc-100 px-3 py-1 rounded-md border border-ash/40">ЭТАП: КОНФИГУРАЦИЯ</span>
+                            <span>ВЫБРАНО: <span className="text-acid">{includedCount} ДОКУМЕНТОВ</span></span>
                         </div>
                     </div>
                 </div>
@@ -159,10 +162,10 @@ export default function AnalysisConfigPage() {
                             <Network className="w-6 h-6" />
                         </div>
                         <div className="flex-1">
-                            <h3 className={`text-lg font-bold font-display ${extractEntities ? 'text-steel' : 'text-steel-dim'}`}>
+                            <h3 className={`text-xl font-semibold ${extractEntities ? 'text-steel' : 'text-steel-dim'}`}>
                                 Построение графа знаний
                             </h3>
-                            <p className="text-sm text-steel-dim mt-1 leading-relaxed">
+                            <p className="text-base text-steel-dim mt-2 leading-relaxed">
                                 Использование LLM для извлечения сущностей (белки, гены, химические вещества) и семантических связей.
                                 Создает интерактивную структуру знаний.
                             </p>
@@ -193,10 +196,10 @@ export default function AnalysisConfigPage() {
                             <TableProperties className="w-6 h-6" />
                         </div>
                         <div className="flex-1">
-                            <h3 className={`text-lg font-bold font-display ${extractColumns ? 'text-steel' : 'text-steel-dim'}`}>
+                            <h3 className={`text-xl font-semibold ${extractColumns ? 'text-steel' : 'text-steel-dim'}`}>
                                 Извлечение структурированных данных
                             </h3>
-                            <p className="text-sm text-steel-dim mt-1 leading-relaxed">
+                            <p className="text-base text-steel-dim mt-2 leading-relaxed">
                                 Автоматизированный сбор конкретных параметров в сравнительную таблицу (P-values, размеры когорт, методы).
                             </p>
                         </div>
@@ -217,17 +220,17 @@ export default function AnalysisConfigPage() {
                     <div className="pl-4 border-l-2 border-plasma/20 ml-9 space-y-6 pt-2">
                         {/* Domain Selector */}
                         <div className="space-y-3">
-                            <label className="text-[10px] font-bold text-steel-dim uppercase tracking-widest flex items-center gap-2">
-                                <Database className="w-3 h-3" /> Схема извлечения
+                            <label className="text-sm font-semibold text-steel-dim flex items-center gap-2">
+                                <Database className="w-4 h-4" /> Схема извлечения
                             </label>
                             <div className="flex flex-wrap gap-2">
                                 <button
                                     onClick={() => setSelectedDomain('all')}
                                     className={`
-                                        px-4 py-2 rounded text-[10px] font-bold font-display transition-all border uppercase tracking-wider
+                                        px-5 py-2.5 rounded-lg text-sm font-semibold transition-all border
                                         ${selectedDomain === 'all'
-                                            ? 'bg-plasma/20 border-plasma text-plasma shadow-glow-plasma'
-                                            : 'bg-void border-ash/20 text-steel-dim hover:text-steel'}
+                                            ? 'bg-plasma text-white border-plasma shadow-sm'
+                                            : 'bg-white border-ash/40 text-steel-dim hover:text-steel'}
                                     `}
                                 >
                                     ВСЕ ПОЛЯ
@@ -237,10 +240,10 @@ export default function AnalysisConfigPage() {
                                         key={d.id}
                                         onClick={() => setSelectedDomain(d.id)}
                                         className={`
-                                            px-4 py-2 rounded text-[10px] font-bold font-display transition-all border uppercase tracking-wider
+                                            px-5 py-2.5 rounded-lg text-sm font-semibold transition-all border
                                             ${selectedDomain === d.id
-                                                ? 'bg-plasma/20 border-plasma text-plasma shadow-glow-plasma'
-                                                : 'bg-void border-ash/20 text-steel-dim hover:text-steel'}
+                                                ? 'bg-plasma text-white border-plasma shadow-sm'
+                                                : 'bg-white border-ash/40 text-steel-dim hover:text-steel'}
                                         `}
                                     >
                                         {d.name.toUpperCase()}
@@ -290,22 +293,22 @@ export default function AnalysisConfigPage() {
 
             {/* Launch Button */}
             <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-void via-void/90 to-transparent pointer-events-none flex justify-center lg:justify-end lg:pr-12 gap-4">
-                <button
+                <Button
+                    variant="primary"
+                    size="lg"
                     onClick={handleStartAnalysis}
                     disabled={isSubmitting || (!extractEntities && !extractColumns)}
                     className={`
-                        pointer-events-auto px-8 py-4 rounded-xl font-display font-bold tracking-widest text-lg shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center gap-3
-                        ${(isSubmitting || (!extractEntities && !extractColumns))
-                            ? 'bg-ash/20 text-steel-dim cursor-not-allowed border border-ash/30'
-                            : 'bg-acid text-void shadow-glow-acid'}
+                        pointer-events-auto px-12 py-6 text-xl shadow-xl
+                        ${(isSubmitting || (!extractEntities && !extractColumns)) && 'opacity-50 grayscale cursor-not-allowed'}
                     `}
                 >
                     {isSubmitting ? (
-                        <><Loader2 className="w-5 h-5 animate-spin" /> ИНИЦИАЛИЗАЦИЯ...</>
+                        <><Loader2 className="w-6 h-6 animate-spin" /> ИНИЦИАЛИЗАЦИЯ...</>
                     ) : (
-                        <><Play className="w-5 h-5 fill-current" /> НАЧАТЬ АНАЛИЗ</>
+                        <><Play className="w-6 h-6 fill-current" /> НАЧАТЬ АНАЛИЗ</>
                     )}
-                </button>
+                </Button>
             </div>
         </div>
     )

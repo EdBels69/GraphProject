@@ -441,3 +441,5 @@ ${edgesXML}
 </gexf>`
   }
 }
+
+export const knowledgeGraphBuilder = new KnowledgeGraphBuilder()

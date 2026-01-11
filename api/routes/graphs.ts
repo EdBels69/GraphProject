@@ -42,4 +42,21 @@ router.post('/:id/research', GraphController.research)
 router.get('/:id/export/gexf', GraphController.exportGEXF)
 router.get('/:id/export/pdf', GraphController.exportPDF)
 
+// Citation Graph (New)
+import { jobManager } from '../services/jobs/JobManager'
+import { citationGraphBuilder } from '../services/graph/CitationGraphBuilder'
+
+router.get('/citation/:jobId', async (req, res) => {
+    try {
+        const job = jobManager.getJob(req.params.jobId)
+        if (!job) {
+            return res.status(404).json({ error: 'Job not found' })
+        }
+        const graph = citationGraphBuilder.buildGraph(job)
+        res.json(graph)
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to build citation graph' })
+    }
+})
+
 export default router

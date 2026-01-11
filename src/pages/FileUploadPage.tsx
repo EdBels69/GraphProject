@@ -145,10 +145,10 @@ export default function FileUploadPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-4xl font-display font-bold text-steel tracking-tight mb-2">
+            <h1 className="mb-2">
               Центр загрузки документов
             </h1>
-            <p className="text-sm font-bold text-steel-dim uppercase tracking-widest">Извлечение знаний из литературы</p>
+            <p className="text-xs font-bold text-steel-dim uppercase tracking-widest">Извлечение знаний из литературы</p>
           </div>
         </div>
       </div>
@@ -182,10 +182,10 @@ export default function FileUploadPage() {
               <div className="w-20 h-20 mx-auto bg-void rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-ash/20 shadow-sm">
                 <Upload className="w-8 h-8 text-acid" />
               </div>
-              <p className="text-xl font-display font-bold text-steel mb-2 tracking-wide">
+              <h3 className="text-steel mb-2">
                 Перетащите файл сюда
-              </p>
-              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest mb-6">
+              </h3>
+              <p className="text-xs font-bold text-steel-dim uppercase tracking-widest mb-6 border-b border-ash/10 pb-2">
                 ИЛИ НАЖМИТЕ ДЛЯ ВЫБОРА
               </p>
               <div className="flex flex-wrap justify-center gap-3">
@@ -259,10 +259,10 @@ export default function FileUploadPage() {
               <CheckCircle className="w-7 h-7 text-acid" />
             </div>
             <div>
-              <h2 className="text-2xl font-display font-bold text-steel tracking-tight">
+              <h2 className="mb-1">
                 Анализ завершен
               </h2>
-              <p className="text-[10px] font-bold text-acid uppercase tracking-widest">
+              <p className="text-xs font-bold text-acid uppercase tracking-widest">
                 ОБРАБОТАН ФАЙЛ: {result.document.fileName}
               </p>
             </div>
@@ -270,20 +270,20 @@ export default function FileUploadPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-void rounded-xl p-6 border border-ash/10 shadow-sm group hover:border-acid/30 transition-all">
-              <p className="text-3xl font-display font-bold text-steel mb-1">{result.entities.totalEntities}</p>
-              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest">СУЩНОСТЕЙ НАЙДЕНО</p>
+              <h2 className="text-steel mb-1">{result.entities.totalEntities}</h2>
+              <p className="text-xs font-bold text-steel-dim uppercase tracking-widest">СУЩНОСТЕЙ НАЙДЕНО</p>
             </div>
             <div className="bg-void rounded-xl p-6 border border-ash/10 shadow-sm group hover:border-acid/30 transition-all">
-              <p className="text-3xl font-display font-bold text-steel mb-1">{result.relations.totalRelations}</p>
-              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest">СВЯЗЕЙ ВЫЯВЛЕНО</p>
+              <h2 className="text-steel mb-1">{result.relations.totalRelations}</h2>
+              <p className="text-xs font-bold text-steel-dim uppercase tracking-widest">СВЯЗЕЙ ВЫЯВЛЕНО</p>
             </div>
             <div className="bg-void rounded-xl p-6 border border-ash/10 shadow-sm group hover:border-acid/30 transition-all">
-              <p className="text-3xl font-display font-bold text-steel mb-1">{result.graph.nodes}</p>
-              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest">УЗЛОВ ГРАФА</p>
+              <h2 className="text-steel mb-1">{result.graph.nodes}</h2>
+              <p className="text-xs font-bold text-steel-dim uppercase tracking-widest">УЗЛОВ ГРАФА</p>
             </div>
             <div className="bg-void rounded-xl p-6 border border-ash/10 shadow-sm group hover:border-acid/30 transition-all">
-              <p className="text-3xl font-display font-bold text-steel mb-1">{result.chunks.total}</p>
-              <p className="text-[10px] font-bold text-steel-dim uppercase tracking-widest">СЕГМЕНТОВ ДАННЫХ</p>
+              <h2 className="text-steel mb-1">{result.chunks.total}</h2>
+              <p className="text-xs font-bold text-steel-dim uppercase tracking-widest">СЕГМЕНТОВ ДАННЫХ</p>
             </div>
           </div>
 

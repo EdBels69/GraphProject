@@ -35,9 +35,10 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    strictPort: true, // Fail if 5173 is busy, prevents taking backend's port 3001
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:3002',
         changeOrigin: true
       }
     }

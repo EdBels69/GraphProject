@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Loader2, CheckCircle, XCircle, Clock, FileText, Activity, ArrowRight, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { useTranslation } from 'react-i18next'
+import { useSocket } from '@/hooks/useSocket'
 
 interface ResearchJob {
     id: string
@@ -17,16 +19,49 @@ interface ResearchJob {
 }
 
 export default function ResearchPage() {
+    const { t, i18n } = useTranslation()
     const navigate = useNavigate()
     const [filterQuery, setFilterQuery] = useState('')
     const [jobs, setJobs] = useState<ResearchJob[]>([])
     const [loading, setLoading] = useState(true)
+
+    const { socket, isConnected, joinJob, leaveJob } = useSocket()
 
     useEffect(() => {
         fetchJobs()
         const interval = setInterval(fetchJobs, 5000)
         return () => clearInterval(interval)
     }, [])
+
+    // WebSocket Integration: Join rooms
+    useEffect(() => {
+        if (!socket || !isConnected) return
+        jobs.forEach(job => {
+            if (['searching', 'downloading', 'analyzing'].includes(job.status)) {
+                joinJob(job.id)
+            }
+        })
+    }, [jobs, isConnected])
+
+    // WebSocket Integration: Listen for events
+    useEffect(() => {
+        if (!socket) return
+
+        const handleProgress = (data: any) => {
+            setJobs(prev => prev.map(job => {
+                if (job.id === data.jobId) {
+                    return { ...job, progress: data.progress, status: data.status || job.status }
+                }
+                return job
+            }))
+            if (['completed', 'failed', 'cancelled'].includes(data.status)) {
+                setTimeout(fetchJobs, 1000)
+            }
+        }
+
+        socket.on('job_progress', handleProgress)
+        return () => { socket.off('job_progress', handleProgress) }
+    }, [socket])
 
     const fetchJobs = async () => {
         try {
@@ -45,7 +80,7 @@ export default function ResearchPage() {
     const getStatusIcon = (status: ResearchJob['status']) => {
         switch (status) {
             case 'completed':
-                return <CheckCircle className="w-5 h-5 text-acid shadow-glow-acid/20" />
+                return <CheckCircle className="w-5 h-5 text-acid" />
             case 'failed':
             case 'cancelled':
                 return <XCircle className="w-5 h-5 text-red-500" />
@@ -58,13 +93,13 @@ export default function ResearchPage() {
 
     const getStatusText = (status: ResearchJob['status']) => {
         const texts: Record<string, string> = {
-            pending: 'Ожидание',
-            searching: 'Поиск статей...',
-            downloading: 'Загрузка PDF...',
-            analyzing: 'Анализ текстов...',
-            completed: 'Завершен',
-            failed: 'Ошибка',
-            cancelled: 'Отменен'
+            pending: t('common.pending'),
+            searching: t('common.searching'),
+            downloading: t('common.downloading'),
+            analyzing: t('common.analyzing'),
+            completed: t('common.completed'),
+            failed: t('common.failed'),
+            cancelled: t('common.cancelled')
         }
         return texts[status] || status
     }
@@ -87,28 +122,27 @@ export default function ResearchPage() {
         <div className="space-y-10 animate-fade-in pb-20">
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-ash/10">
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-acid text-[10px] font-bold tracking-[0.3em] uppercase">
-                        <Activity className="w-3 h-3" />
-                        ЦЕНТР УПРАВЛЕНИЯ ПРОЕКТАМИ
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-acid text-sm font-semibold">
+                        <Activity className="w-4 h-4" />
+                        {t('research.management_center')}
                     </div>
-                    <h1 className="text-4xl md:text-6xl font-display font-bold text-steel tracking-tighter">
-                        АРХИВ <span className="text-steel/40 font-light italic">CORTEX</span>
+                    <h1 className="text-steel">
+                        {t('research.title_main')} <span className="text-zinc-400 font-normal">{t('research.title_prefix')}</span>
                     </h1>
-                    <p className="text-steel-dim text-sm max-w-lg font-medium leading-relaxed">
-                        Ваша персональная библиотека исследований. Управление графами знаний и аналитическими отчетами.
+                    <p className="text-steel-dim text-lg font-normal max-w-xl leading-relaxed">
+                        {t('research.subtitle')}
                     </p>
                 </div>
 
                 <div className="relative group w-full md:w-96">
-                    <div className="absolute inset-0 bg-acid/5 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-steel-dim group-focus-within:text-acid transition-colors" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-steel-dim group-focus-within:text-acid transition-colors" />
                     <input
                         type="text"
                         value={filterQuery}
                         onChange={(e) => setFilterQuery(e.target.value)}
-                        placeholder="Поиск по названию исследования..."
-                        className="w-full pl-12 pr-4 py-4 bg-void border border-ash/20 rounded-2xl text-steel text-sm focus:outline-none focus:border-acid/50 transition-all placeholder:text-steel-dim/40 shadow-sm"
+                        placeholder={t('research.search_placeholder')}
+                        className="w-full pl-12 pr-4 py-4 bg-white border border-ash/60 rounded-2xl text-steel text-base focus:outline-none focus:border-acid focus:ring-4 focus:ring-acid/5 transition-all shadow-sm"
                     />
                 </div>
             </div>
@@ -120,16 +154,16 @@ export default function ResearchPage() {
                         <div className="w-20 h-20 bg-void border border-ash/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
                             <FileText className="w-8 h-8 text-steel-dim/30" />
                         </div>
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-display font-bold text-steel tracking-wide">АРХИВ ПУСТ</h3>
-                            <p className="text-steel-dim text-xs uppercase tracking-[0.2em] font-medium">
-                                {filterQuery ? 'Нет соответствий параметрам фильтра' : 'Начните свое первое исследование на главной'}
+                        <div className="space-y-4">
+                            <h3 className="text-2xl font-semibold text-steel">{t('research.empty_archive')}</h3>
+                            <p className="text-steel-dim text-base font-normal">
+                                {filterQuery ? t('research.no_filter_matches') : t('research.start_first_research')}
                             </p>
                         </div>
                         {!filterQuery && (
-                            <Button variant="primary" size="lg" onClick={() => navigate('/')} className="px-10 shadow-glow-acid/20">
-                                <Activity className="w-4 h-4 mr-2" />
-                                ЗАПУСТИТЬ СИНТЕЗ
+                            <Button variant="primary" size="lg" onClick={() => navigate('/')} className="px-12 h-14 text-base">
+                                <Activity className="w-5 h-5 mr-3" />
+                                {t('research.launch_synthesis')}
                             </Button>
                         )}
                     </div>
@@ -148,28 +182,28 @@ export default function ResearchPage() {
                                         {getStatusIcon(job.status)}
                                     </div>
                                     <div className="space-y-2 flex-1 min-w-0">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="text-2xl font-display font-bold text-steel group-hover:text-acid transition-colors tracking-tight truncate">
+                                        <div className="flex items-center gap-4">
+                                            <h3 className="text-2xl font-semibold group-hover:text-acid transition-colors truncate">
                                                 {job.topic}
                                             </h3>
                                             {job.status === 'completed' && (
-                                                <div className="px-2 py-0.5 rounded-full bg-acid/10 border border-acid/20 text-[9px] font-bold text-acid uppercase tracking-tighter">
-                                                    READY
+                                                <div className="px-3 py-1 rounded-lg bg-zinc-100 border border-ash/40 text-xs font-semibold text-steel">
+                                                    {t('research.ready')}
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-mono text-steel-dim uppercase tracking-[0.1em] font-bold">
-                                            <span className="flex items-center gap-2 py-1 px-3 rounded-lg bg-ash/5">
-                                                <Clock className="w-3 h-3 text-acid" />
-                                                ID: {job.id.slice(0, 8)} • {new Date(job.createdAt).toLocaleDateString('ru-RU')}
+                                        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-medium text-steel-dim">
+                                            <span className="flex items-center gap-2 py-1.5 px-4 rounded-xl bg-zinc-50 border border-ash/20">
+                                                <Clock className="w-4 h-4 text-acid" />
+                                                ID: {job.id.slice(0, 8)} • {new Date(job.createdAt).toLocaleDateString(i18n.language === 'ru' ? 'ru-RU' : 'en-US')}
                                             </span>
-                                            <span className="flex items-center gap-2 py-1 px-3 rounded-lg bg-ash/5">
-                                                <FileText className="w-3 h-3 text-plasma" />
-                                                {job.articlesFound || 0} ИСТОЧНИКОВ
+                                            <span className="flex items-center gap-2 py-1.5 px-4 rounded-xl bg-zinc-50 border border-ash/20">
+                                                <FileText className="w-4 h-4 text-plasma" />
+                                                {job.articlesFound || 0} {t('research.sources')}
                                             </span>
-                                            <div className="flex items-center gap-2 text-steel">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${job.status === 'completed' ? 'bg-acid shadow-glow-acid' : 'bg-plasma animate-pulse'}`} />
+                                            <div className="flex items-center gap-2 text-steel font-semibold">
+                                                <div className={`w-2.5 h-2.5 rounded-full ${job.status === 'completed' ? 'bg-acid' : 'bg-plasma animate-pulse'}`} />
                                                 {getStatusText(job.status)}
                                             </div>
                                         </div>
@@ -187,9 +221,9 @@ export default function ResearchPage() {
                                         variant="secondary"
                                         size="lg"
                                         onClick={() => navigate(`/research/${job.id}/papers`)}
-                                        className="rounded-2xl border-ash/20 hover:border-steel px-6"
+                                        className="rounded-2xl border-ash/40 hover:border-steel px-8 text-sm font-semibold"
                                     >
-                                        ОТКРЫТЬ
+                                        {t('research.open')}
                                     </Button>
 
                                     {job.status === 'completed' && job.graphId && (
@@ -197,11 +231,23 @@ export default function ResearchPage() {
                                             variant="primary"
                                             size="lg"
                                             onClick={() => navigate(`/research/${job.id}/graph`)}
-                                            className="rounded-2xl shadow-glow-acid/10 px-6 group/btn"
+                                            className="rounded-2xl px-8 group/btn text-sm font-semibold"
                                         >
-                                            <Activity className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
-                                            ГРАФ
-                                            <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                                            <Activity className="w-5 h-5 mr-3 group-hover/btn:animate-pulse" />
+                                            {t('research.graph')}
+                                            <ArrowRight className="w-5 h-5 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                                        </Button>
+                                    )}
+
+                                    {job.status === 'completed' && (
+                                        <Button
+                                            variant="secondary"
+                                            size="lg"
+                                            onClick={() => navigate(`/research/${job.id}/citation-map`)}
+                                            className="rounded-2xl px-6 text-sm font-medium border-ash/40 hover:border-steel"
+                                            title={t('research.citation_map')}
+                                        >
+                                            🕸️
                                         </Button>
                                     )}
                                 </div>

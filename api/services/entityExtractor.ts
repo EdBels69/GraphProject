@@ -54,11 +54,11 @@ export class EntityExtractor {
     // Gene patterns (HGNC style)
     this.patterns.set('gene', /\b[A-Z][A-Z0-9]{1,5}(?:\d)?(?:-[A-Z0-9]+)?\b/g)
 
-    // Metabolite patterns
-    this.patterns.set('metabolite', /\b(?:carnitine|glucose|pyruvate|lactate|ATP|ADP|AMP|NAD|NADH|NADP|NADPH|FAD|FADH2|CoA|acetyl-CoA|citrate|succinate|fumarate|malate|oxaloacetate|alpha-ketoglutarate|glutamate|glutamine|aspartate|asparagine)\b/gi)
+    // Metabolite patterns - expanded
+    this.patterns.set('metabolite', /\b(?:carnitine|glucose|pyruvate|lactate|ATP|ADP|AMP|NAD|NADH|NADP|NADPH|FAD|FADH2|CoA|acetyl-CoA|citrate|succinate|fumarate|malate|oxaloacetate|alpha-ketoglutarate|glutamate|glutamine|aspartate|asparagine|urea|creatinine|cholesterol|bilirubin|citrulline|ornithine)\b/gi)
 
-    // Pathway patterns
-    this.patterns.set('pathway', /\b(?:glycolysis|TCA cycle|Krebs cycle|citric acid cycle|pentose phosphate|beta-?oxidation|fatty acid (?:synthesis|oxidation)|amino acid metabolism|nucleotide metabolism|urea cycle|gluconeogenesis|glycogenolysis|glycogenesis|oxidative phosphorylation|electron transport chain|cellular respiration|apoptosis|autophagy|cell cycle|DNA repair|signaling pathway|signal transduction)\b/gi)
+    // Pathway patterns - expanded
+    this.patterns.set('pathway', /\b(?:glycolysis|TCA cycle|Krebs cycle|citric acid cycle|pentose phosphate|beta-?oxidation|fatty acid (?:synthesis|oxidation)|amino acid metabolism|nucleotide metabolism|urea cycle|gluconeogenesis|glycogenolysis|glycogenesis|oxidative phosphorylation|electron transport chain|cellular respiration|apoptosis|autophagy|cell cycle|DNA repair|signaling pathway|signal transduction|mTOR signaling|AMPK signaling|Wnt signaling|Notch signaling)\b/gi)
 
     // Disease patterns - enhanced for clinical use
     this.patterns.set('disease', /\b(?:diabetes(?:\s+mellitus)?(?:\s+type\s+[12])?|cancer|carcinoma|sarcoma|leukemia|lymphoma|melanoma|glioma|adenoma|alzheimer(?:'s)?(?:\s+disease)?|parkinson(?:'s)?(?:\s+disease)?|huntington(?:'s)?(?:\s+disease)?|hypertension|atherosclerosis|obesity|arthritis|rheumatoid arthritis|osteoarthritis|asthma|COPD|cystic fibrosis|muscular dystrophy|multiple sclerosis|lupus|psoriasis|eczema|hepatitis|cirrhosis|fibrosis|nephropathy|neuropathy|retinopathy|stroke|infarction|thrombosis|anemia|hemophilia)\b/gi)
@@ -99,6 +99,13 @@ export class EntityExtractor {
             position: chunk.metadata.position
           }
 
+          // Adjust confidence based on section
+          // @ts-ignore
+          const section = chunk.metadata.section || 'Introduction'
+          if (['Results', 'Discussion', 'Conclusion'].includes(section)) {
+            entity.confidence = Math.min(1.0, entity.confidence + 0.1)
+          }
+
           // Try MeSH normalization for diseases and drugs
           if (this.useMeSH && (type === 'disease' || type === 'drug')) {
             try {
@@ -107,7 +114,7 @@ export class EntityExtractor {
                 entity.normalizedName = meshResult.descriptor.descriptorName
                 entity.meshId = meshResult.descriptor.descriptorUI
                 entity.meshCategory = meshResult.descriptor.category
-                entity.confidence = Math.min(1.0, entity.confidence + 0.2)
+                entity.confidence = Math.min(1.0, entity.confidence + 0.15)
                 meshNormalized++
               }
             } catch (error) {
@@ -374,3 +381,5 @@ export class EntityExtractor {
     }
   }
 }
+
+export const entityExtractor = new EntityExtractor()

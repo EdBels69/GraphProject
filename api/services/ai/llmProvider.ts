@@ -23,13 +23,16 @@ export interface AICompletionOptions {
     maxTokens?: number
     stream?: boolean
     jsonMode?: boolean
-    provider?: 'openrouter' | 'glm' | 'local' | 'openai'
+    provider?: 'openrouter' | 'glm' | 'local' | 'openai' | 'ollama'
 }
 
 interface ProviderConfig {
     url: string
     key: string
     model: string
+    status: 'online' | 'offline' | 'circuit-open'
+    failureCount: number
+    lastFailure?: number
 }
 
 export class LlmProvider {
@@ -46,21 +49,36 @@ export class LlmProvider {
         this.providers.set('local', {
             url: process.env.MIMO_API_URL || 'http://localhost:9001/v1',
             key: process.env.MIMO_API_KEY || 'dummy-key',
-            model: process.env.AI_MODEL || 'glm-4.7'
+            model: process.env.AI_MODEL || 'glm-4.7',
+            status: 'online',
+            failureCount: 0
         })
 
         // Configure GLM (ZhipuAI / Custom)
         this.providers.set('glm', {
             url: process.env.GLM_API_URL || 'https://open.bigmodel.cn/api/paas/v4',
             key: process.env.GLM_API_KEY || '',
-            model: process.env.AI_MODEL || 'glm-4'
+            model: process.env.AI_MODEL || 'glm-4',
+            status: 'online',
+            failureCount: 0
         })
 
         // Configure OpenRouter
         this.providers.set('openrouter', {
             url: 'https://openrouter.ai/api/v1',
             key: process.env.OPENROUTER_API_KEY || '',
-            model: process.env.AI_MODEL || 'deepseek/deepseek-chat'
+            model: process.env.AI_MODEL || 'deepseek/deepseek-chat',
+            status: 'online',
+            failureCount: 0
+        })
+
+        // Configure Ollama (Local)
+        this.providers.set('ollama', {
+            url: process.env.OLLAMA_API_URL || 'http://localhost:11434/v1',
+            key: 'ollama', // Non-empty dummy key
+            model: process.env.OLLAMA_MODEL || 'llama3',
+            status: 'online',
+            failureCount: 0
         })
 
         this.defaultProvider = process.env.PRIMARY_AI_PROVIDER || 'local'
@@ -73,14 +91,68 @@ export class LlmProvider {
         return this.defaultProvider
     }
 
-    private getActiveConfig(options: AICompletionOptions): ProviderConfig {
-        const providerName = options.provider || this.defaultProvider
-        const config = this.providers.get(providerName) || this.providers.get('local')!
+    private getActiveConfig(options: AICompletionOptions): { config: ProviderConfig, name: string } {
+        let providerName = options.provider || this.defaultProvider
+        let config = this.providers.get(providerName)
+
+        // Circuit Breaker Check: If provider is down, find a healthy one
+        if (!config || config.status === 'circuit-open') {
+            logger.warn('LlmProvider', `Provider ${providerName} is in CIRCUIT-OPEN state. Searching for fallback...`)
+
+            // Find first online provider with a key
+            const healthyFallback = Array.from(this.providers.entries()).find(([name, cfg]) =>
+                cfg.status === 'online' && (cfg.key || name === 'local')
+            )
+
+            if (!healthyFallback) {
+                const error = `All AI providers are currently unavailable or in CIRCUIT-OPEN state.`
+                logger.error('LlmProvider', error)
+                throw new Error(error)
+            }
+
+            providerName = healthyFallback[0]
+            config = healthyFallback[1]
+            logger.info('LlmProvider', `Selected fallback provider: ${providerName}`)
+        }
 
         return {
-            url: config.url,
-            key: config.key,
-            model: options.model || config.model
+            name: providerName,
+            config: {
+                ...config,
+                model: options.model || config.model
+            }
+        }
+    }
+
+    private handleFailure(providerName: string, error?: any) {
+        const config = this.providers.get(providerName)
+        if (!config) return
+
+        config.failureCount++
+        config.lastFailure = Date.now()
+
+        // Connection refused or other hard errors should trigger circuit breaker faster
+        const isHardError = error?.code === 'ECONNREFUSED' || error?.name === 'AbortError';
+
+        if (config.failureCount >= 3 || isHardError) {
+            config.status = 'circuit-open'
+            const reason = isHardError ? `Hard error (${error.code || error.name})` : `Too many failures (${config.failureCount})`;
+            logger.error('LlmProvider', `CIRCUIT OPEN for ${providerName}. Reason: ${reason}`)
+
+            // Auto-reset circuit after 10 minutes (increased from 5)
+            setTimeout(() => {
+                config.status = 'online'
+                config.failureCount = 0
+                logger.info('LlmProvider', `CIRCUIT CLOSED for ${providerName}. Retrying availability...`)
+            }, 600000)
+        }
+    }
+
+    private handleSuccess(providerName: string) {
+        const config = this.providers.get(providerName)
+        if (config) {
+            config.failureCount = 0
+            config.status = 'online'
         }
     }
 
@@ -93,7 +165,7 @@ export class LlmProvider {
     }
 
     async chatCompletion(messages: AIMessage[], options: AICompletionOptions = {}): Promise<AIResponse> {
-        const config = this.getActiveConfig(options)
+        let { name: providerName, config } = this.getActiveConfig(options)
         const {
             temperature = 0.7,
             maxTokens = 32000,
@@ -104,12 +176,9 @@ export class LlmProvider {
 
         for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
             // Skip if no API key for non-local provider
-            if (options.provider !== 'local' && !config.key) {
-                logger.warn('LlmProvider', `Provider ${options.provider} selected but no API key present. Falling back to local.`);
-                // Recursively call with local if possible, or just fail
-                if (options.provider !== 'local') {
-                    return this.chatCompletion(messages, { ...options, provider: 'local' });
-                }
+            if (providerName !== 'local' && !config.key) {
+                logger.warn('LlmProvider', `Provider ${providerName} selected but no API key present. Falling back to local.`);
+                return this.chatCompletion(messages, { ...options, provider: 'local' });
             }
 
             try {
@@ -121,7 +190,7 @@ export class LlmProvider {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${config.key}`,
-                        'HTTP-Referer': 'https://github.com/EdBels69/GraphProject', // OpenRouter requirement
+                        'HTTP-Referer': 'https://github.com/EdBels69/GraphProject',
                         'X-Title': 'Graph Analyser'
                     },
                     body: JSON.stringify({
@@ -152,18 +221,20 @@ export class LlmProvider {
                         const delay = this.baseDelay * Math.pow(2, attempt)
                         logger.warn('LlmProvider', `Retry ${attempt + 1}/${this.maxRetries} after ${delay}ms`, {
                             status: response.status,
-                            error: errorData
+                            provider: providerName
                         })
                         await this.sleep(delay)
                         continue
                     }
 
-                    const errorMsg = `AI API error: ${response.status} ${response.statusText} - ${typeof errorData === 'object' ? JSON.stringify(errorData) : errorData}`;
+                    this.handleFailure(providerName)
+                    const errorMsg = `AI API error: ${response.status} ${response.statusText} - ${providerName}`;
                     logger.error('LlmProvider', errorMsg);
                     throw new Error(errorMsg)
                 }
 
                 const data = await response.json()
+                this.handleSuccess(providerName)
                 return {
                     content: data.choices[0]?.message?.content || '',
                     usage: data.usage
@@ -173,20 +244,27 @@ export class LlmProvider {
 
                 if (attempt < this.maxRetries && ((error as any).name === 'AbortError' || (error as any).code === 'ECONNREFUSED')) {
                     const delay = this.baseDelay * Math.pow(2, attempt)
-                    const reason = (error as any).name === 'AbortError' ? 'Timeout' : 'Connection refused';
-                    logger.warn('LlmProvider', `${reason}, retry ${attempt + 1}/${this.maxRetries}`, { error })
+                    logger.warn('LlmProvider', `Retryable error on ${providerName}, attempt ${attempt + 1}`, { error })
                     await this.sleep(delay)
                     continue
                 }
 
+                this.handleFailure(providerName, error)
                 const cause = (error as any).cause || (error as any).code || 'Unknown';
-                const finalErrorMsg = `Chat completion failed for ${config.url}: ${(error as Error).message} (Cause: ${cause})`;
+                const finalErrorMsg = `Chat completion failed for ${providerName}: ${(error as Error).message}`;
 
                 logger.error('LlmProvider', 'Chat completion failed', {
                     error: (error as Error).message,
-                    cause: cause,
+                    provider: providerName,
                     url: config.url
                 })
+
+                // If this provider failed and we have retries/alternatives, try one more time with a DIFFERENT provider if it wasn't local
+                if (providerName !== 'local' && attempt < this.maxRetries) {
+                    logger.info('LlmProvider', `Attempting final fallback after ${providerName} failure`)
+                    return this.chatCompletion(messages, { ...options, provider: undefined }) // Let getActiveConfig pick next
+                }
+
                 throw new Error(finalErrorMsg)
             }
         }

@@ -108,10 +108,10 @@ export default function HealthDashboardPage() {
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-4xl font-display font-bold text-steel tracking-tight mb-2">
+                            <h1 className="mb-2">
                                 Состояние системы
                             </h1>
-                            <p className="text-sm font-bold text-steel-dim uppercase tracking-widest">
+                            <p className="text-xs font-bold text-steel-dim uppercase tracking-widest">
                                 ПОСЛЕДНЕЕ СКАНИРОВАНИЕ: {lastRefresh.toLocaleTimeString()}
                             </p>
                         </div>
@@ -136,7 +136,7 @@ export default function HealthDashboardPage() {
                                 <div className="p-2 bg-void rounded-lg border border-ash/20 text-steel-dim group-hover:text-acid group-hover:border-acid/30 transition-colors">
                                     <Cpu className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-sm font-display font-bold text-steel tracking-widest uppercase">Сервер (Core)</h3>
+                                <h6 className="text-steel">Сервер (Core)</h6>
                             </div>
                             {systemHealth && getStatusIcon(systemHealth.status)}
                         </div>
@@ -181,7 +181,7 @@ export default function HealthDashboardPage() {
                                 <div className="p-2 bg-void rounded-lg border border-ash/20 text-steel-dim group-hover:text-plasma group-hover:border-plasma/30 transition-colors">
                                     <Zap className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-sm font-display font-bold text-steel tracking-widest uppercase">Интеллект (AI)</h3>
+                                <h6 className="text-steel">Интеллект (AI)</h6>
                             </div>
                             {aiHealth && (aiHealth.available ?
                                 <CheckCircle className="w-6 h-6 text-green-500 shadow-glow-green" /> :
@@ -249,7 +249,7 @@ export default function HealthDashboardPage() {
                                 <div className="p-2 bg-void rounded-lg border border-ash/20 text-steel-dim group-hover:text-acid group-hover:border-acid/30 transition-colors">
                                     <Database className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-sm font-display font-bold text-steel tracking-widest uppercase">Кэш-память</h3>
+                                <h6 className="text-steel">Кэш-память</h6>
                             </div>
                             <HardDrive className="w-6 h-6 text-ash/30" />
                         </div>
@@ -285,9 +285,9 @@ export default function HealthDashboardPage() {
                 {/* Memory Usage Bar */}
                 {systemHealth && (
                     <Card className="p-8 border-ash/20 bg-white shadow-lg">
-                        <h3 className="text-sm font-display font-bold text-steel tracking-widest uppercase mb-4 flex items-center gap-2">
+                        <h5 className="mb-4 flex items-center gap-2">
                             <Activity className="w-4 h-4 text-acid" /> Телеметрия оперативной памяти
-                        </h3>
+                        </h5>
                         <p className="text-[10px] text-steel-dim font-bold uppercase mb-8 opacity-60">
                             Критический мониторинг для рендеринга больших графов и PDF-парсинга
                         </p>

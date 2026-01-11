@@ -135,23 +135,23 @@ export default function SettingsPage() {
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
             {/* Header */}
-            <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10">
+            <header className="bg-white border-b border-ash/40 px-6 py-6 sticky top-0 z-10 shadow-sm">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-6">
                         <Link to="/">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="font-semibold">
                                 <ArrowLeft className="w-4 h-4 mr-2" />
                                 Назад
                             </Button>
                         </Link>
-                        <h1 className="text-xl font-bold text-slate-900">Настройки системы</h1>
+                        <h1 className="text-2xl font-semibold text-steel">Настройки системы</h1>
                     </div>
                     <Button
                         onClick={activeTab === 'ontology' ? saveOntology : savePrompts}
                         disabled={saving}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        className="px-8 h-12 text-sm font-semibold"
                     >
-                        <Save className="w-4 h-4 mr-2" />
+                        <Save className="w-5 h-5 mr-3" />
                         {saving ? 'Сохранение...' : 'Сохранить изменения'}
                     </Button>
                 </div>
@@ -159,25 +159,25 @@ export default function SettingsPage() {
 
             <main className="max-w-4xl mx-auto p-6">
                 {/* Tabs */}
-                <div className="flex gap-4 mb-8">
+                <div className="flex gap-4 mb-10">
                     <button
                         onClick={() => setActiveTab('ontology')}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${activeTab === 'ontology'
-                            ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200'
-                            : 'text-slate-600 hover:bg-white/50'
+                        className={`flex items-center gap-3 px-8 py-4 rounded-xl font-semibold transition-all ${activeTab === 'ontology'
+                            ? 'bg-acid text-white shadow-md'
+                            : 'bg-white text-steel-dim border border-ash/40 hover:bg-zinc-50'
                             }`}
                     >
-                        <Database className="w-4 h-4" />
+                        <Database className="w-5 h-5" />
                         Динамическая Онтология
                     </button>
                     <button
                         onClick={() => setActiveTab('prompts')}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${activeTab === 'prompts'
-                            ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200'
-                            : 'text-slate-600 hover:bg-white/50'
+                        className={`flex items-center gap-3 px-8 py-4 rounded-xl font-semibold transition-all ${activeTab === 'prompts'
+                            ? 'bg-acid text-white shadow-md'
+                            : 'bg-white text-steel-dim border border-ash/40 hover:bg-zinc-50'
                             }`}
                     >
-                        <MessageSquare className="w-4 h-4" />
+                        <MessageSquare className="w-5 h-5" />
                         Prompt Studio
                     </button>
                 </div>

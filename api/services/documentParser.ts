@@ -1,3 +1,4 @@
+import fs from 'fs'
 import path from 'path'
 import Piscina from 'piscina'
 
@@ -29,12 +30,13 @@ export class DocumentParser {
   private workerPath: string
 
   constructor() {
-    // Fix for ESM __filename
-    const currentFile = import.meta.url
-    const isTs = currentFile.endsWith('.ts')
-
     // Correct path based on file system search: api/workers/parser.worker.ts
-    this.workerPath = path.resolve(process.cwd(), isTs ? 'api/workers/parser.worker.ts' : 'dist/api/workers/parser.worker.js')
+    this.workerPath = path.resolve(process.cwd(), 'api/workers/parser.worker.ts')
+
+    // Fallback for production
+    if (!fs.existsSync(this.workerPath)) {
+      this.workerPath = path.resolve(process.cwd(), 'dist/api/workers/parser.worker.js')
+    }
 
     this.pool = new Piscina({
       filename: this.workerPath

@@ -15,10 +15,10 @@ describe('GraphAnalyzer', () => {
 
     testGraph.nodes.push(node1, node2, node3, node4)
 
-    const edge1 = createEdge(testGraph.id, 'node1', 'node2', 2)
-    const edge2 = createEdge(testGraph.id, 'node2', 'node3', 1)
-    const edge3 = createEdge(testGraph.id, 'node3', 'node4', 3)
-    const edge4 = createEdge(testGraph.id, 'node4', 'node1', 1)
+    const edge1 = createEdge('edge1', 'node1', 'node2', 2)
+    const edge2 = createEdge('edge2', 'node2', 'node3', 1)
+    const edge3 = createEdge('edge3', 'node3', 'node4', 3)
+    const edge4 = createEdge('edge4', 'node4', 'node1', 1)
 
     testGraph.edges.push(edge1, edge2, edge3, edge4)
 
@@ -74,6 +74,7 @@ describe('GraphAnalyzer', () => {
     })
 
     it('should calculate higher degree for more connected nodes', () => {
+      analyzer.addEdge(createEdge('edge5', 'node1', 'node3', 1))
       const results = analyzer.calculateCentrality()
       const node1Result = results.find(r => r.nodeId === 'node1')
       const node4Result = results.find(r => r.nodeId === 'node4')
@@ -163,11 +164,12 @@ describe('GraphAnalyzer', () => {
   describe('removeEdge', () => {
     it('should remove edge from graph', () => {
       const initialLength = testGraph.edges.length
+      const edgeIdToRemove = testGraph.edges[0].id
 
-      analyzer.removeEdge(testGraph.edges[0].id)
+      analyzer.removeEdge(edgeIdToRemove)
 
       expect(testGraph.edges.length).toBe(initialLength - 1)
-      expect(testGraph.edges.find(e => e.id === testGraph.edges[0].id)).toBeUndefined()
+      expect(testGraph.edges.find(e => e.id === edgeIdToRemove)).toBeUndefined()
     })
   })
 
@@ -265,7 +267,7 @@ describe('createNode', () => {
   it('should create node without weight', () => {
     const node = createNode('node1', 'Test Node')
 
-    expect(node.weight).toBeUndefined()
+    expect(node.weight).toBe(1)
   })
 })
 

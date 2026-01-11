@@ -33,17 +33,17 @@ export default function WorkListPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-ash/10">
+        <div className="space-y-4">
+          <h1 className="text-steel">
             Список работ
           </h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-lg font-normal text-steel-dim max-w-lg">
             История проанализированных публикаций и графов
           </p>
         </div>
-        <Button onClick={() => navigate('/upload')}>
-          <FileText className="w-4 h-4 mr-2" />
+        <Button onClick={() => navigate('/upload')} className="h-12 px-10 text-base">
+          <FileText className="w-5 h-5 mr-2" />
           Новая работа
         </Button>
       </div>
@@ -59,46 +59,47 @@ export default function WorkListPage() {
           </CardBody>
         </Card>
       ) : articles?.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <BarChart2 className="w-8 h-8 text-gray-400" />
+        <div className="glass-panel-heavy rounded-[2rem] p-24 text-center space-y-6 border-dashed border-2 border-ash/10 bg-void/30">
+          <div className="w-20 h-20 bg-void border border-ash/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <BarChart2 className="w-8 h-8 text-steel-dim/30" />
           </div>
-          <p className="text-gray-600 mb-4">
-            Список работ пуст
-          </p>
-          <Button variant="secondary" onClick={() => navigate('/upload')}>
+          <div className="space-y-4">
+            <h3 className="text-steel font-semibold">Список работ пуст</h3>
+            <p className="text-steel-dim text-base font-normal">Ваш архив пока пуст</p>
+          </div>
+          <Button variant="secondary" onClick={() => navigate('/upload')} className="px-10 h-12 text-sm">
             Загрузить первый файл
           </Button>
         </div>
       ) : (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-ash/20 bg-white shadow-xl rounded-2xl">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-900">Название</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-900">Автор</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-900">Год</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-900">Категория</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">Действия</th>
+                <tr className="bg-zinc-50 border-b border-ash/40 text-sm font-semibold text-steel-dim">
+                  <th className="px-6 py-5">Название</th>
+                  <th className="px-6 py-5">Автор</th>
+                  <th className="px-6 py-5">Год</th>
+                  <th className="px-6 py-5">Категория</th>
+                  <th className="px-6 py-5 text-right">Действия</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-ash/10">
                 {articles?.map((article) => (
-                  <tr key={article.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={article.id} className="hover:bg-steel/5 transition-all group">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900 max-w-md truncate">
+                      <div className="text-base font-bold text-steel max-w-md truncate group-hover:text-acid transition-colors">
                         {article.title}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-5 text-base font-normal text-steel-dim truncate max-w-[200px]">
                       {article.author}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-5 text-base font-normal text-steel-dim">
                       {article.year}
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <td className="px-6 py-5">
+                      <span className="inline-flex items-center px-4 py-1 rounded-lg text-xs font-semibold bg-zinc-100 border border-ash/40 text-steel">
                         {article.category}
                       </span>
                     </td>

@@ -96,21 +96,35 @@ export interface ResearchJobRequest {
     /** Mode: 'quick' (auto-analyze) or 'research' (screening table) */
     mode?: ResearchMode
 
-    /** Maximum articles to process (default: 20) */
-    maxArticles?: number
-
     /** Sources to search */
     sources?: ResearchSource[]
 
-    /** Year range filter */
-    yearFrom?: number
-    yearTo?: number
+    /** Max articles to process */
+    maxArticles?: number
+
+    /** Start date (YYYY-MM-DD) */
+    fromDate?: string
+
+    /** End date (YYYY-MM-DD) */
+    toDate?: string
 
     /** Generate literature review with AI */
     generateReview?: boolean
+
+    /** Filter by Scopus Quartile */
+    scopusQuartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'
+
+    /** Filter by WoS Quartile */
+    wosQuartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'
+
+    /** Filter by SJR Quartile */
+    sjrQuartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'
+
+    /** Filter by minimum Impact Factor */
+    minImpactFactor?: number
 }
 
-export type ResearchSource = 'pubmed' | 'crossref' | 'arxiv'
+export type ResearchSource = 'pubmed' | 'crossref' | 'arxiv' | 'biorxiv' | 'scholar'
 
 export interface ResearchJobResponse {
     job: ResearchJob
@@ -156,13 +170,37 @@ export interface ArticleSource {
     status: 'pending' | 'downloaded' | 'processed' | 'failed'
 
     /** Screening decision (Research mode) */
-    screeningStatus?: 'pending' | 'included' | 'excluded'
+    screeningStatus?: 'pending' | 'included' | 'excluded' | 'recommended'
 
     /** Extracted tabular data (Research mode) */
     extractedData?: Record<string, any>
 
     /** Error if failed */
     error?: string
+
+    /** List of cited DOIs */
+    references?: string[]
+
+    /** Relevance score */
+    relevanceScore: number
+
+    /** Journal Name */
+    journal?: string
+
+    /** ISSN for metric lookup */
+    issn?: string
+
+    /** Impact Factor */
+    impactFactor?: number
+
+    /** Scopus Quartile */
+    scopusQuartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'
+
+    /** Web of Science Quartile */
+    wosQuartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'
+
+    /** SJR Quartile */
+    sjrQuartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'
 }
 
 // =============================================================================

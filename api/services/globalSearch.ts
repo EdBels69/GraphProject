@@ -1,10 +1,12 @@
-import axios from 'axios'
-import { pubmedService } from './pubmedService'
 import { logger } from '../core/Logger'
-
+import cacheManager from './cacheManager'
+import { journalMetricService } from './journalMetricService'
+import { ISearchSource, SearchSourceOptions } from './search/sources/ISearchSource'
+import { PubMedSource } from './search/sources/PubMedSource'
+import { CrossrefSource } from './search/sources/CrossrefSource'
 export interface SearchResult {
   id: string
-  source: 'scholar' | 'pubmed' | 'crossref' | 'arxiv'
+  source: 'scholar' | 'pubmed' | 'crossref' | 'arxiv' | 'biorxiv'
   title: string
   authors: string[]
   year?: number
@@ -13,15 +15,20 @@ export interface SearchResult {
   url?: string
   citations?: number
   relevanceScore: number
+  quartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'
+  impactFactor?: number
+  issn?: string
+  journal?: string
 }
 
 export interface SearchOptions {
   query: string
-  sources?: Array<'scholar' | 'pubmed' | 'crossref' | 'arxiv'>
+  sources?: Array<'scholar' | 'pubmed' | 'crossref' | 'arxiv' | 'biorxiv'>
   maxResults?: number
-  yearFrom?: number
-  yearTo?: number
   sortBy?: 'relevance' | 'date' | 'citations'
+  fromDate?: string
+  toDate?: string
+  onProgress?: (source: string, count: number) => void
 }
 
 export interface SearchResults {
@@ -33,7 +40,7 @@ export interface SearchResults {
 }
 
 export class GlobalSearch {
-  private sources: Map<string, SearchFunction>
+  private sources: Map<string, ISearchSource>
 
   constructor() {
     this.sources = new Map()
@@ -41,10 +48,16 @@ export class GlobalSearch {
   }
 
   private initializeSources(): void {
-    this.sources.set('scholar', this.searchGoogleScholar.bind(this))
-    this.sources.set('pubmed', this.searchPubMed.bind(this))
-    this.sources.set('crossref', this.searchCrossref.bind(this))
-    this.sources.set('arxiv', this.searchArxiv.bind(this))
+    // Register sources
+    const pubmed = new PubMedSource()
+    this.sources.set(pubmed.name, pubmed)
+
+    const crossref = new CrossrefSource()
+    this.sources.set(crossref.name, crossref)
+
+    // TODO: Migrate ArXiv and Google Scholar to ISearchSource
+    // For now, we keep them disabled or we handle them in a legacy way if needed
+    // But based on previous analysis, only PubMed and Crossref are actively used/reliable in this context.
   }
 
   /**
@@ -54,17 +67,27 @@ export class GlobalSearch {
     const startTime = Date.now()
     const {
       query,
-      sources = ['scholar', 'pubmed', 'crossref'],
+      sources = (options.sources && options.sources.length > 0) ? options.sources : ['scholar', 'pubmed', 'crossref'],
       maxResults = 20,
-      yearFrom,
-      yearTo,
-      sortBy = 'relevance'
+      fromDate,
+      toDate,
+      sortBy = 'relevance',
+      onProgress
     } = options
 
     // Search all requested sources in parallel
     const searchPromises = sources
       .filter(source => this.sources.has(source))
-      .map(source => this.sources.get(source)!(query, { maxResults, yearFrom, yearTo, sortBy }))
+      .map(sourceName => {
+        const source = this.sources.get(sourceName)!
+        return source.search(query, { maxResults, fromDate, toDate, sortBy })
+          .then(results => {
+            if (onProgress) {
+              onProgress(sourceName, results.length)
+            }
+            return results
+          })
+      })
 
     const results = await Promise.allSettled(searchPromises)
 
@@ -92,12 +115,15 @@ export class GlobalSearch {
     // Sort by relevance score
     deduplicated.sort((a, b) => b.relevanceScore - a.relevanceScore)
 
+    // Enrich with metrics (IF/Quartiles)
+    const enrichedResults = await journalMetricService.enrichArticles(deduplicated)
+
     const executionTime = Date.now() - startTime
 
     return {
       query,
-      totalResults: deduplicated.length,
-      results: deduplicated.slice(0, maxResults),
+      totalResults: enrichedResults.length,
+      results: enrichedResults, // No more slice here, return all
       bySource,
       executionTime
     }
@@ -136,62 +162,20 @@ export class GlobalSearch {
     }
   }
 
-  /**
-   * Search Google Scholar (web scraping - respects robots.txt)
-   */
-  private async searchGoogleScholar(
-    query: string,
-    options: { maxResults: number; yearFrom?: number; yearTo?: number; sortBy?: string }
-  ): Promise<SearchResult[]> {
-    // Google Scholar does not have a public API and scraping is heavily rate-limited/blocked.
-    // Returning empty to avoid "mock" confusion for the user.
-    return []
-  }
 
-  /**
-   * Search PubMed using E-utilities API
-   */
-  private async searchPubMed(
-    query: string,
-    options: { maxResults: number; yearFrom?: number; yearTo?: number; sortBy?: string }
-  ): Promise<SearchResult[]> {
-    try {
-      // Use centralized PubMed service
-      const { articles } = await pubmedService.getArticles(query, {
-        maxResults: options.maxResults,
-        year: options.yearFrom // PubMed service currently supports single year or range, passing yearFrom as simplified year for now
-      })
 
-      return articles.map(article => ({
-        id: `pubmed-${article.id}`,
-        source: 'pubmed',
-        title: article.title,
-        authors: article.authors,
-        year: article.year,
-        abstract: article.abstract,
-        doi: article.doi,
-        url: article.url,
-        citations: undefined, // PubMed doesn't provide easy citation counts in basic search
-        relevanceScore: this.calculateRelevanceScore({
-          title: article.title,
-          abstract: article.abstract,
-          doi: article.doi,
-          year: article.year,
-          source: 'pubmed',
-          authors: article.authors,
-          id: article.id
-        }, query)
-      }))
-    } catch (error) {
-      console.error('Error searching PubMed:', error)
-      return []
-    }
-  }
+
+
+
 
   /**
    * Fetch MeSH terms for a given PubMed ID
    */
   async fetchMeshTerms(pmid: string): Promise<string[]> {
+    const cacheKey = `pubmed:mesh:${pmid}`
+    const cached = cacheManager.get<string[]>(cacheKey)
+    if (cached) return cached
+
     try {
       const fetchUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi'
       const response = await axios.get(fetchUrl, {
@@ -207,167 +191,21 @@ export class GlobalSearch {
       const matches = response.data.match(/<DescriptorName UI="D\d+.*?">(.*?)<\/DescriptorName>/g)
       if (!matches) return []
 
-      return matches.map((m: string) => m.replace(/<.*?>/g, ''))
+      const result = matches.map((m: string) => m.replace(/<.*?>/g, ''))
+
+      // Cache for 24 hours (MeSH terms don't change often)
+      cacheManager.set(cacheKey, result, { ttl: 24 * 60 * 60 * 1000 })
+
+      return result
     } catch (error) {
       console.error('Error fetching MeSH terms:', error)
       return []
     }
   }
 
-  /**
-   * Search Crossref API - filtered for biomedical/life sciences
-   */
-  private async searchCrossref(
-    query: string,
-    options: { maxResults: number; yearFrom?: number; yearTo?: number; sortBy?: string }
-  ): Promise<SearchResult[]> {
-    try {
-      const baseUrl = 'https://api.crossref.org/works'
 
-      // Build filter string
-      const filters: string[] = []
-      if (options.yearFrom) {
-        filters.push(`from-pub-date:${options.yearFrom}`)
-      }
-      if (options.yearTo) {
-        filters.push(`until-pub-date:${options.yearTo}`)
-      }
-      filters.push('has-abstract:true')
 
-      const params: Record<string, string> = {
-        query,
-        rows: (options.maxResults * 3).toString(), // Request more to filter later
-        select: 'title,author,published-online,published-print,abstract,DOI,URL,is-referenced-by-count,subject,container-title',
-        sort: 'relevance'
-      }
-      if (filters.length > 0) {
-        params['filter'] = filters.join(',')
-      }
 
-      const response = await axios.get(baseUrl, {
-        params,
-        timeout: 15000,
-        headers: { 'User-Agent': 'GraphAnalyser/1.0 (mailto:graphanalyser@example.com)' }
-      })
-      const items = response.data.message?.items || []
-
-      // Biomedical keywords to filter relevant results
-      const biomedKeywords = [
-        'biology', 'biochem', 'medicine', 'medical', 'health', 'clinical', 'pharma',
-        'drug', 'disease', 'cell', 'molecular', 'gene', 'protein', 'metabol', 'physiol',
-        'pathol', 'neuro', 'cardio', 'immuno', 'oncol', 'nutrition', 'biomed', 'plos',
-        'bmc', 'frontiers', 'nature', 'science', 'lancet', 'jama', 'elsevier',
-        'carnitine', 'enzyme', 'mitochondr', 'lipid', 'amino', 'vitamin', 'physiology',
-        'pharmacology', 'toxicology', 'genetics', 'genomics', 'proteomics', 'metabolomics'
-      ]
-
-      // Keywords that indicate NON-biomedical content
-      const excludeKeywords = [
-        'law', 'legal', 'court', 'criminal', 'судебн', 'право', 'уголовн',
-        'crm', 'sales', 'marketing', 'management', 'business', 'бизнес',
-        'budget', 'finance', 'economy', 'budgetary', 'бюджет', 'экономика',
-        'accounting', 'audit', 'taxation', 'politics', 'social science', 'history',
-        'humanities', 'arts', 'music', 'theater', 'defendants', 'plaintiffs',
-        'software engineering', 'computer vision', 'robotics' // Unless strictly needed
-      ]
-
-      const filteredItems = items.filter((item: any) => {
-        const title = (item.title?.[0] || '').toLowerCase()
-        const journal = (item['container-title']?.[0] || '').toLowerCase()
-        const abstract = (item.abstract || '').toLowerCase()
-        const allText = `${title} ${journal} ${abstract}`
-
-        // Exclude if contains non-biomed keywords
-        if (excludeKeywords.some(kw => allText.includes(kw))) return false
-
-        // STRICT MODE VALIDATION
-        const queryTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 3)
-
-        // 1. Check if ALL significant query terms are present in the text (AND logic)
-        const allTermsPresent = queryTerms.every(term => allText.includes(term))
-
-        // 2. Or if it's a direct DOI match/very high relevance
-        const hasDoiMatch = title.includes(query.toLowerCase())
-
-        // 3. Or at least 2 strong biomedical keywords AND at least 70% of query terms
-        const matchingBiomed = biomedKeywords.filter(kw => allText.includes(kw))
-        const presentTermsCount = queryTerms.filter(term => allText.includes(term)).length
-        const partialMatch = (presentTermsCount / queryTerms.length >= 0.7) && matchingBiomed.length >= 2
-
-        return allTermsPresent || hasDoiMatch || partialMatch
-      })
-
-      return filteredItems.slice(0, options.maxResults).map((item: any) => {
-        const pubDate = item['published-online'] || item['published-print']
-        return {
-          id: `crossref-${item.DOI}`,
-          source: 'crossref' as const,
-          title: item.title?.[0] || '',
-          authors: item.author?.map((a: any) => `${a.given || ''} ${a.family || ''}`.trim()) || [],
-          year: pubDate?.['date-parts']?.[0]?.[0],
-          abstract: item.abstract?.replace(/<[^>]*>/g, '') || '',
-          doi: item.DOI,
-          url: item.URL,
-          citations: item['is-referenced-by-count'] || 0,
-          relevanceScore: this.calculateRelevanceScore({
-            title: item.title?.[0] || '',
-            abstract: item.abstract?.replace(/<[^>]*>/g, '') || '',
-            doi: item.DOI,
-            year: pubDate?.['date-parts']?.[0]?.[0],
-            source: 'crossref',
-            authors: item.author?.map((a: any) => `${a.given || ''} ${a.family || ''}`.trim()) || [],
-            journal: item['container-title']?.[0]
-          }, query)
-        }
-      })
-    } catch (error) {
-      console.error('Error searching Crossref:', error)
-      return []
-    }
-  }
-
-  /**
-   * Search arXiv
-   */
-  private async searchArxiv(
-    query: string,
-    options: { maxResults: number; yearFrom?: number; yearTo?: number; sortBy?: string }
-  ): Promise<SearchResult[]> {
-    try {
-      const baseUrl = 'http://export.arxiv.org/api/query'
-      const params: Record<string, string> = {
-        search_query: query,
-        start: '0',
-        max_results: options.maxResults.toString()
-      }
-
-      const response = await axios.get(baseUrl, { params })
-      const entries = response.data.entries || []
-
-      return entries.map((entry: any) => ({
-        id: `arxiv-${entry.id.split('/').pop()}`,
-        source: 'arxiv',
-        title: entry.title || '',
-        authors: entry.authors?.map((a: any) => a.name) || [],
-        year: entry.published ? parseInt(entry.published.slice(0, 4)) : undefined,
-        abstract: entry.summary || '',
-        url: entry.id,
-        citations: undefined, // arXiv doesn't provide citation count
-        relevanceScore: this.calculateRelevanceScore({
-          title: entry.title || '',
-          abstract: entry.summary || '',
-          url: entry.id,
-          year: entry.published ? parseInt(entry.published.slice(0, 4)) : undefined,
-          source: 'arxiv',
-          authors: entry.authors?.map((a: any) => a.name) || [],
-          id: entry.id
-        }, query)
-      }))
-    } catch (error) {
-      console.error('Error searching arXiv:', error)
-      return []
-    }
-  }
 
   /**
    * Deduplicate results by DOI
@@ -486,7 +324,7 @@ export class GlobalSearch {
 
 type SearchFunction = (
   query: string,
-  options: { maxResults: number; yearFrom?: number; yearTo?: number; sortBy?: string }
+  options: { maxResults: number; fromDate?: string; toDate?: string; sortBy?: string }
 ) => Promise<SearchResult[]>
 
 export default new GlobalSearch()

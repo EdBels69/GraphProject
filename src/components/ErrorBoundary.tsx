@@ -1,8 +1,9 @@
 import React, { Component, ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, ChevronDown, Terminal } from 'lucide-react'
 import { Button } from './ui/Button'
+import { withTranslation, WithTranslation } from 'react-i18next'
 
-interface Props {
+interface Props extends WithTranslation {
   children: ReactNode
 }
 
@@ -11,7 +12,7 @@ interface State {
   error: Error | null
 }
 
-export default class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
     this.state = { hasError: false, error: null }
@@ -26,6 +27,8 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   render() {
+    const { t } = this.props;
+
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-void flex items-center justify-center p-8 animate-fade-in">
@@ -37,12 +40,11 @@ export default class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <h1 className="text-3xl font-display font-bold text-white tracking-tighter uppercase mb-4">
-              SYSTEM_INTEGRITY_COMPROMISED
+              {t('error_boundary.title')}
             </h1>
 
             <p className="text-steel/50 mb-10 font-mono text-xs uppercase tracking-widest leading-relaxed">
-              An unexpected neural collision has occurred.
-              The current session protocol has been terminated to prevent data leakage.
+              {t('error_boundary.subtitle')}
             </p>
 
             {this.state.error && (
@@ -51,7 +53,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                   <summary className="cursor-pointer flex items-center justify-between px-6 py-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all">
                     <span className="flex items-center gap-3 text-[10px] font-display font-bold text-steel/40 uppercase tracking-widest">
                       <Terminal className="w-4 h-4 text-red-400" />
-                      FAULT_DETAILS_STREAM
+                      {t('error_boundary.fault_details')}
                     </span>
                     <ChevronDown className="w-4 h-4 text-steel/20 group-open:rotate-180 transition-transform" />
                   </summary>
@@ -71,7 +73,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               className="w-full shadow-glow-acid/20"
             >
               <RefreshCw className="w-5 h-5 mr-3" />
-              REBOOT_SESSION
+              {t('error_boundary.reboot')}
             </Button>
 
             <p className="mt-8 text-[9px] font-mono text-steel/20 uppercase tracking-tighter">
@@ -85,3 +87,5 @@ export default class ErrorBoundary extends Component<Props, State> {
     return this.props.children
   }
 }
+
+export default withTranslation()(ErrorBoundary)

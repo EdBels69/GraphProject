@@ -12,6 +12,7 @@ import AnalysisConfigPage from '@/pages/AnalysisConfigPage'
 import GraphViewPage from '@/pages/GraphViewPage'
 import AIAnalysisPage from '@/pages/AIAnalysisPage'
 import SettingsPage from '@/pages/SettingsPage'
+import CitationMapPage from '@/pages/CitationMapPage'
 
 // Legacy pages (with sidebar) - kept for compatibility
 import FileUploadPage from '@/pages/FileUploadPage'
@@ -50,6 +51,7 @@ function App() {
                   <Route path="/research/:id/papers" element={<PapersPage />} />
                   <Route path="/research/:id/config" element={<AnalysisConfigPage />} />
                   <Route path="/research/:id/graph" element={<GraphViewPage />} />
+                  <Route path="/research/:id/citation-map" element={<CitationMapPage />} />
                   <Route path="/research/:id/ai" element={<AIAnalysisPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
 

@@ -28,7 +28,8 @@ router.get('/search', async (req: Request, res: Response) => {
 
     const articles = await pubmedService.getArticles(query, {
       maxResults: maxResults ? parseInt(maxResults as string) : 20,
-      year: year ? parseInt(year as string) : undefined
+      fromDate: year ? `${year as string}-01-01` : undefined,
+      toDate: year ? `${year as string}-12-31` : undefined
     });
 
     res.json({

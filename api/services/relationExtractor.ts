@@ -284,3 +284,5 @@ export class RelationExtractor {
     return relations.filter(r => r.source === entityId || r.target === entityId)
   }
 }
+
+export const relationExtractor = new RelationExtractor()

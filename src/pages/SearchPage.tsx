@@ -7,6 +7,7 @@ import { CardBody } from '@/components/ui/Card'
 import { AdvancedSearchFilters } from '@/components/AdvancedSearchFilters'
 import { useApiLazy } from '@/hooks/useApi'
 import { API_ENDPOINTS } from '@/api/endpoints'
+import { useTranslation } from 'react-i18next'
 
 interface SearchResult {
     id: string
@@ -30,6 +31,7 @@ interface SearchFilters {
 }
 
 export default function SearchPage() {
+    const { t } = useTranslation()
     const [hasSearched, setHasSearched] = useState(false)
 
     const { data, loading: isLoading, error, trigger } = useApiLazy<SearchResult[]>((params: URLSearchParams) =>
@@ -62,12 +64,12 @@ export default function SearchPage() {
                 <Link to="/">
                     <Button variant="ghost" size="sm">
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        Назад
+                        {t('common.back')}
                     </Button>
                 </Link>
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-100">ГЛОБАЛЬНЫЙ_ПОИСК_ЛИТЕРАТУРЫ</h1>
-                    <p className="text-slate-400 font-mono text-sm">ПОИСКОВЫЕ СИСТЕМЫ: PUBMED, CROSSREF, ARCHIVE, UNPAYWALL</p>
+                    <h1 className="mb-1">{t('search.title')}</h1>
+                    <p className="text-steel-dim font-bold text-xs uppercase tracking-widest">{t('search.subtitle')}</p>
                 </div>
             </div>
 
@@ -82,45 +84,45 @@ export default function SearchPage() {
             {isLoading && (
                 <div className="flex flex-col items-center justify-center py-20 space-y-4">
                     <Loader2 className="w-10 h-10 animate-spin text-cyan-500" />
-                    <span className="text-cyan-500/80 font-mono animate-pulse">ЗАПУСК МЕЖБАЗОВОГО ПОИСКА...</span>
+                    <span className="text-cyan-500/80 font-mono animate-pulse uppercase">{t('search.running')}</span>
                 </div>
             )}
 
             {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 font-mono text-sm">
-                    ОШИБКА ПРОТОКОЛА: {error}
+                <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 font-mono text-sm uppercase">
+                    {t('search.protocol_error')}: {error}
                 </div>
             )}
 
             {!isLoading && hasSearched && results.length === 0 && !error && (
                 <div className="text-center py-20 text-slate-500 space-y-4">
                     <BookOpen className="w-16 h-16 mx-auto opacity-20" />
-                    <p className="font-mono">СОВПАДЕНИЙ НЕ НАЙДЕНО</p>
+                    <p className="font-mono uppercase">{t('search.no_results')}</p>
                 </div>
             )}
 
             {results.length > 0 && (
                 <div className="space-y-4">
-                    <p className="text-sm font-mono text-cyan-500/60 uppercase tracking-widest">НАЙДЕНО СОВПАДЕНИЙ: {results.length}</p>
+                    <p className="text-xs font-bold text-acid uppercase tracking-[0.2em]">НАЙДЕНО СОВПАДЕНИЙ: {results.length}</p>
 
                     {results.map((result) => (
                         <Card key={result.id} variant="glass" className="hover:border-cyan-500/30 transition-all duration-300 group">
                             <CardBody>
                                 <div className="flex justify-between items-start gap-4">
                                     <div className="flex-1 space-y-2">
-                                        <h3 className="font-display font-bold text-white tracking-widest leading-snug group-hover:text-cyan-400 transition-colors">
+                                        <h3 className="group-hover:text-acid transition-colors">
                                             {result.title}
                                         </h3>
 
-                                        <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-steel/50 uppercase">
-                                            <span className="text-slate-200">
+                                        <div className="flex flex-wrap items-center gap-2 text-xs text-steel-dim uppercase font-bold tracking-tight">
+                                            <span className="text-steel">
                                                 {result.authors?.slice(0, 3).join(', ')}
                                                 {result.authors?.length > 3 && ' И ДР.'}
                                             </span>
                                             {result.year && (
                                                 <>
                                                     <span className="opacity-30">|</span>
-                                                    <span className="text-cyan-500/70">ГОД: {result.year}</span>
+                                                    <span className="text-acid">ГОД: {result.year}</span>
                                                 </>
                                             )}
                                         </div>
@@ -132,12 +134,12 @@ export default function SearchPage() {
                                         )}
 
                                         <div className="flex items-center gap-4 pt-1">
-                                            <span className="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 text-[10px] font-mono font-bold rounded uppercase tracking-tighter">
+                                            <span className="px-2 py-0.5 bg-acid/10 border border-acid/20 text-acid text-xs font-bold rounded uppercase tracking-tighter">
                                                 ИСТОЧНИК: {result.source}
                                             </span>
 
                                             {result.citations !== undefined && (
-                                                <span className="text-[10px] font-mono text-steel/40 uppercase tracking-tighter">
+                                                <span className="text-xs font-bold text-steel-dim uppercase tracking-tighter">
                                                     ЦИТИРОВАНИЯ: {result.citations}
                                                 </span>
                                             )}

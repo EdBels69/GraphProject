@@ -7,8 +7,29 @@ import { RelationExtractor } from '../services/relationExtractor'
 import { KnowledgeGraphBuilder } from '../services/knowledgeGraphBuilder'
 import { summarizeDocument } from '../services/aiService'
 import { isFeatureEnabled } from '../../shared/config/features'
+import { localDocumentSearch } from '../services/search/LocalDocumentSearch'
 
 const router = express.Router()
+
+/**
+ * GET /api/documents/search
+ * Search within downloaded documents
+ */
+router.get('/search', async (req, res) => {
+  try {
+    const { jobId, q } = req.query
+
+    if (!jobId || !q) {
+      return res.status(400).json({ error: 'jobId and q (query) are required' })
+    }
+
+    const results = await localDocumentSearch.search(String(jobId), String(q))
+    res.json({ results })
+  } catch (error) {
+    console.error('Search error:', error)
+    res.status(500).json({ error: 'Search failed' })
+  }
+})
 
 // Extend Express Request type for multer array upload
 declare global {

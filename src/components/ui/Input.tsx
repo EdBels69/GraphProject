@@ -10,15 +10,15 @@ export function Input({ label, error, className, ...props }: InputProps) {
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-xs font-display font-bold tracking-widest text-steel-dim uppercase mb-2">
+        <label className="block text-sm font-semibold text-steel mb-2">
           {label}
         </label>
       )}
       <input
         className={twMerge(
-          'w-full bg-white border border-ash/30 rounded-xl px-4 py-3 text-steel placeholder-gray-400 outline-none transition-all font-mono text-sm',
-          'focus:border-acid focus:ring-1 focus:ring-acid/20',
-          error && 'border-red-500/50 focus:ring-red-500/20',
+          'w-full bg-white border border-ash/60 rounded-xl px-5 py-4 text-steel placeholder-gray-400 outline-none transition-all font-body text-base',
+          'focus:border-acid focus:ring-4 focus:ring-acid/5',
+          error && 'border-red-500/50 focus:ring-red-500/5',
           className
         )}
         {...props}

@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { logger } from './Logger';
 
 export interface CacheEntry<T> {
@@ -12,19 +14,29 @@ export class CacheManager {
   private defaultTTL: number;
   private maxEntries: number;
   private cleanupInterval: NodeJS.Timeout;
+  private saveInterval: NodeJS.Timeout;
+  private cacheFilePath: string;
 
   constructor(defaultTTL: number = 5 * 60 * 1000, maxEntries: number = 1000) {
     this.cache = new Map();
     this.defaultTTL = defaultTTL;
     this.maxEntries = maxEntries;
+    this.cacheFilePath = path.join(process.cwd(), 'api', 'data', 'cache.json');
+
+    this.load();
 
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
     }, 60 * 1000);
 
-    logger.info('CacheManager', 'Cache manager initialized', {
+    this.saveInterval = setInterval(() => {
+      this.save();
+    }, 60 * 1000);
+
+    logger.info('CacheManager', 'Cache manager initialized (Persistent)', {
       defaultTTL: `${defaultTTL / 1000}s`,
-      maxEntries
+      maxEntries,
+      path: this.cacheFilePath
     });
   }
 
@@ -145,9 +157,47 @@ export class CacheManager {
     }
   }
 
+  private load(): void {
+    try {
+      if (!fs.existsSync(this.cacheFilePath)) return;
+
+      const data = fs.readFileSync(this.cacheFilePath, 'utf-8');
+      const entries: CacheEntry<any>[] = JSON.parse(data);
+
+      if (Array.isArray(entries)) {
+        const now = Date.now();
+        let loadedCount = 0;
+        entries.forEach(entry => {
+          if (now - entry.timestamp <= entry.ttl) {
+            this.cache.set(entry.key, entry);
+            loadedCount++;
+          }
+        });
+        logger.info('CacheManager', `Loaded ${loadedCount} entries from disk`);
+      }
+    } catch (error) {
+      logger.warn('CacheManager', 'Failed to load cache', { error });
+    }
+  }
+
+  private save(): void {
+    try {
+      const dir = path.dirname(this.cacheFilePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      const entries = Array.from(this.cache.values());
+      fs.writeFileSync(this.cacheFilePath, JSON.stringify(entries));
+    } catch (error) {
+      logger.error('CacheManager', 'Failed to save cache', { error });
+    }
+  }
+
   destroy(): void {
     clearInterval(this.cleanupInterval);
-    this.clear();
+    clearInterval(this.saveInterval);
+    this.save();
+    this.cache.clear();
     logger.info('CacheManager', 'Cache manager destroyed');
   }
 }

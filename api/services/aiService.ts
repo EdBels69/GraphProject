@@ -23,10 +23,15 @@ export interface DocumentSummary {
 }
 
 // 1. Core Chat Facade
+import { isFeatureEnabled } from '../../shared/config/features'
+
 export async function chatCompletion(
     messages: AIMessage[],
     options: AICompletionOptions = {}
 ): Promise<AIResponse> {
+    if (!isFeatureEnabled('USE_AI_FEATURES')) {
+        throw new Error('AI features are disabled')
+    }
     return llmProvider.chatCompletion(messages, options)
 }
 

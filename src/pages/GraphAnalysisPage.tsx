@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useLocation, Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, BarChart3, Share2, Download, RefreshCw, FileText, FileDown, MessageCircle, Database, Info, Atom, Layers, Search, FlaskConical } from 'lucide-react'
+import { useLocation, Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, BarChart3, Share2, Download, RefreshCw, FileText, FileDown, MessageCircle, Database, Info, Atom, Layers, Search, FlaskConical, Network } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 // import GraphViewer from '@/components/GraphViewer'
@@ -55,6 +55,7 @@ DEMO_GRAPH.edges = [
 
 export default function GraphAnalysisPage() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [graph, setGraph] = useState<Graph | null>(null)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
@@ -160,11 +161,11 @@ export default function GraphAnalysisPage() {
           <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
             <Info className="w-8 h-8 text-red-500" />
           </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-display font-bold text-steel">ОШИБКА ВИЗУАЛИЗАЦИИ</h2>
-            <p className="text-steel-dim text-sm leading-relaxed">{error}</p>
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold text-steel">ОШИБКА ВИЗУАЛИЗАЦИИ</h2>
+            <p className="text-steel-dim text-base leading-relaxed">{error}</p>
           </div>
-          <Button variant="primary" onClick={() => navigate('/projects')} className="w-full">
+          <Button variant="primary" size="lg" onClick={() => navigate('/projects')} className="w-full h-14 text-base">
             ВЕРНУТЬСЯ В АРХИВ
           </Button>
         </div>
@@ -191,13 +192,13 @@ export default function GraphAnalysisPage() {
           <div className="w-16 h-16 bg-void border border-ash/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
             <Network className="w-8 h-8 text-steel-dim/30" />
           </div>
-          <div className="space-y-2">
-            <h2 className="text-xl font-display font-bold text-steel">ГРАФ ПУСТ</h2>
-            <p className="text-steel-dim text-sm leading-relaxed">
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold text-steel">ГРАФ ПУСТ</h2>
+            <p className="text-steel-dim text-base leading-relaxed">
               В проанализированных статьях не обнаружено значимых сущностей и связей для построения графа.
             </p>
           </div>
-          <Button variant="secondary" onClick={() => navigate('/projects')} className="w-full">
+          <Button variant="secondary" size="lg" onClick={() => navigate('/projects')} className="w-full h-14 text-base">
             ВЕРНУТЬСЯ К ПРОЕКТАМ
           </Button>
         </div>
@@ -211,26 +212,26 @@ export default function GraphAnalysisPage() {
       {/* Top Glass Bar */}
       <div className="h-16 flex items-center justify-between px-6 z-30 border-b border-ash/20 bg-void/90 backdrop-blur-md">
         <div className="flex items-center gap-6">
-          <Link to="/upload" className="flex items-center gap-2 text-steel/60 hover:text-acid transition-colors group">
-            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            <span className="font-mono text-xs tracking-widest">BACK</span>
+          <Link to="/upload" className="flex items-center gap-3 text-steel-dim hover:text-acid transition-colors group px-4 py-2 rounded-lg hover:bg-zinc-100">
+            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            <span className="font-semibold text-sm">НАЗАД</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full ${isDemo ? 'bg-plasma animate-pulse shadow-glow-plasma' : 'bg-acid animate-pulse-slow shadow-glow-acid'}`} />
+          <div className="flex items-center gap-4">
+            <div className={`w-3 h-3 rounded-full ${isDemo ? 'bg-plasma' : 'bg-acid'}`} />
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold font-display text-steel tracking-wide uppercase">{graph.name}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-semibold text-steel">{graph.name}</h1>
                 {isDemo && (
-                  <span className="px-1.5 py-0.5 rounded bg-plasma/10 border border-plasma/20 text-[8px] font-bold text-plasma uppercase tracking-widest">
+                  <span className="px-3 py-1 rounded-lg bg-zinc-100 border border-ash/40 text-[10px] font-semibold text-steel">
                     DEMO_VIEW
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-3 text-[10px] font-mono text-steel/60">
-                <span>NODES: {graph.nodes.length}</span>
-                <span>EDGES: {graph.edges.length}</span>
+              <div className="flex items-center gap-4 text-xs font-medium text-steel-dim">
+                <span>УЗЛЫ: {graph.nodes.length}</span>
+                <span>СВЯЗИ: {graph.edges.length}</span>
                 {graph.nodes.length > 1 ? (
-                  <span>DENSITY: {(2 * graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1)) * 100).toFixed(1)}%</span>
+                  <span>ПЛОТНОСТЬ: {(2 * graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1)) * 100).toFixed(1)}%</span>
                 ) : null}
               </div>
             </div>
@@ -300,23 +301,23 @@ export default function GraphAnalysisPage() {
           {/* Tabs Header */}
           <div className="flex items-center gap-1 p-2 border-b border-ash/10 overflow-x-auto no-scrollbar">
             {[
-              { id: 'stats', icon: BarChart3, label: 'METRICS' },
-              { id: 'chat', icon: MessageCircle, label: 'AI_ANALYST' },
-              { id: 'research', icon: FlaskConical, label: 'RESEARCH' },
-              { id: 'data', icon: Database, label: 'DATA' },
-              { id: 'list', icon: Share2, label: 'SAVED' },
+              { id: 'stats', icon: BarChart3, label: 'МЕТРИКИ' },
+              { id: 'chat', icon: MessageCircle, label: 'АИ_АНАЛИТИК' },
+              { id: 'research', icon: FlaskConical, label: 'ИССЛЕДОВАНИЕ' },
+              { id: 'data', icon: Database, label: 'ДАННЫЕ' },
+              { id: 'list', icon: Share2, label: 'БИБЛИОТЕКА' },
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
-                            flex items-center gap-2 px-3 py-2 rounded text-[10px] font-bold tracking-wider font-display transition-all whitespace-nowrap
+                            flex items-center gap-2 px-5 py-3 rounded-lg text-xs font-semibold transition-all whitespace-nowrap
                             ${activeTab === tab.id
-                    ? 'bg-acid text-void shadow-glow-acid'
-                    : 'text-steel hover:bg-steel/5 hover:text-black'}
+                    ? 'bg-acid text-white shadow-sm'
+                    : 'text-steel-dim hover:bg-zinc-50 hover:text-steel'}
                         `}
               >
-                <tab.icon className="w-3 h-3" />
+                <tab.icon className="w-4 h-4" />
                 {tab.label}
               </button>
             ))}
@@ -337,8 +338,8 @@ export default function GraphAnalysisPage() {
 
             {/* Metrics */}
             <div className={`absolute inset-0 overflow-y-auto p-6 transition-opacity duration-300 ${activeTab === 'stats' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-              <h2 className="text-xl font-display font-bold text-steel mb-6 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-acid" /> NETWORK_METRICS
+              <h2 className="text-2xl font-semibold text-steel mb-8 flex items-center gap-3">
+                <BarChart3 className="w-6 h-6 text-acid" /> МЕТРИКИ СЕТИ
               </h2>
               <AnalyticsPanel graph={graph} />
             </div>
@@ -355,9 +356,9 @@ export default function GraphAnalysisPage() {
 
             {/* Data Table */}
             <div className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${activeTab === 'data' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-              <div className="p-4 border-b border-ash/10">
-                <h2 className="text-xl font-display font-bold text-steel flex items-center gap-2">
-                  <Database className="w-5 h-5 text-plasma" /> RAW_DATA
+              <div className="p-6 border-b border-ash/10">
+                <h2 className="text-2xl font-semibold text-steel flex items-center gap-3">
+                  <Database className="w-6 h-6 text-plasma" /> СЫРЫЕ ДАННЫЕ
                 </h2>
               </div>
               <div className="flex-1 overflow-auto bg-black/20">
@@ -367,9 +368,9 @@ export default function GraphAnalysisPage() {
 
             {/* Saved Graphs */}
             <div className={`absolute inset-0 flex flex-col transition-opacity duration-300 ${activeTab === 'list' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-              <div className="p-4 border-b border-ash/10">
-                <h2 className="text-xl font-display font-bold text-steel flex items-center gap-2">
-                  <Share2 className="w-5 h-5 text-indigo-500" /> GRAPH_LIBRARY
+              <div className="p-6 border-b border-ash/10">
+                <h2 className="text-2xl font-semibold text-steel flex items-center gap-3">
+                  <Share2 className="w-6 h-6 text-indigo-600" /> БИБЛИОТЕКА ГРАФОВ
                 </h2>
               </div>
               <div className="flex-1 overflow-y-auto p-4">

@@ -34,47 +34,67 @@ export class ChunkingEngine {
   }
 
   /**
-   * Chunk text into semantic units (paragraphs, sections, etc.)
+   * Chunk text into semantic units (sections, paragraphs, etc.)
    */
   async chunkText(text: string, source: string): Promise<Chunk[]> {
     const chunks: Chunk[] = []
     let currentPosition = 0
-    let currentSection: string[] = []
+    let currentSection = 'Introduction'
 
-    // Split by paragraphs first
-    const paragraphs = text.split(/\n\s*\n\s*\n/)
-      .filter(p => p.trim().length > 50)
+    // Common section headers in academic papers
+    const sectionHeaders = [
+      'Introduction', 'Background', 'Methods', 'Materials and Methods',
+      'Results', 'Discussion', 'Conclusion', 'Summary', 'References', 'Acknowledgements'
+    ]
+
+    // Split by standard paragraphs (double newline)
+    const paragraphs = text.split(/\n\s*\n/)
+      .filter(p => p.trim().length > 20)
 
     for (const paragraph of paragraphs) {
-      const paragraphTokens = paragraph.length // Approximation
+      const trimmed = paragraph.trim()
+
+      // Check if this is a section header
+      const lowerParagraph = trimmed.toLowerCase()
+      const foundHeader = sectionHeaders.find(h => lowerParagraph === h.toLowerCase() || lowerParagraph.startsWith(h.toLowerCase() + '\n'))
+      if (foundHeader && trimmed.length < 50) {
+        currentSection = foundHeader
+        continue
+      }
+
+      const paragraphTokens = trimmed.length // Improved approximation: count chars
 
       if (paragraphTokens > this.options.maxTokens) {
-        // Split long paragraph
-        const words = paragraph.split(/\s+/)
+        // Split long paragraph by sentences to avoid mid-sentence breaks
+        const sentences = trimmed.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [trimmed]
         let chunkContent = ''
         let currentChunkLength = 0
 
-        for (const word of words) {
-          if (currentChunkLength + word.length + 1 > this.options.maxTokens) {
-            chunks.push({
-              id: uuidv4(),
-              content: chunkContent.trim(),
-              metadata: {
-                source,
-                position: currentPosition,
-                tokens: currentChunkLength,
-                type: 'paragraph'
-              }
-            })
-            currentPosition += currentChunkLength
-            chunkContent = word + ' '
-            currentChunkLength = word.length + 1
+        for (const sentence of sentences) {
+          if (currentChunkLength + sentence.length > this.options.maxTokens) {
+            if (chunkContent.trim()) {
+              chunks.push({
+                id: uuidv4(),
+                content: chunkContent.trim(),
+                metadata: {
+                  source,
+                  position: currentPosition,
+                  tokens: currentChunkLength,
+                  type: 'paragraph',
+                  // @ts-ignore
+                  section: currentSection
+                }
+              })
+              currentPosition += currentChunkLength
+            }
+            chunkContent = sentence
+            currentChunkLength = sentence.length
           } else {
-            chunkContent += word + ' '
-            currentChunkLength += word.length + 1
+            chunkContent += ' ' + sentence
+            currentChunkLength += sentence.length
           }
         }
-        // Add remaining
+
         if (chunkContent.trim()) {
           chunks.push({
             id: uuidv4(),
@@ -83,21 +103,24 @@ export class ChunkingEngine {
               source,
               position: currentPosition,
               tokens: currentChunkLength,
-              type: 'paragraph'
+              type: 'paragraph',
+              // @ts-ignore
+              section: currentSection
             }
           })
           currentPosition += currentChunkLength
         }
       } else {
-        // Paragraph fits, just add it
         chunks.push({
           id: uuidv4(),
-          content: paragraph.trim(),
+          content: trimmed,
           metadata: {
             source,
             position: currentPosition,
             tokens: paragraphTokens,
-            type: 'paragraph'
+            type: 'paragraph',
+            // @ts-ignore
+            section: currentSection
           }
         })
         currentPosition += paragraphTokens + this.options.overlap

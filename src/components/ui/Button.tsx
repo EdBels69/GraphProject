@@ -17,14 +17,14 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'font-display font-bold tracking-widest uppercase rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed outline-none'
+  const baseStyles = 'font-body font-medium rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed outline-none select-none active:scale-[0.98]'
 
   const variants = {
-    primary: 'bg-acid text-void hover:bg-acid/90 hover:scale-[1.02] active:scale-[0.98] shadow-glow-acid/20',
-    secondary: 'bg-steel/5 text-steel border border-steel/10 hover:bg-steel/10 hover:border-steel/20',
-    ghost: 'text-steel/60 hover:text-steel hover:bg-steel/5',
-    danger: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20',
-    outline: 'bg-transparent border border-acid/30 text-acid hover:bg-acid/10 hover:border-acid'
+    primary: 'bg-acid text-white hover:bg-acid/90 shadow-sm',
+    secondary: 'bg-zinc-100 text-steel border border-ash/40 hover:bg-zinc-200',
+    ghost: 'text-steel-dim hover:text-steel hover:bg-zinc-100',
+    danger: 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100',
+    outline: 'bg-transparent border border-ash/60 text-steel hover:border-steel hover:bg-zinc-50'
   }
 
   const sizes = {

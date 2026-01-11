@@ -27,13 +27,23 @@ import configRouter from './routes/config'
 import { ApiResponse } from './utils/response'
 import { AppError, ErrorCode } from './utils/errors'
 import { logger } from '../api/core/Logger'
+import { errorMonitor } from './services/ErrorMonitor'
 
 
 
 
+
+// Setup HTTP Server with Socket.IO
+import { createServer } from 'http'
+import { socketService } from './services/SocketService'
 
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3002
+
+const httpServer = createServer(app)
+
+// Initialize Socket Service
+socketService.initialize(httpServer)
 
 app.use(cors())
 app.use(express.json())
@@ -115,19 +125,45 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     return ApiResponse.error(res, err.message, err.statusCode, err.errorCode)
   }
 
-  logger.error('GlobalErrorHandler', 'Unhandled error caught', {
-    error: err instanceof Error ? { message: err.message, stack: err.stack } : err,
+  errorMonitor.captureException(err, {
     path: req.path,
-    method: req.method
+    method: req.method,
+    user: (req as any).user?.id
   })
 
   return ApiResponse.error(res, 'An unexpected error occurred')
 })
 
-function startServer() {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`)
-  })
+import { databaseManager } from './core/Database'
+import { literatureAgent } from './services/literatureAgent'
+
+async function startServer() {
+  try {
+    // Initialize Database
+    await databaseManager.initialize()
+
+    // Initialize Agents
+    await literatureAgent.initialize()
+
+    const server = httpServer.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`)
+      logger.info('Server', `Server started on port ${PORT}`)
+    })
+
+    const shutdown = () => {
+      console.log('Stopping server...')
+      server.close(() => {
+        console.log('Server stopped')
+        process.exit(0)
+      })
+    }
+
+    process.on('SIGTERM', shutdown)
+    process.on('SIGINT', shutdown)
+  } catch (error) {
+    console.error('Failed to start server:', error)
+    process.exit(1)
+  }
 }
 
 startServer()

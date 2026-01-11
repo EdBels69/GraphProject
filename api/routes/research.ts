@@ -31,7 +31,10 @@ router.post('/jobs', async (req: any, res) => {
         })
     } catch (error) {
         console.error('Error starting research job:', error)
-        res.status(500).json({ error: 'Failed to start research job' })
+        res.status(500).json({
+            error: 'Failed to start research job',
+            details: error instanceof Error ? error.message : String(error)
+        })
     }
 })
 
@@ -63,7 +66,10 @@ router.get('/jobs', async (req: any, res) => {
         })
     } catch (error) {
         console.error('Error listing research jobs:', error)
-        res.status(500).json({ error: 'Failed to list research jobs' })
+        res.status(500).json({
+            error: 'Failed to list research jobs',
+            details: error instanceof Error ? error.message : String(error)
+        })
     }
 })
 
@@ -84,7 +90,10 @@ router.get('/jobs/:id', async (req: any, res) => {
         res.json({ job })
     } catch (error) {
         console.error('Error getting research job:', error)
-        res.status(500).json({ error: 'Failed to get research job' })
+        res.status(500).json({
+            error: 'Failed to get research job',
+            details: error instanceof Error ? error.message : String(error)
+        })
     }
 })
 
@@ -136,7 +145,10 @@ router.patch('/jobs/:id/screening', async (req: any, res) => {
         res.json({ job: updatedJob })
     } catch (error) {
         console.error('Error updating screening:', error)
-        res.status(500).json({ error: 'Failed to update screening' })
+        res.status(500).json({
+            error: 'Failed to update screening',
+            details: error instanceof Error ? error.message : String(error)
+        })
     }
 })
 
@@ -182,7 +194,10 @@ router.post('/jobs/:id/analyze', async (req: any, res) => {
         })
     } catch (error) {
         console.error('Error starting analysis:', error)
-        res.status(500).json({ error: 'Failed to start analysis' })
+        res.status(500).json({
+            error: 'Failed to start analysis',
+            details: error instanceof Error ? error.message : String(error)
+        })
     }
 })
 
@@ -207,7 +222,10 @@ router.delete('/jobs/:id', async (req: any, res) => {
         })
     } catch (error) {
         console.error('Error deleting research job:', error)
-        res.status(500).json({ error: 'Failed to delete research job' })
+        res.status(500).json({
+            error: 'Failed to delete research job',
+            details: error instanceof Error ? error.message : String(error)
+        })
     }
 })
 
@@ -246,7 +264,10 @@ router.get('/jobs/:id/entities', async (req: any, res) => {
         })
     } catch (error) {
         console.error('Error getting entities:', error)
-        res.status(500).json({ error: 'Failed to get entities' })
+        res.status(500).json({
+            error: 'Failed to get entities',
+            details: error instanceof Error ? error.message : String(error)
+        })
     }
 })
 
@@ -287,7 +308,10 @@ router.post('/jobs/:id/build-graph', async (req: any, res) => {
         })
     } catch (error) {
         console.error('Error building graph:', error)
-        res.status(500).json({ error: 'Failed to build graph' })
+        res.status(500).json({
+            error: 'Failed to build graph',
+            details: error instanceof Error ? error.message : String(error)
+        })
     }
 })
 
@@ -436,6 +460,94 @@ router.get('/jobs/:id/export/parquet', async (req: any, res) => {
     } catch (error) {
         console.error('Error exporting Parquet:', error)
         res.status(500).json({ error: 'Failed to export Parquet' })
+    }
+})
+
+/**
+ * GET /api/research/jobs/:id/export/csv
+ * Export job articles as CSV
+ */
+router.get('/jobs/:id/export/csv', async (req: any, res) => {
+    try {
+        const { id } = req.params
+        const userId = req.user.id
+
+        const job = literatureAgent.getJob(id, userId)
+        if (!job) return res.status(404).json({ error: 'Job not found' })
+
+        const articles = job.articles || []
+
+        // CSV Header
+        const header = ['ID', 'Title', 'Authors', 'Year', 'Journal', 'DOI', 'URL', 'Source', 'Status', 'Screening Status'].join(',')
+
+        // CSV Rows
+        const rows = articles.map(a => {
+            const escape = (text: string | undefined) => {
+                if (!text) return ''
+                return `"${text.replace(/"/g, '""')}"` // Escape double quotes
+            }
+            return [
+                escape(a.id),
+                escape(a.title),
+                escape(a.authors?.join('; ')),
+                a.year || '',
+                escape(a.journal),
+                escape(a.doi),
+                escape(a.url),
+                escape(a.source),
+                escape(a.status),
+                escape(a.screeningStatus)
+            ].join(',')
+        })
+
+        const csvContent = [header, ...rows].join('\n')
+
+        res.setHeader('Content-Type', 'text/csv')
+        res.setHeader('Content-Disposition', `attachment; filename="research-${id}.csv"`)
+        res.send(csvContent)
+    } catch (error) {
+        console.error('Error exporting CSV:', error)
+        res.status(500).json({ error: 'Failed to export CSV' })
+    }
+})
+
+/**
+ * GET /api/research/jobs/:id/export/bibtex
+ * Export job articles as BibTeX
+ */
+router.get('/jobs/:id/export/bibtex', async (req: any, res) => {
+    try {
+        const { id } = req.params
+        const userId = req.user.id
+
+        const job = literatureAgent.getJob(id, userId)
+        if (!job) return res.status(404).json({ error: 'Job not found' })
+
+        const articles = job.articles || []
+
+        const bibtexEntries = articles.map(a => {
+            const entryId = a.doi ? a.doi.replace(/[^a-zA-Z0-9]/g, '_') : `article_${a.id}`
+            const authors = a.authors?.join(' and ') || 'Unknown'
+
+            return `@article{${entryId},
+  title = {${a.title}},
+  author = {${authors}},
+  year = {${a.year || ''}},
+  journal = {${a.journal || 'Unknown'}},
+  doi = {${a.doi || ''}},
+  url = {${a.url || ''}},
+  source = {${a.source}}
+}`
+        })
+
+        const bibtexContent = bibtexEntries.join('\n\n')
+
+        res.setHeader('Content-Type', 'application/x-bibtex')
+        res.setHeader('Content-Disposition', `attachment; filename="research-${id}.bib"`)
+        res.send(bibtexContent)
+    } catch (error) {
+        console.error('Error exporting BibTeX:', error)
+        res.status(500).json({ error: 'Failed to export BibTeX' })
     }
 })
 

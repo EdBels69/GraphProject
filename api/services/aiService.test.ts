@@ -73,7 +73,7 @@ describe('AI Service', () => {
 
             await expect(chatCompletion([
                 { role: 'user', content: 'Hello' }
-            ])).rejects.toThrow('AI API error')
+            ])).rejects.toThrow(/Chat completion failed/)
         })
 
         it('should throw when AI features are disabled', async () => {

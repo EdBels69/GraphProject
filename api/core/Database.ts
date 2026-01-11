@@ -94,6 +94,10 @@ export class DatabaseManager {
     } as any);
   }
 
+  public getClient(): PrismaClient {
+    return this.prisma;
+  }
+
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
     try {

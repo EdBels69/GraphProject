@@ -1,42 +1,52 @@
-@import url('https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Light Mode Palette - ENHANCED CONTRAST */
+  /* Refined Light Mode Palette - HIGHER CONTRAST */
   color-scheme: light;
 
-  /* HSL Values for Tailwind compatibility (space-separated) */
-  --void: 220 15% 92%;
-  /* Slightly darker base gray */
-  --space: 220 15% 85%;
-  /* Darker secondary gray */
+  /* Neutrals */
+  --void: 0 0% 98%;
+  /* Very clean light gray */
+  --space: 220 15% 94%;
+  /* Subtle background accent */
   --glass: 0 0% 100%;
-  /* Pure White Panels */
+  /* Pure White */
 
-  /* ACCENT: Juicy Strict Orange */
-  --acid: 24 95% 45%;
-  /* Slightly darker orange for better contrast on light bg */
-  --acid-dim: 24 95% 90%;
+  /* ACCENT: Professional Primary Orange (Increased Saturation/Contrast) */
+  --acid: 24 95% 42%;
+  --acid-dim: 24 95% 94%;
 
-  /* SECONDARY: Soft Violet */
-  --plasma: 250 60% 55%;
-  --plasma-light: 250 60% 80%;
+  /* SECONDARY: Muted Professional Violet */
+  --plasma: 250 40% 45%;
+  --plasma-light: 250 40% 92%;
 
-  /* TEXT & BORDERS */
-  --steel: 0 0% 0%;
-  /* Pure Black for primary text */
-  --steel-dim: 220 15% 25%;
-  /* Deep Dark Gray for secondary text */
-  --ash: 220 15% 60%;
-  /* Darker border gray */
+  /* TEXT: Optimized for Readability */
+  --steel: 0 0% 12%;
+  /* Near black for maximum contrast */
+  --steel-dim: 220 10% 40%;
+  /* Gray for meta info */
+  --ash: 220 15% 85%;
+  /* Clean border gray */
+
+  /* TYPOGRAPHY SCALE - OPTIMIZED FOR LARGE SCREENS (READABILITY) */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  /* Increased from 14px */
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-2xl: 36px;
+  --text-3xl: 52px;
+  --text-4xl: 72px;
 }
 
 body {
   @apply bg-void text-steel font-body antialiased;
-  /* Noise Texture Overlay */
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  /* Very subtle noise for professional texture */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.015'/%3E%3C/svg%3E");
   background-attachment: fixed;
   overflow-x: hidden;
 }
@@ -46,10 +56,77 @@ body {
   @apply bg-acid text-void;
 }
 
-/* Custom Scrollbar */
+/* Typography Defaults - NO AGGRESSIVE UPPERCASE */
+h1 {
+  @apply text-[length:var(--text-3xl)] font-bold tracking-tight leading-tight;
+}
+
+h2 {
+  @apply text-[length:var(--text-2xl)] font-bold tracking-tight leading-tight;
+}
+
+h3 {
+  @apply text-[length:var(--text-xl)] font-semibold tracking-tight;
+}
+
+h4 {
+  @apply text-[length:var(--text-lg)] font-semibold;
+}
+
+h5 {
+  @apply text-[length:var(--text-base)] font-bold text-steel;
+}
+
+h6 {
+  @apply text-[length:var(--text-sm)] font-bold uppercase tracking-widest text-steel-dim;
+}
+
+p,
+span,
+div {
+  @apply text-[length:var(--text-base)] leading-relaxed;
+}
+
+/* Explicit over-rides for small text classes */
+.text-xs {
+  font-size: var(--text-xs);
+}
+
+.text-sm {
+  font-size: var(--text-sm);
+}
+
+.text-base {
+  font-size: var(--text-base);
+}
+
+.text-lg {
+  font-size: var(--text-lg);
+}
+
+.text-xl {
+  font-size: var(--text-xl);
+}
+
+.text-2xl {
+  font-size: var(--text-2xl);
+}
+
+/* Utility Classes - SOFT PROFESSIONAL CARDS */
+.glass-panel {
+  @apply bg-glass border border-ash/40 shadow-sm rounded-2xl;
+}
+
+.glass-panel-heavy {
+  @apply bg-glass border border-ash/60 shadow-lg rounded-2xl;
+}
+
+/* REMOVED .text-glow for professional look */
+
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -57,31 +134,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-ash/40 rounded-full hover:bg-acid/80 transition-colors;
-}
-
-/* Typography Defaults */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  @apply font-display tracking-widest font-bold uppercase;
-}
-
-/* Utility Classes */
-.glass-panel {
-  @apply bg-glass/80 backdrop-blur-xl border border-ash/30 shadow-md;
-  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
-}
-
-.glass-panel-heavy {
-  @apply bg-glass/95 backdrop-blur-2xl border border-ash/40 shadow-xl;
-}
-
-.text-glow {
-  text-shadow: 0 0 10px rgba(204, 255, 0, 0.3);
+  @apply bg-ash/60 rounded-full hover:bg-ash transition-colors;
 }
 
 /* Toast animations */

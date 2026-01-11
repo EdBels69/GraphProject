@@ -12,8 +12,9 @@ export interface IGlobalSearch {
         query: string,
         sources: ResearchSource[],
         maxResults?: number,
-        yearFrom?: number,
-        yearTo?: number
+        fromDate?: string,
+        toDate?: string,
+        sortBy?: string
     }): Promise<ISearchResult>
 }
 

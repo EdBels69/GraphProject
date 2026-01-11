@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Rajdhani', 'sans-serif'],
+        display: ['Outfit', 'sans-serif'],
         body: ['Outfit', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
@@ -38,8 +38,8 @@ export default {
         'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")",
       },
       boxShadow: {
-        'glow-acid': '0 0 20px rgba(255, 102, 0, 0.25)', // Orange glow
-        'glow-plasma': '0 0 25px rgba(100, 80, 200, 0.15)', // Softer, subtler violet glow
+        'glow-acid': '0 4px 12px rgba(255, 102, 0, 0.12)', // Subtle orange elevation
+        'glow-plasma': '0 4px 12px rgba(100, 80, 200, 0.08)', // Subtler elevation
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out forwards',

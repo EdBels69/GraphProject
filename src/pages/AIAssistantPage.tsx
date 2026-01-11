@@ -2,19 +2,14 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Send, Bot, User, Loader2, AlertCircle, Sparkles, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody, CardHeader } from '@/components/ui/Card'
+import { Card, CardBody } from '@/components/ui/Card'
+import { aiService, AIStatus } from '@/services/aiService'
 
 interface Message {
   id: string
   role: 'user' | 'assistant' | 'system'
   content: string
   timestamp: Date
-}
-
-interface AIStatus {
-  available: boolean
-  model?: string
-  error?: string
 }
 
 export default function AIAssistantPage() {
@@ -43,13 +38,8 @@ export default function AIAssistantPage() {
   }, [messages])
 
   const checkAIStatus = async () => {
-    try {
-      const response = await fetch('/api/ai/health')
-      const data = await response.json()
-      setAiStatus(data)
-    } catch (error) {
-      setAiStatus({ available: false, error: 'Не удалось проверить статус AI' })
-    }
+    const status = await aiService.checkStatus()
+    setAiStatus(status)
   }
 
   const sendMessage = async () => {
@@ -75,30 +65,18 @@ export default function AIAssistantPage() {
 
       apiMessages.push({ role: 'user', content: userMessage.content })
 
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful biomedical research assistant. Answer questions concisely in Russian. Help with entity extraction, document analysis, and research recommendations.'
-            },
-            ...apiMessages
-          ]
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('AI request failed')
-      }
-
-      const data = await response.json()
+      const response = await aiService.sendMessage([
+        {
+          role: 'system',
+          content: 'You are a helpful biomedical research assistant. Answer questions concisely in Russian. Help with entity extraction, document analysis, and research recommendations.'
+        },
+        ...apiMessages
+      ])
 
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: data.content || 'Не удалось получить ответ',
+        content: response.content || 'Не удалось получить ответ',
         timestamp: new Date()
       }
 
@@ -145,23 +123,23 @@ export default function AIAssistantPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-steel flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-plasma" />
+            <h2 className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-acid" />
               AI-помощник
-            </h1>
-            <p className="text-sm text-steel-dim font-bold">
-              Интеллектуальный анализ биомедицинских данных
+            </h2>
+            <p className="text-xs text-steel-dim font-bold uppercase tracking-widest">
+              Интеллектуальный анализ данных
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {/* AI Status indicator */}
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight border ${aiStatus?.available
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tight border ${aiStatus?.available
             ? 'bg-acid/10 text-steel border-acid/20'
             : 'bg-red-500/10 text-red-700 border-red-500/20'
             }`}>
-            <div className={`w-2 h-2 rounded-full ${aiStatus?.available ? 'bg-green-500 shadow-glow-green' : 'bg-red-500 shadow-glow-red'
+            <div className={`w-2 h-2 rounded-full ${aiStatus?.available ? 'bg-acid shadow-glow-acid' : 'bg-red-500 shadow-glow-red'
               }`} />
             {aiStatus?.available ? (aiStatus.model || 'AI активен') : 'AI недоступен'}
           </div>
@@ -188,12 +166,12 @@ export default function AIAssistantPage() {
                 </div>
               )}
 
-              <div className={`max-w-[70%] rounded-lg p-3 shadow-sm border ${message.role === 'user'
-                ? 'bg-acid text-steel font-bold border-acid'
-                : 'bg-void text-steel border-ash/30'
+              <div className={`max-w-[75%] rounded-2xl p-4 shadow-sm border ${message.role === 'user'
+                ? 'bg-acid text-void font-bold border-acid'
+                : 'bg-glass text-steel border-ash/20 shadow-lg'
                 }`}>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
-                <p className={`text-[10px] mt-1 uppercase tracking-tighter font-bold ${message.role === 'user' ? 'text-void/60' : 'text-steel-dim'
+                <p className="whitespace-pre-wrap text-base leading-relaxed">{message.content}</p>
+                <p className={`text-xs mt-2 uppercase tracking-tighter font-bold ${message.role === 'user' ? 'text-void/60' : 'text-steel-dim'
                   }`}>
                   {message.timestamp.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                 </p>

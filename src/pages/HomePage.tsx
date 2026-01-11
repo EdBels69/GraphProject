@@ -9,6 +9,7 @@ import { API_ENDPOINTS } from '@/api/endpoints'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
+import { useTranslation } from 'react-i18next'
 
 interface ResearchJob {
   id: string
@@ -21,29 +22,42 @@ interface ResearchJob {
 
 interface SearchOptions {
   mode: 'quick' | 'research'
-  maxArticles: number
-  yearFrom: number
-  yearTo: number
   sources: {
     pubmed: boolean
     crossref: boolean
+    arxiv: boolean
+    biorxiv: boolean
+    scholar: boolean
   }
+  scopusQuartile?: ('Q1' | 'Q2' | 'Q3' | 'Q4')[]
+  wosQuartile?: ('Q1' | 'Q2' | 'Q3' | 'Q4')[]
+  sjrQuartile?: ('Q1' | 'Q2' | 'Q3' | 'Q4')[]
+  minImpactFactor?: number
+  fromDate?: string
+  toDate?: string
 }
 
 const currentYear = new Date().getFullYear()
 
 export default function HomePage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [topic, setTopic] = useState('')
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [options, setOptions] = useState<SearchOptions>({
     mode: 'research',
-    maxArticles: 50,
-    yearFrom: currentYear - 5,
-    yearTo: currentYear,
-    yearFrom: currentYear - 5,
-    yearTo: currentYear,
-    sources: { pubmed: true, crossref: false }
+    fromDate: `${currentYear - 5}-01-01`,
+    toDate: `${currentYear}-12-31`,
+    sources: {
+      pubmed: true,
+      crossref: true,
+      arxiv: false,
+      biorxiv: false,
+      scholar: false
+    },
+    scopusQuartile: undefined,
+    wosQuartile: undefined,
+    sjrQuartile: undefined,
+    minImpactFactor: 0
   })
 
   const { data: jobsData, loading: listLoading, refetch: fetchRecentJobs } = useApi<{ jobs: ResearchJob[] }>(API_ENDPOINTS.RESEARCH.JOBS_LIST)
@@ -56,49 +70,68 @@ export default function HomePage() {
 
   const getStatusText = (status: string) => {
     const texts: Record<string, string> = {
-      pending: 'Ожидание',
-      searching: 'Поиск...',
-      downloading: 'Загрузка...',
-      analyzing: 'Анализ...',
-      completed: 'Завершен',
-      failed: 'Ошибка',
-      cancelled: 'Отменен'
+      pending: t('common.pending') || 'Pending',
+      searching: t('common.searching') || 'Searching...',
+      downloading: t('common.downloading') || 'Downloading...',
+      analyzing: t('common.analyzing') || 'Analyzing...',
+      completed: t('common.completed') || 'Completed',
+      failed: t('common.failed') || 'Failed',
+      cancelled: t('common.cancelled') || 'Cancelled'
     }
     return texts[status] || status
   }
   const [validationError, setValidationError] = useState<string | null>(null)
 
+  const today = new Date().toISOString().split('T')[0]
+
   const handleStartResearch = async () => {
     setValidationError(null)
     if (!topic.trim()) return
 
+    // Date Validation
+    if (options.fromDate > options.toDate) {
+      setValidationError(t('home.error_date_range') || 'Start date cannot be after end date')
+      return
+    }
+    if (options.fromDate > today || options.toDate > today) {
+      setValidationError(t('home.error_future_date') || 'Dates cannot be in the future')
+      return
+    }
+
     const sources: string[] = []
     if (options.sources.pubmed) sources.push('pubmed')
     if (options.sources.crossref) sources.push('crossref')
+    if (options.sources.arxiv) sources.push('arxiv')
+    if (options.sources.biorxiv) sources.push('biorxiv')
+    if (options.sources.scholar) sources.push('scholar')
 
     try {
       const data = await startResearch({
         topic,
         mode: options.mode,
-        maxArticles: options.maxArticles,
-        yearFrom: options.yearFrom,
-        yearTo: options.yearTo,
-        sources
+        fromDate: options.fromDate,
+        toDate: options.toDate,
+        sources,
+        scopusQuartile: options.scopusQuartile,
+        wosQuartile: options.wosQuartile,
+        sjrQuartile: options.sjrQuartile,
+        minImpactFactor: options.minImpactFactor
       })
       if (data?.job?.id) {
         navigate(`/research/${data.job.id}/papers`)
       } else {
-        setValidationError('Ошибка: Сервер не вернул ID задачи. Проверьте консоль.')
+        setValidationError(t('home.validation_error'))
       }
     } catch (error) {
       console.error('Failed to start research:', error)
-      setValidationError(`Ошибка запуска: ${error instanceof Error ? error.message : String(error)}`)
+      setValidationError(`${t('home.launch_error')}: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
   const handleDeleteJob = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!window.confirm('Удалить эту запись исследования?')) return
+    // TODO: Localize confirm
+    if (!window.confirm(t('home.confirm_delete'))) return
 
     try {
       await deleteJob(id)
@@ -119,213 +152,206 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-12">
-      {/* Hero Section */}
-      <div className="text-center space-y-6 py-12 animate-fade-in">
-        <h2 className="text-5xl lg:text-8xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-b from-steel to-steel/40 tracking-tighter leading-none pointer-events-none select-none">
-          СИНТЕЗ <span className="text-acid text-glow">ЗНАНИЙ</span>
-        </h2>
-        <p className="text-lg text-steel-dim max-w-2xl mx-auto font-light tracking-widest uppercase">
-          Построение семантических графов из научной литературы.
-          Анализ связей с нейронной точностью.
+    <div className="min-h-[80vh] flex flex-col items-center justify-center space-y-12 animate-fade-in relative px-4">
+      {/* Hero Header */}
+      <div className="text-center space-y-4 relative z-10 max-w-2xl">
+        <h1 className="text-steel">
+          {t('home.hero_title')} <span className="text-acid">{t('home.hero_accent')}</span>
+        </h1>
+        <p className="text-steel-dim text-lg font-normal leading-relaxed">
+          {t('home.hero_subtitle')}
         </p>
       </div>
 
-      {/* Main Actions Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-        {/* Research Card */}
-        <div className="glass-panel p-8 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:border-acid/30 hover:shadow-glow-acid/5">
-          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-acid/5 rounded-full blur-3xl pointer-events-none group-hover:bg-acid/10 transition-colors" />
-
-          <div className="relative z-10 flex flex-col h-full">
-            <div className="w-14 h-14 rounded-xl bg-acid/10 border border-acid/20 flex items-center justify-center mb-8 group-hover:shadow-glow-acid transition-all">
-              <Search className="w-6 h-6 text-acid" />
+      {/* Main Search Area */}
+      <div className="w-full max-w-3xl space-y-8 relative z-10">
+        <div className="relative group">
+          <div className="relative flex items-center bg-white border-2 border-ash/40 rounded-2xl shadow-sm transition-all duration-300 focus-within:border-acid focus-within:ring-4 focus-within:ring-acid/5">
+            <div className="pl-6 text-steel-dim/60">
+              <Search className="w-6 h-6" />
             </div>
-
-            <h3 className="text-2xl font-display font-bold text-steel mb-2 tracking-widest">НОВОЕ ИССЛЕДОВАНИЕ</h3>
-            <p className="text-steel-dim mb-10 text-xs tracking-wider uppercase">
-              Запуск глубокого поиска по базам PubMed и CrossRef.
-            </p>
-
-            <div className="space-y-6 mt-auto">
-              <Input
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !showAdvanced && handleStartResearch()}
-                placeholder="Введите тему исследования (например, 'Применение CRISPR')..."
-              />
-
-              {/* Mode Selectors */}
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setOptions(o => ({ ...o, mode: 'quick' }))}
-                  className={`p-4 rounded-xl border transition-all text-left relative overflow-hidden ${options.mode === 'quick'
-                    ? 'bg-acid/10 border-acid text-steel'
-                    : 'bg-void border-ash/20 text-steel-dim hover:bg-white hover:border-ash/40'
-                    }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className={`w-4 h-4 ${options.mode === 'quick' ? 'text-acid' : ''}`} />
-                    <span className="font-display font-bold text-sm tracking-wider">БЫСТРЫЙ</span>
-                  </div>
-                  <div className="text-[10px] opacity-60">Автоматический пайплайн</div>
-                </button>
-
-                <button
-                  onClick={() => setOptions(o => ({ ...o, mode: 'research' }))}
-                  className={`p-4 rounded-xl border transition-all text-left relative overflow-hidden ${options.mode === 'research'
-                    ? 'bg-plasma/10 border-plasma text-steel'
-                    : 'bg-void border-ash/20 text-steel-dim hover:bg-white hover:border-ash/40'
-                    }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Database className={`w-4 h-4 ${options.mode === 'research' ? 'text-plasma' : ''}`} />
-                    <span className="font-display font-bold text-sm tracking-wider">ИССЛЕДОВАНИЕ</span>
-                  </div>
-                  <div className="text-[10px] opacity-60">Ручной отбор</div>
-                </button>
-              </div>
-
-              {/* Advanced Options Toggle */}
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-xs text-steel-dim hover:text-steel transition-colors w-full justify-center py-2"
-              >
-                <Filter className="w-3 h-3" />
-                {showAdvanced ? 'СКРЫТЬ ОПЦИИ' : 'РАСШИРЕННЫЕ НАСТРОЙКИ'}
-              </button>
-
-              {showAdvanced && (
-                <div className="p-4 bg-void border border-ash/20 rounded-xl space-y-4 animate-fade-in text-sm text-steel">
-                  {/* Simplified advanced options for UI cleanliness */}
-                  <div className="flex justify-between items-center text-steel-dim">
-                    <span>Лимит статей: <span className="text-steel font-bold">{options.maxArticles}</span></span>
-                    <input
-                      type="range" min="10" max="200" step="10"
-                      value={options.maxArticles}
-                      onChange={e => setOptions(o => ({ ...o, maxArticles: Number(e.target.value) }))}
-                      className="w-32 accent-acid"
-                    />
-                  </div>
-
-                  <div className="pt-2 border-t border-ash/10 space-y-2">
-                    <p className="text-xs text-steel-dim uppercase tracking-wider font-bold mb-2">Источники поиска</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="flex items-center gap-2 cursor-pointer hover:text-acid transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={options.sources.pubmed}
-                          onChange={e => setOptions(o => ({ ...o, sources: { ...o.sources, pubmed: e.target.checked } }))}
-                          className="accent-acid rounded-sm"
-                        />
-                        <span>PubMed (Мед.)</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer hover:text-plasma transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={options.sources.crossref}
-                          onChange={e => setOptions(o => ({ ...o, sources: { ...o.sources, crossref: e.target.checked } }))}
-                          className="accent-plasma rounded-sm"
-                        />
-                        <span>CrossRef (Строгий)</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-not-allowed opacity-50" title="Доступно только в платной версии">
-                        <input type="checkbox" disabled className="rounded-sm" />
-                        <span>Google Scholar</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-not-allowed opacity-50" title="Требуется ключ API">
-                        <input type="checkbox" disabled className="rounded-sm" />
-                        <span>ACS (Химия)</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {validationError && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm animate-fade-in">
-                  {validationError}
-                </div>
-              )}
-
+            <input
+              type="text"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleStartResearch()}
+              placeholder={t('home.placeholder')}
+              className="w-full bg-transparent border-none py-6 px-4 text-base font-normal focus:ring-0 placeholder:text-steel-dim/40"
+            />
+            <div className="pr-3">
               <Button
                 variant="primary"
                 size="lg"
                 onClick={handleStartResearch}
                 disabled={isLoading || !topic.trim()}
-                className="w-full shadow-glow-acid/20"
+                className="rounded-xl px-10"
               >
-                {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : <>ЗАПУСТИТЬ <ArrowRight className="w-5 h-5 ml-1" /></>}
+                {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : t('home.new_research')}
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Upload Card */}
-        <div
-          onClick={() => navigate('/upload')}
-          className="glass-panel p-10 rounded-[2.5rem] flex flex-col group cursor-pointer hover:border-plasma/30 transition-all duration-500 relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-plasma/5 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" />
+        {/* Sources Bar */}
+        <div className="flex flex-col items-center gap-4 py-6 border-y border-ash/20">
+          <span className="text-sm font-semibold text-steel-dim">
+            {t('home.sources_label')}
+          </span>
+          <div className="flex flex-wrap justify-center gap-8">
+            {[
+              { id: 'pubmed', label: t('home.source_pubmed') },
+              { id: 'crossref', label: t('home.source_crossref') },
+              { id: 'arxiv', label: t('home.source_arxiv') },
+              { id: 'biorxiv', label: t('home.source_biorxiv') },
+              { id: 'scholar', label: t('home.source_scholar') }
+            ].map(source => (
+              <button
+                key={source.id}
+                onClick={() => setOptions(o => ({
+                  ...o,
+                  sources: { ...o.sources, [source.id]: !((o.sources as any)[source.id]) }
+                }))}
+                className={`flex items-center gap-2 group transition-all duration-200 ${(options.sources as any)[source.id]
+                  ? 'opacity-100'
+                  : 'opacity-40 hover:opacity-100'
+                  }`}
+              >
+                <div className={`w-4 h-4 rounded border-2 transition-colors flex items-center justify-center ${(options.sources as any)[source.id] ? 'bg-acid border-acid' : 'border-ash/60'
+                  }`}>
+                  {(options.sources as any)[source.id] && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                </div>
+                <span className={`text-sm font-medium transition-colors ${(options.sources as any)[source.id] ? 'text-steel' : 'text-steel-dim'
+                  }`}>
+                  {source.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-          <div className="space-y-6 relative z-10 flex flex-col h-full">
-            <div className="p-4 w-16 h-16 rounded-2xl bg-void border border-ash/10 group-hover:border-plasma/30 group-hover:scale-110 transition-all duration-500 shadow-sm flex items-center justify-center">
-              <FileUp className="w-8 h-8 text-plasma-light" />
+        {validationError && (
+          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs text-center animate-shake font-mono uppercase tracking-widest">
+            {validationError}
+          </div>
+        )}
+
+
+        <div className="glass-panel p-10 animate-fade-in space-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+            {/* Row 1, Col 1: Date Range */}
+            <div className="space-y-4">
+              <label className="text-sm font-semibold text-steel block">
+                Publication Date Range
+              </label>
+              <div className="flex flex-col gap-3">
+                <input
+                  type="date"
+                  max={today}
+                  value={options.fromDate}
+                  onChange={e => setOptions(o => ({ ...o, fromDate: e.target.value }))}
+                  className="w-full bg-void border border-ash/60 rounded-xl py-3 px-4 text-sm font-normal text-steel focus:border-acid focus:ring-4 focus:ring-acid/5 transition-all"
+                />
+                <input
+                  type="date"
+                  max={today}
+                  value={options.toDate}
+                  onChange={e => setOptions(o => ({ ...o, toDate: e.target.value }))}
+                  className="w-full bg-void border border-ash/60 rounded-xl py-3 px-4 text-sm font-normal text-steel focus:border-acid focus:ring-4 focus:ring-acid/5 transition-all"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <h2 className="text-3xl font-display font-bold text-steel tracking-tighter uppercase">ЗАГРУЗКА <span className="text-plasma-light italic">DATA</span></h2>
-              <p className="text-xs font-bold text-steel-dim uppercase tracking-widest leading-relaxed">Извлечение знаний из ваших PDF, DOCX и TXT файлов</p>
+            {/* Row 1, Col 2: Impact Factor */}
+            <div className="space-y-4">
+              <label className="text-sm font-semibold text-steel block">
+                Impact Factor (IF) ≥
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={options.minImpactFactor}
+                  onChange={e => setOptions(o => ({ ...o, minImpactFactor: Number(e.target.value) }))}
+                  className="w-full bg-void border border-ash/60 rounded-xl py-3 px-4 text-base font-normal text-steel focus:border-acid focus:ring-4 focus:ring-acid/5 transition-all"
+                />
+              </div>
+              <div className="text-xs text-steel-dim leading-relaxed">
+                Uses OpenAlex Impact Score as a proxy for current journal IF.
+              </div>
             </div>
 
-            <div className="mt-auto pt-6 border-t border-ash/10 flex items-center justify-between text-steel-dim group-hover:text-plasma-light transition-colors">
-              <span className="text-[10px] font-bold tracking-[0.2em] uppercase">ЦЕНТР ОБРАБОТКИ</span>
-              <div className="w-10 h-10 rounded-full border border-ash/10 flex items-center justify-center group-hover:border-plasma/30 transition-colors">
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            {/* Row 1, Col 3-4: Quartiles */}
+            <div className="col-span-1 md:col-span-2 space-y-4">
+              <label className="text-sm font-semibold text-steel block">
+                Database Quartiles (Scopus, WoS, SJR)
+              </label>
+
+              <div className="space-y-4">
+                {[
+                  { label: 'Scopus', key: 'scopusQuartile' },
+                  { label: 'WoS', key: 'wosQuartile' },
+                  { label: 'SJR', key: 'sjrQuartile' }
+                ].map(metric => (
+                  <div key={metric.key} className="flex items-center gap-6">
+                    <span className="text-sm font-medium text-steel-dim w-16">{metric.label}:</span>
+                    <div className="flex gap-2 flex-1">
+                      {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
+                        <button
+                          key={q}
+                          onClick={() => setOptions(o => {
+                            const currentSelected = (o as any)[metric.key] || []
+                            const newSelected = currentSelected.includes(q)
+                              ? currentSelected.filter((v: string) => v !== q)
+                              : [...currentSelected, q]
+                            return { ...o, [metric.key]: newSelected.length > 0 ? newSelected : undefined }
+                          })}
+                          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all border-2 ${((options as any)[metric.key] || []).includes(q)
+                            ? 'bg-acid text-white border-acid shadow-sm'
+                            : 'bg-void text-steel-dim border-ash/40 hover:border-acid/30'
+                            }`}
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Jobs - Bottom Bar Style */}
       {recentJobs.length > 0 && (
-        <div className="max-w-6xl mx-auto pt-8 pb-20">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-display font-bold text-steel tracking-widest flex items-center gap-2">
-              <Clock className="w-4 h-4 text-acid" />
-              ПОСЛЕДНИЕ ПРОЕКТЫ
-            </h3>
+        <div className="w-full max-w-6xl pt-12 animate-fade-in-up">
+          <div className="flex items-center justify-between mb-6 px-4">
+            <h5 className="flex items-center gap-3 text-steel-dim/50">
+              <Clock className="w-4 h-4" />
+              {t('home.recent_projects')}
+            </h5>
             <button
               onClick={() => navigate('/projects')}
-              className="text-[10px] font-bold text-steel-dim hover:text-acid transition-colors flex items-center gap-1 tracking-widest uppercase"
+              className="text-xs font-bold text-acid hover:tracking-widest transition-all uppercase"
             >
-              ВЕСЬ АРХИВ <ArrowRight className="w-3 h-3" />
+              {t('home.full_archive')} →
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4">
             {recentJobs.slice(0, 3).map((job) => (
               <div
                 key={job.id}
-                onClick={() => openJob(job)}
-                className="glass-panel p-6 rounded-2xl cursor-pointer hover:border-acid/30 transition-all group relative overflow-hidden"
+                onClick={() => navigate(`/papers/${job.id}`)}
+                className="glass-panel-heavy p-6 cursor-pointer hover:border-acid active:scale-[0.98] transition-all group flex items-start gap-4"
               >
-                <div className="relative z-10 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className={`w-2 h-2 rounded-full ${job.status === 'completed' ? 'bg-acid shadow-glow-acid' : 'bg-plasma animate-pulse'}`} />
-                    <span className="text-[10px] font-mono text-steel-dim">{new Date(job.createdAt).toLocaleDateString()}</span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <h4 className="font-display font-bold text-steel group-hover:text-acid transition-colors truncate">{job.topic}</h4>
-                    <p className="text-[10px] text-steel-dim uppercase tracking-wider">{job.articlesFound || 0} источников • {getStatusText(job.status)}</p>
-                  </div>
-
-                  <div className="pt-2 flex items-center justify-between text-steel-dim group-hover:text-acid transition-colors">
-                    <span className="text-[10px] font-bold tracking-widest">ОТКРЫТЬ</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
+                <div className={`mt-2 w-2 h-2 rounded-full shrink-0 ${job.status === 'completed' ? 'bg-acid shadow-sm' : 'bg-plasma animate-pulse'}`} />
+                <div className="min-w-0">
+                  <h5 className="truncate mb-2 text-steel">{job.topic}</h5>
+                  <p className="text-xs text-steel-dim font-medium">
+                    {job.articlesFound || 0} {t('papers.records_found')} • {getStatusText(job.status)}
+                  </p>
                 </div>
               </div>
             ))}
