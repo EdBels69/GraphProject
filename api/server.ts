@@ -2,7 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 
-console.log('Server starting...')
+console.log('Server starting... (Force Restart)')
 console.log('CWD:', process.cwd())
 console.log('DATABASE_URL:', process.env.DATABASE_URL)
 

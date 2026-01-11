@@ -173,7 +173,7 @@ export default function PapersPage() {
     }, [job?.articles, selectedIndex])
 
 
-    const handleContinue = () => {
+    const handleTransition = () => {
         if (job?.graphId) {
             navigate(`/research/${id}/graph`)
         } else {
@@ -208,8 +208,8 @@ export default function PapersPage() {
                             Тема исследования: <span className="text-acid text-glow">{job?.topic}</span>
                         </h1>
                         <div className="flex items-center gap-4 text-sm font-bold text-steel-dim uppercase tracking-tight">
-                            <span className="bg-void px-2 py-1 rounded text-[10px] border border-ash/10">{job?.status === 'completed' ? 'ЗАВЕРШЕНО' : 'В ПРОЦЕССЕ'}</span>
-                            <span className="text-[10px] tracking-widest">{job?.articlesFound} СТАТЕЙ НАЙДЕНО</span>
+                            <span className="bg-void px-2 py-1 rounded text-[10px] border border-ash/20">СТАТУС: {job?.status === 'completed' ? 'ЗАВЕРШЕНО' : 'ОБРАБОТКА'}</span>
+                            <span className="text-[10px] tracking-widest">{job?.articlesFound} ЗАПИСЕЙ НАЙДЕНО</span>
                         </div>
                     </div>
 
@@ -446,31 +446,35 @@ export default function PapersPage() {
                     <button
                         onClick={async () => {
                             setActionLoading(true);
-                            // Logic (save screening)
                             const includedIds = job.articles!.filter(a => a.screeningStatus === 'included').map(a => a.id)
                             const excludedIds = job.articles!.filter(a => a.screeningStatus === 'excluded').map(a => a.id)
                             try {
-                                await fetch(`/api/research/jobs/${id}/screening`, {
+                                const response = await fetch(`/api/research/jobs/${id}/screening`, {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ includedIds, excludedIds })
                                 })
-                                navigate(`/research/${id}/config`)
+                                if (response.ok) {
+                                    handleTransition()
+                                } else {
+                                    addToast('Ошибка сохранения выбора', 'error')
+                                }
                             } catch (e) {
                                 console.error(e)
+                                addToast('Сетевая ошибка', 'error')
                             } finally {
                                 setActionLoading(false)
                             }
                         }}
                         disabled={actionLoading || !job.articles?.some(a => a.screeningStatus === 'included')}
                         className={`
-                            pointer-events-auto px-8 py-4 rounded-xl font-display font-bold tracking-widest text-lg shadow-2xl transition-all hover:scale-105 active:scale-95
+                            pointer-events-auto px-10 py-5 rounded-2xl font-display font-bold tracking-widest text-xl shadow-2xl transition-all hover:scale-105 active:scale-95
                             ${job.articles?.some(a => a.screeningStatus === 'included')
                                 ? 'bg-acid text-void shadow-glow-acid'
-                                : 'bg-steel/10 text-steel-dim cursor-not-allowed'}
+                                : 'bg-ash/20 text-steel-dim cursor-not-allowed border border-ash/30'}
                         `}
                     >
-                        ПРОДОЛЖИТЬ →
+                        {actionLoading ? 'СОХРАНЕНИЕ...' : 'ПРОДОЛЖИТЬ →'}
                     </button>
                 </div>
             )}

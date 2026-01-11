@@ -46,6 +46,9 @@ export class KnowledgeGraphBuilder {
         (includeCooccurrence || r.type !== 'cooccurs_with')  // FIXED: match new type name
     )
 
+    console.info(`[KnowledgeGraphBuilder] Input: ${entities.length} entities, ${relations.length} relations`)
+    console.info(`[KnowledgeGraphBuilder] Filtered (conf>=${minConfidence}): ${filteredEntities.length} entities, ${filteredRelations.length} relations`)
+
     // Limit number of nodes if specified
     const sortedEntities = filteredEntities
       .sort((a, b) => b.mentions - a.mentions)

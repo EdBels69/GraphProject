@@ -262,14 +262,22 @@ export async function generateResearchRecommendations(
 }
 
 // 6. Health Check
-export async function checkAIHealth(): Promise<{ available: boolean; model?: string; error?: string }> {
+export async function checkAIHealth(): Promise<{ available: boolean; model?: string; provider?: string; error?: string }> {
     try {
         const response = await chatCompletion([
             { role: 'user', content: 'Hi' }
         ], { maxTokens: 5 })
-        return { available: true, model: process.env.AI_MODEL || 'glm-4.7' }
+        return {
+            available: true,
+            model: process.env.AI_MODEL || 'glm-4.7',
+            provider: llmProvider.getActiveProvider()
+        }
     } catch (error) {
-        return { available: false, error: String(error) }
+        return {
+            available: false,
+            error: String(error),
+            provider: llmProvider.getActiveProvider()
+        }
     }
 }
 

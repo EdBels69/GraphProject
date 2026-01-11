@@ -23,8 +23,10 @@ const router = Router()
 router.get('/health', async (req, res) => {
     try {
         const health = await checkAIHealth()
+        logger.info('AIRoute', `Health check: ${health.provider} - ${health.available ? 'ONLINE' : 'OFFLINE'}`)
         res.json(health)
     } catch (error) {
+        logger.error('AIRoute', 'Health check failed', { error })
         res.json({ available: false, error: String(error) })
     }
 })

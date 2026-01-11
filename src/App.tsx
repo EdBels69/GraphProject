@@ -61,7 +61,7 @@ function App() {
                   <Route path="/analysis/data/:id?" element={<GraphDataPage />} />
                   <Route path="/report/:id?" element={<ReportPage />} />
                   <Route path="/search" element={<SearchPage />} />
-                  <Route path="/research" element={<ResearchPage />} />
+                  <Route path="/projects" element={<ResearchPage />} />
                   <Route path="/health" element={<HealthDashboardPage />} />
                 </Route>
               </Routes>

@@ -25,11 +25,11 @@
   --plasma-light: 250 60% 80%;
 
   /* TEXT & BORDERS */
-  --steel: 220 25% 12%;
-  /* Darker primary text */
-  --steel-dim: 220 15% 40%;
-  /* More visible secondary text */
-  --ash: 220 15% 70%;
+  --steel: 0 0% 0%;
+  /* Pure Black for primary text */
+  --steel-dim: 220 15% 25%;
+  /* Deep Dark Gray for secondary text */
+  --ash: 220 15% 60%;
   /* Darker border gray */
 }
 
@@ -72,12 +72,12 @@ h6 {
 
 /* Utility Classes */
 .glass-panel {
-  @apply bg-glass/60 backdrop-blur-xl border border-ash/50 shadow-sm;
-  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+  @apply bg-glass/80 backdrop-blur-xl border border-ash/30 shadow-md;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 100%);
 }
 
 .glass-panel-heavy {
-  @apply bg-glass/80 backdrop-blur-2xl border border-white/20 shadow-xl;
+  @apply bg-glass/95 backdrop-blur-2xl border border-ash/40 shadow-xl;
 }
 
 .text-glow {

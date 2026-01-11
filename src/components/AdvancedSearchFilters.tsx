@@ -90,29 +90,34 @@ export function AdvancedSearchFilters({ onSearch, isLoading }: AdvancedSearchFil
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* Year Range */}
                         <div>
-                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                                <Calendar className="w-4 h-4" />
-                                Год публикации
+                            <label className="flex items-center gap-2 text-[10px] font-bold text-steel-dim uppercase tracking-widest mb-2">
+                                <Calendar className="w-3 h-3 text-cyan-500" />
+                                Диапазон лет
                             </label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="number"
-                                    placeholder="От"
-                                    min={1900}
-                                    max={currentYear}
-                                    value={filters.yearFrom || ''}
-                                    onChange={(e) => setFilters({ ...filters, yearFrom: e.target.value ? parseInt(e.target.value) : undefined })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    placeholder="До"
-                                    min={1900}
-                                    max={currentYear}
-                                    value={filters.yearTo || ''}
-                                    onChange={(e) => setFilters({ ...filters, yearTo: e.target.value ? parseInt(e.target.value) : undefined })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                />
+                            <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="number"
+                                        placeholder="ОТ"
+                                        min={1900}
+                                        max={currentYear}
+                                        value={filters.yearFrom || ''}
+                                        onChange={(e) => setFilters({ ...filters, yearFrom: e.target.value ? parseInt(e.target.value) : undefined })}
+                                        className="w-full pl-3 pr-2 py-2 bg-void border border-ash/20 rounded text-steel font-mono text-xs focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                                    />
+                                </div>
+                                <span className="text-ash/30">—</span>
+                                <div className="relative flex-1">
+                                    <input
+                                        type="number"
+                                        placeholder="ДО"
+                                        min={1900}
+                                        max={currentYear}
+                                        value={filters.yearTo || ''}
+                                        onChange={(e) => setFilters({ ...filters, yearTo: e.target.value ? parseInt(e.target.value) : undefined })}
+                                        className="w-full pl-3 pr-2 py-2 bg-void border border-ash/20 rounded text-steel font-mono text-xs focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all"
+                                    />
+                                </div>
                             </div>
                         </div>
 

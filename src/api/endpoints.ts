@@ -41,6 +41,9 @@ export const API_ENDPOINTS = {
         ANALYZE: '/ai/analyze',
         ASK_GRAPH: '/ai/ask-graph',
     },
+    SEARCH: {
+        BASE: '/search',
+    },
     SYSTEM: {
         HEALTH: '/health',
         CONFIG: '/config',

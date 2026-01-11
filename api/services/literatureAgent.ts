@@ -71,6 +71,34 @@ export class LiteratureAgent extends EventEmitter {
         this.entityExtractor = dependencies.entityExtractor
         this.relationExtractor = dependencies.relationExtractor
         this.graphBuilder = dependencies.graphBuilder
+
+        // Initial sync from DB
+        this.syncJobsWithDb().catch(err => {
+            logger.error('LiteratureAgent', 'Failed initial job sync', { err })
+        })
+    }
+
+    /**
+     * Sync jobs from database to memory on startup
+     */
+    private async syncJobsWithDb(): Promise<void> {
+        try {
+            // How do we get all users? We don't easily, but we can get all jobs and iterate.
+            // Or better, add a method to DatabaseManager to get ALL jobs across all users.
+            const jobs = await databaseManager.getAllResearchJobs('system') // Fallback/placeholder or specialized method
+            // Actually, DatabaseManager should have a way to load ALL jobs if we are a singleton server agent.
+            // For now, let's assume we load them as they are requested if not in memory, 
+            // but that requires changing getJob to be async.
+
+            // ALTERNATIVE: Since we only have one user in local dev, we use 'local-admin'
+            const adminJobs = await databaseManager.getAllResearchJobs('local-admin')
+            adminJobs.forEach(job => {
+                this.jobs.set(job.id, job as any)
+            })
+            logger.info('LiteratureAgent', `Synced ${adminJobs.length} jobs from DB for local-admin`)
+        } catch (e) {
+            logger.error('LiteratureAgent', 'Job synchronization failed', { error: e })
+        }
     }
 
     /**
@@ -240,6 +268,7 @@ export class LiteratureAgent extends EventEmitter {
         }
 
         job.updatedAt = new Date().toISOString()
+        this.persistJob(job) // CRITICAL: Save screening data to DB
         return job
     }
 
@@ -331,8 +360,13 @@ export class LiteratureAgent extends EventEmitter {
                         minConfidence: 0.3,
                         includeCooccurrence: true
                     })
+
+                    // Save graph to database and storage
+                    await databaseManager.saveGraphToDb(graphRes.graph as any)
+                    GraphStorage.save(graphRes.graph as any)
+
                     job.graphId = graphRes.graph.id
-                    this.log(jobId, 'success', `Graph built successfully: ${graphRes.graph.id}`)
+                    this.log(jobId, 'success', `Graph built and saved successfully: ${graphRes.graph.id}`)
                 } catch (e) {
                     logger.error('LiteratureAgent', `Failed to build graph`, { error: e })
                     this.log(jobId, 'error', 'Failed to build graph')
@@ -342,6 +376,8 @@ export class LiteratureAgent extends EventEmitter {
             job.status = 'completed'
             job.progress = 100
             job.completedAt = new Date().toISOString()
+
+            await this.persistJob(job) // Final persistence
             this.emit('job:completed', job)
 
             return job
@@ -450,13 +486,14 @@ export class LiteratureAgent extends EventEmitter {
     }
 
     private async executeSearchPhase(job: ResearchJob, request: ResearchJobRequest): Promise<ArticleSource[]> {
-        const maxArticles = request.maxArticles || 20
+        const maxArticles = request.maxArticles || 100 // Increased from 20
         const sources = request.sources || ['pubmed', 'crossref']
 
         this.updateJob(job, 'searching', 5)
         this.log(job.id, 'ai', 'Generating search queries with AI...')
 
         job.queries = await this.generateQueries(request.topic)
+        this.persistJob(job) // Ensure queries are saved to DB for debugging
         logger.info('LiteratureAgent', `Generated ${job.queries.length} queries for "${request.topic}"`)
         this.log(job.id, 'search', `Generated queries: ${job.queries.join(', ')}`)
 
@@ -493,7 +530,7 @@ export class LiteratureAgent extends EventEmitter {
     }
 
     private async executeAnalysisPhase(job: ResearchJob, articles: ArticleSource[], request: ResearchJobRequest): Promise<{ entities: any[], relations: any[] }> {
-        const maxArticles = request.maxArticles || 20
+        const maxArticles = request.maxArticles || 100 // Increased from 20
         this.updateJob(job, 'analyzing', 50)
 
         const allEntities: any[] = []
@@ -544,11 +581,35 @@ export class LiteratureAgent extends EventEmitter {
             job.reviewText = reviewText
         }
 
+        // NEW: Build knowledge graph if entities exist - missing in automatic/quick flow
+        if (mergedEntities.length > 0) {
+            try {
+                logger.info('LiteratureAgent', `Building auto-graph for job ${job.id}`)
+                const graphRes = await this.graphBuilder.buildGraph(mergedEntities, relations, {
+                    minConfidence: 0.3,
+                    includeCooccurrence: true
+                })
+
+                    // Associate with the user who started the job
+                    ; (graphRes.graph as any).userId = job.userId
+
+                await databaseManager.saveGraphToDb(graphRes.graph as any)
+                GraphStorage.save(graphRes.graph as any)
+                job.graphId = graphRes.graph.id
+                logger.info('LiteratureAgent', `Auto-graph built: ${job.graphId} for user ${job.userId}`)
+            } catch (e) {
+                logger.error('LiteratureAgent', `Failed to build auto-graph for job ${job.id}`, { error: e })
+            }
+        } else {
+            logger.warn('LiteratureAgent', `No entities found for job ${job.id}, skipping graph building`)
+        }
+
         job.status = 'completed'
         job.progress = 100
         job.completedAt = new Date().toISOString()
         job.updatedAt = new Date().toISOString()
 
+        await this.persistJob(job) // CRITICAL: Save final state with graphId
         this.emit('job:completed', job)
     }
 
@@ -581,26 +642,25 @@ export class LiteratureAgent extends EventEmitter {
             const response = await chatCompletion([
                 {
                     role: 'system',
-                    content: `You are a biomedical search assistant. Given a research topic, generate 3 simple search query variations for PubMed.
+                    content: `You are a biomedical search assistant. Given a research topic (which might be in Russian or another language), generate 3 effective search query variations for PubMed in ENGLISH.
 Rules:
+- ALWAYS translate non-English topics to English
 - Keep queries SHORT (2-4 words max)
-- Use common biomedical terms
-- Do NOT add complex operators or boolean logic
-- Focus on synonyms and related concepts
+- Use standard MeSH terms where possible
+- Do NOT add complex operators
 Return ONLY a JSON array of 3 strings.`
                 },
                 {
                     role: 'user',
                     content: `Topic: "${topic}"
-Generate 3 simple search query variations:`
+Generate 3 English search query variations:`
                 }
-            ], { temperature: 0.3 }) // Lower temperature for more focused results
+            ], { temperature: 0.3 })
 
             const cleaned = response.content.replace(/```json\n?/g, '').replace(/```/g, '').trim()
             const aiQueries = JSON.parse(cleaned)
 
             if (Array.isArray(aiQueries)) {
-                // Add AI queries but keep them simple
                 for (const q of aiQueries.slice(0, 3)) {
                     if (typeof q === 'string' && q.length > 2 && !queries.includes(q)) {
                         queries.push(q)
@@ -608,10 +668,19 @@ Generate 3 simple search query variations:`
                 }
             }
 
+            // Ensure we have at least the topic (if it looks English-ish) or rely on AI queries
+            // If topic is Cyrillic and we have AI queries, maybe remove the original Cyrillic topic to avoid 0-result noise?
+            // For now, let's keep all, but ensure list is not empty.
+            if (queries.length === 0) queries.push(topic)
+
             logger.info('LiteratureAgent', `Generated ${queries.length} search queries`, { queries })
             return queries
         } catch (error) {
-            logger.warn('LiteratureAgent', 'Failed to generate queries with AI, using topic only', { error })
+            logger.warn('LiteratureAgent', 'Failed to generate queries with AI, using original topic only', { error })
+            // Ensure we at least have the original topic
+            if (!queries.includes(topic)) {
+                queries.push(topic)
+            }
             return queries
         }
     }
@@ -626,6 +695,7 @@ Generate 3 simple search query variations:`
         yearFrom?: number,
         yearTo?: number
     ): Promise<ArticleSource[]> {
+        logger.info('LiteratureAgent', `searchSources called with:`, { queries, sources, maxResults })
         const allArticles: ArticleSource[] = []
         const seenDois = new Set<string>()
 
@@ -649,7 +719,7 @@ Generate 3 simple search query variations:`
         }
 
         // Try each query
-        for (const query of queries.slice(0, 4)) {
+        for (const query of queries.slice(0, 8)) { // Increased from 4
             if (allArticles.length >= maxResults) break
 
             try {
@@ -668,24 +738,29 @@ Generate 3 simple search query variations:`
             }
         }
 
-        // FALLBACK: If still no results, try broader search without year limits
-        if (allArticles.length === 0 && queries.length > 0) {
-            logger.info('LiteratureAgent', 'No results found, trying broader search without year limits...')
+        // FALLBACK: If too few results found, try broader search
+        if (allArticles.length < (maxResults / 4) && queries.length > 0) {
+            logger.info('LiteratureAgent', `Only ${allArticles.length} results found, trying broader search...`)
 
-            // Try just the main keyword(s)
-            const mainTopic = queries[0].split(' ').slice(0, 2).join(' ')
+            // Try the top 2 queries without year limits and without strict source filters if needed
+            for (const q of queries.slice(0, 2)) {
+                if (allArticles.length >= (maxResults / 2)) break
 
-            try {
-                const results = await this.globalSearch.search({
-                    query: mainTopic,
-                    sources,
-                    maxResults: maxResults,
-                    // No year limits for fallback
-                })
-                addResults(results.results)
-                logger.info('LiteratureAgent', `Fallback search "${mainTopic}" returned ${results.results.length} results`)
-            } catch (error) {
-                logger.warn('LiteratureAgent', `Fallback search failed`, { error })
+                // Try to strip some specific technical terms if they exist to be broader
+                const broadQuery = q.split(' ').filter(w => w.length > 3).slice(0, 3).join(' ')
+                if (!broadQuery) continue
+
+                try {
+                    const results = await this.globalSearch.search({
+                        query: broadQuery,
+                        sources,
+                        maxResults: Math.ceil(maxResults / 2),
+                    })
+                    addResults(results.results)
+                    logger.info('LiteratureAgent', `Fallback search "${broadQuery}" added ${results.results.length} results`)
+                } catch (error) {
+                    logger.warn('LiteratureAgent', `Fallback search failed for ${broadQuery}`, { error })
+                }
             }
         }
 

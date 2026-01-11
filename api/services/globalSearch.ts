@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { pubmedService } from './pubmedService'
+import { logger } from '../core/Logger'
 
 export interface SearchResult {
   id: string
@@ -77,8 +78,11 @@ export class GlobalSearch {
 
       if (result.status === 'fulfilled') {
         const sourceResults = result.value
+        logger.info('GlobalSearch', `Source ${source} returned ${sourceResults.length} results`)
         allResults.push(...sourceResults)
         bySource[source] = sourceResults
+      } else {
+        logger.error('GlobalSearch', `Source ${source} failed`, { error: result.reason })
       }
     }
 
@@ -139,24 +143,9 @@ export class GlobalSearch {
     query: string,
     options: { maxResults: number; yearFrom?: number; yearTo?: number; sortBy?: string }
   ): Promise<SearchResult[]> {
-    // Note: Google Scholar doesn't have an official API
-    // This is a placeholder that returns mock data
-    // In production, you would use a proxy service or alternative
-
-    // For now, return mock results
-    return [
-      {
-        id: `scholar-1`,
-        source: 'scholar',
-        title: `Mock result for "${query}" from Google Scholar`,
-        authors: ['Author A', 'Author B'],
-        year: 2023,
-        abstract: 'This is a mock abstract. In production, this would be fetched from Google Scholar.',
-        citations: 42,
-        relevanceScore: 0.9,
-        url: 'https://scholar.google.com/mock'
-      }
-    ]
+    // Google Scholar does not have a public API and scraping is heavily rate-limited/blocked.
+    // Returning empty to avoid "mock" confusion for the user.
+    return []
   }
 
   /**
@@ -183,7 +172,15 @@ export class GlobalSearch {
         doi: article.doi,
         url: article.url,
         citations: undefined, // PubMed doesn't provide easy citation counts in basic search
-        relevanceScore: 0.8 // Default score
+        relevanceScore: this.calculateRelevanceScore({
+          title: article.title,
+          abstract: article.abstract,
+          doi: article.doi,
+          year: article.year,
+          source: 'pubmed',
+          authors: article.authors,
+          id: article.id
+        }, query)
       }))
     } catch (error) {
       console.error('Error searching PubMed:', error)
@@ -260,12 +257,19 @@ export class GlobalSearch {
         'drug', 'disease', 'cell', 'molecular', 'gene', 'protein', 'metabol', 'physiol',
         'pathol', 'neuro', 'cardio', 'immuno', 'oncol', 'nutrition', 'biomed', 'plos',
         'bmc', 'frontiers', 'nature', 'science', 'lancet', 'jama', 'elsevier',
-        'carnitine', 'enzyme', 'mitochondr', 'lipid', 'amino', 'vitamin'
+        'carnitine', 'enzyme', 'mitochondr', 'lipid', 'amino', 'vitamin', 'physiology',
+        'pharmacology', 'toxicology', 'genetics', 'genomics', 'proteomics', 'metabolomics'
       ]
 
       // Keywords that indicate NON-biomedical content
-      const excludeKeywords = ['law', 'legal', 'court', 'criminal', 'судебн', 'право',
-        'уголовн', 'crm', 'sales', 'marketing', 'management', 'business', 'бизнес']
+      const excludeKeywords = [
+        'law', 'legal', 'court', 'criminal', 'судебн', 'право', 'уголовн',
+        'crm', 'sales', 'marketing', 'management', 'business', 'бизнес',
+        'budget', 'finance', 'economy', 'budgetary', 'бюджет', 'экономика',
+        'accounting', 'audit', 'taxation', 'politics', 'social science', 'history',
+        'humanities', 'arts', 'music', 'theater', 'defendants', 'plaintiffs',
+        'software engineering', 'computer vision', 'robotics' // Unless strictly needed
+      ]
 
       const filteredItems = items.filter((item: any) => {
         const title = (item.title?.[0] || '').toLowerCase()
@@ -276,8 +280,21 @@ export class GlobalSearch {
         // Exclude if contains non-biomed keywords
         if (excludeKeywords.some(kw => allText.includes(kw))) return false
 
-        // Include if contains biomed keywords
-        return biomedKeywords.some(kw => allText.includes(kw))
+        // STRICT MODE VALIDATION
+        const queryTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 3)
+
+        // 1. Check if ALL significant query terms are present in the text (AND logic)
+        const allTermsPresent = queryTerms.every(term => allText.includes(term))
+
+        // 2. Or if it's a direct DOI match/very high relevance
+        const hasDoiMatch = title.includes(query.toLowerCase())
+
+        // 3. Or at least 2 strong biomedical keywords AND at least 70% of query terms
+        const matchingBiomed = biomedKeywords.filter(kw => allText.includes(kw))
+        const presentTermsCount = queryTerms.filter(term => allText.includes(term)).length
+        const partialMatch = (presentTermsCount / queryTerms.length >= 0.7) && matchingBiomed.length >= 2
+
+        return allTermsPresent || hasDoiMatch || partialMatch
       })
 
       return filteredItems.slice(0, options.maxResults).map((item: any) => {
@@ -292,7 +309,15 @@ export class GlobalSearch {
           doi: item.DOI,
           url: item.URL,
           citations: item['is-referenced-by-count'] || 0,
-          relevanceScore: 0.75
+          relevanceScore: this.calculateRelevanceScore({
+            title: item.title?.[0] || '',
+            abstract: item.abstract?.replace(/<[^>]*>/g, '') || '',
+            doi: item.DOI,
+            year: pubDate?.['date-parts']?.[0]?.[0],
+            source: 'crossref',
+            authors: item.author?.map((a: any) => `${a.given || ''} ${a.family || ''}`.trim()) || [],
+            journal: item['container-title']?.[0]
+          }, query)
         }
       })
     } catch (error) {
@@ -328,7 +353,15 @@ export class GlobalSearch {
         abstract: entry.summary || '',
         url: entry.id,
         citations: undefined, // arXiv doesn't provide citation count
-        relevanceScore: 0.7
+        relevanceScore: this.calculateRelevanceScore({
+          title: entry.title || '',
+          abstract: entry.summary || '',
+          url: entry.id,
+          year: entry.published ? parseInt(entry.published.slice(0, 4)) : undefined,
+          source: 'arxiv',
+          authors: entry.authors?.map((a: any) => a.name) || [],
+          id: entry.id
+        }, query)
       }))
     } catch (error) {
       console.error('Error searching arXiv:', error)
@@ -358,41 +391,67 @@ export class GlobalSearch {
    * Calculate relevance score
    */
   private calculateRelevanceScore(
-    result: SearchResult,
+    result: any,
     query: string
   ): number {
-    let score = 0.5 // Base score
+    let score = 0.3 // Base score
 
-    // Title match
-    const titleLower = result.title.toLowerCase()
+    const titleLower = (result.title || '').toLowerCase()
+    const abstractLower = (result.abstract || '').toLowerCase()
     const queryLower = query.toLowerCase()
-    const queryWords = queryLower.split(/\s+/)
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2)
 
+    // Exact phrase match in title (Highest weight)
+    if (titleLower.includes(queryLower)) {
+      score += 0.5
+    }
+
+    // Individual word matches in title
+    let titleWordMatches = 0
     for (const word of queryWords) {
       if (titleLower.includes(word)) {
-        score += 0.2
+        titleWordMatches++
+        score += 0.15
       }
     }
 
-    // Has abstract
-    if (result.abstract) {
+    // Exact phrase match in abstract
+    if (abstractLower.includes(queryLower)) {
+      score += 0.25
+    }
+
+    // Word matches in abstract
+    let abstractWordMatches = 0
+    for (const word of queryWords) {
+      if (abstractLower.includes(word)) {
+        abstractWordMatches++
+        score += 0.05
+      }
+    }
+
+    // Source weight
+    if (result.source === 'pubmed') score += 0.1
+    if (result.source === 'scholar') score += 0.05
+
+    // Journal/Source quality cues
+    const qualityJournals = ['nature', 'science', 'lancet', 'jama', 'cell', 'nejm', 'bmj', 'plos', 'bmc']
+    const sourceLower = (result.journal || result.source || '').toLowerCase()
+    if (qualityJournals.some(j => sourceLower.includes(j) || titleLower.includes(j))) {
       score += 0.1
     }
 
-    // Has DOI
-    if (result.doi) {
-      score += 0.1
-    }
+    // Has DOI (indicates published work)
+    if (result.doi) score += 0.05
 
-    // Has citations
+    // Has citations (Social proof)
     if (result.citations && result.citations > 0) {
-      score += Math.min(0.2, result.citations / 100)
+      score += Math.min(0.15, (result.citations / 50) * 0.1)
     }
 
-    // Recency (more recent = higher score)
+    // Recency (last 5 years preferred)
     if (result.year) {
       const age = new Date().getFullYear() - result.year
-      score += Math.max(0, 0.2 - age * 0.02)
+      score += Math.max(0, 0.15 - age * 0.015)
     }
 
     return Math.min(1, score)

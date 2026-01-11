@@ -24,12 +24,16 @@ export interface PubMedArticle {
 }
 
 export interface PubMedSearchResult {
-  count: number;
-  retmax: number;
-  retstart: number;
-  queryKey: string;
-  webEnv: string;
-  idList: string[];
+  esearchresult: {
+    count: string | number;
+    retmax: string | number;
+    retstart: string | number;
+    querykey?: string;
+    webenv?: string;
+    idlist: string[];
+    errors?: any;
+    warning?: string;
+  }
 }
 
 export interface PubMedArticleDetails {
@@ -44,46 +48,54 @@ export class PubMedService {
   private baseURL = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
   private apiKey: string;
   private maxRetries = 3;
-  private retryDelay = 1000;
+  private requestDelay: number;
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.PUBMED_API_KEY || '';
+    // Limit is 3 req/s without key/334ms, 10 req/s with key/100ms.
+    this.requestDelay = this.apiKey ? 200 : 500;
+  }
+
+  private async sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private async fetchWithRetry<T>(
     url: string,
     retries = this.maxRetries
-  ): Promise<T> {
+  ): Promise<any> {
     for (let i = 0; i < retries; i++) {
       try {
-        const response = await axios.get<T>(url, {
+        await this.sleep(this.requestDelay);
+        const response = await axios.get(url, {
           timeout: 30000,
-          headers: {
-            'User-Agent': 'GraphAnalyser/1.0'
-          }
+          headers: { 'User-Agent': 'GraphAnalyser/1.0' }
         });
         return response.data;
-      } catch (error) {
+      } catch (error: any) {
         const isLastAttempt = i === retries - 1;
+        const status = error.response?.status;
+
+        if (status === 429) {
+          logger.warn('PubMedService', `Rate limit exceeded (429). Waiting...`, { attempt: i + 1 });
+          // Exponential backoff
+          await this.sleep(2000 * Math.pow(2, i));
+          if (isLastAttempt) throw error;
+          continue;
+        }
+
+        if (status === 404) throw error;
 
         if (isLastAttempt) {
-          logger.error('PubMedService', `Failed to fetch ${url}`, {
-            error: error instanceof Error ? error.message : error,
-            attempts: retries
+          logger.error('PubMedService', `Request failed after ${retries} attempts`, {
+            url, error: error.message
           });
           throw error;
         }
-
-        logger.warn('PubMedService', `Retry ${i + 1}/${retries} for ${url}`);
-        await this.sleep(this.retryDelay * (i + 1));
+        await this.sleep(1000);
       }
     }
-
-    throw new Error('Max retries exceeded');
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    throw new Error('Retries exceeded');
   }
 
   async searchArticles(
@@ -134,16 +146,27 @@ export class PubMedService {
 
     logger.info('PubMedService', `Searching articles with query: ${query}`, {
       maxResults,
-      year
+      year,
+      url // Log the URL
     });
 
     try {
-      const result = await this.fetchWithRetry<PubMedSearchResult>(url);
-      logger.info('PubMedService', `Found ${result.count} articles`, {
-        returned: result.idList.length
+      const response = await this.fetchWithRetry<PubMedSearchResult>(url);
+      logger.info('PubMedService', `Raw PubMed response status: 200`, { data: response })
+      const result = response;
+
+      if (!result.esearchresult) {
+        // Handle different response structure?
+        logger.warn('PubMedService', 'Response missing esearchresult', { data: result })
+      }
+
+      const idList = result.esearchresult?.idlist || []
+
+      logger.info('PubMedService', `Found ${result.esearchresult?.count} articles`, {
+        returned: idList.length
       });
 
-      return result.idList;
+      return idList;
     } catch (error) {
       logger.error('PubMedService', 'Failed to search articles', {
         query,
@@ -162,42 +185,29 @@ export class PubMedService {
       return [];
     }
 
+    // Use retmode=xml because efetch JSON is not supported/reliable for PubMed
     const params = new URLSearchParams({
       db: 'pubmed',
       id: pmids.join(','),
-      retmode: 'json',
+      retmode: 'xml',
       rettype: 'abstract'
     });
 
-    if (webEnv) {
-      params.append('WebEnv', webEnv);
-    }
-
-    if (queryKey) {
-      params.append('query_key', queryKey);
-    }
-
-    if (this.apiKey) {
-      params.append('api_key', this.apiKey);
-    }
+    if (webEnv) params.append('WebEnv', webEnv);
+    if (queryKey) params.append('query_key', queryKey);
+    if (this.apiKey) params.append('api_key', this.apiKey);
 
     const url = `${this.baseURL}/efetch.fcgi?${params.toString()}`;
 
-    logger.info('PubMedService', `Fetching details for ${pmids.length} articles`);
+    logger.info('PubMedService', `Fetching details for ${pmids.length} articles (XML)`);
 
     try {
-      const result = await this.fetchWithRetry<PubMedArticleDetails>(url);
-      const articles: PubMedArticle[] = [];
+      // Get raw XML text
+      const xml = await this.fetchWithRetry<string>(url);
 
-      pmids.forEach(pmid => {
-        const article = result.result[pmid];
-        if (article && typeof article === 'object' && !Array.isArray(article)) {
-          articles.push(article);
-        }
-      });
+      const articles = this.parsePubMedXml(xml);
 
-      logger.info('PubMedService', `Fetched ${articles.length} article details`);
-
+      logger.info('PubMedService', `Fetched and parsed ${articles.length} article details`);
       return articles;
     } catch (error) {
       logger.error('PubMedService', 'Failed to fetch article details', {
@@ -206,6 +216,57 @@ export class PubMedService {
       });
       throw error;
     }
+  }
+
+  private parsePubMedXml(xml: string): PubMedArticle[] {
+    const articles: PubMedArticle[] = [];
+
+    // Simple regex-based parsing to avoid heavy XML dependencies
+    // Split by PubmedArticle to handle multiple articles
+    const articleBlocks = xml.split('</PubmedArticle>');
+
+    for (const block of articleBlocks) {
+      if (!block.includes('<PubmedArticle')) continue;
+
+      const pmidMatch = block.match(/<PMID[^>]*>(.*?)<\/PMID>/);
+      const titleMatch = block.match(/<ArticleTitle[^>]*>(.*?)<\/ArticleTitle>/);
+      const abstractMatch = block.match(/<AbstractText[^>]*>(.*?)<\/AbstractText>/g);
+
+      // Authors
+      const authors: any[] = [];
+      const authorMatches = block.matchAll(/<Author ValidYN="Y">(.*?)<\/Author>/gs);
+      for (const auth of authorMatches) {
+        const last = auth[1].match(/<LastName>(.*?)<\/LastName>/)?.[1];
+        const fore = auth[1].match(/<ForeName>(.*?)<\/ForeName>/)?.[1];
+        if (last) {
+          authors.push({ name: fore ? `${last} ${fore}` : last });
+        }
+      }
+
+      // Date
+      const yearMatch = block.match(/<PubDate>.*?<Year>(.*?)<\/Year>.*?<\/PubDate>/s);
+
+      if (pmidMatch && titleMatch) {
+        let abstractText = '';
+        if (abstractMatch) {
+          abstractText = abstractMatch
+            .map(m => m.replace(/<\/?AbstractText[^>]*>/g, ''))
+            .join(' ');
+        }
+
+        articles.push({
+          uid: pmidMatch[1],
+          title: titleMatch[1],
+          abstractText: abstractText,
+          authors: authors,
+          journalInfo: {
+            title: '',
+            pubDate: yearMatch ? yearMatch[1] : ''
+          }
+        });
+      }
+    }
+    return articles;
   }
 
   async getArticles(
@@ -305,6 +366,13 @@ export class PubMedService {
     }>;
   }> {
     const { maxArticles = 20, maxCitations = 10, depth = 1 } = options;
+
+    logger.warn('PubMedService', 'Citation network disabled to prevent rate limits');
+    return {
+      nodes: [],
+      edges: [],
+      metadata: { entities: 0, relations: 0, sources: [], createdAt: new Date() }
+    } as any;
 
     logger.info('PubMedService', 'Building citation network', {
       query,

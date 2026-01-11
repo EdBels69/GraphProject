@@ -41,7 +41,9 @@ export default function HomePage() {
     maxArticles: 50,
     yearFrom: currentYear - 5,
     yearTo: currentYear,
-    sources: { pubmed: true, crossref: true }
+    yearFrom: currentYear - 5,
+    yearTo: currentYear,
+    sources: { pubmed: true, crossref: false }
   })
 
   const { data: jobsData, loading: listLoading, refetch: fetchRecentJobs } = useApi<{ jobs: ResearchJob[] }>(API_ENDPOINTS.RESEARCH.JOBS_LIST)
@@ -52,8 +54,22 @@ export default function HomePage() {
 
   const isLoading = listLoading || postLoading
 
+  const getStatusText = (status: string) => {
+    const texts: Record<string, string> = {
+      pending: 'Ожидание',
+      searching: 'Поиск...',
+      downloading: 'Загрузка...',
+      analyzing: 'Анализ...',
+      completed: 'Завершен',
+      failed: 'Ошибка',
+      cancelled: 'Отменен'
+    }
+    return texts[status] || status
+  }
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   const handleStartResearch = async () => {
+    setValidationError(null)
     if (!topic.trim()) return
 
     const sources: string[] = []
@@ -71,9 +87,12 @@ export default function HomePage() {
       })
       if (data?.job?.id) {
         navigate(`/research/${data.job.id}/papers`)
+      } else {
+        setValidationError('Ошибка: Сервер не вернул ID задачи. Проверьте консоль.')
       }
     } catch (error) {
       console.error('Failed to start research:', error)
+      setValidationError(`Ошибка запуска: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
@@ -188,6 +207,44 @@ export default function HomePage() {
                       className="w-32 accent-acid"
                     />
                   </div>
+
+                  <div className="pt-2 border-t border-ash/10 space-y-2">
+                    <p className="text-xs text-steel-dim uppercase tracking-wider font-bold mb-2">Источники поиска</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer hover:text-acid transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={options.sources.pubmed}
+                          onChange={e => setOptions(o => ({ ...o, sources: { ...o.sources, pubmed: e.target.checked } }))}
+                          className="accent-acid rounded-sm"
+                        />
+                        <span>PubMed (Мед.)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer hover:text-plasma transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={options.sources.crossref}
+                          onChange={e => setOptions(o => ({ ...o, sources: { ...o.sources, crossref: e.target.checked } }))}
+                          className="accent-plasma rounded-sm"
+                        />
+                        <span>CrossRef (Строгий)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-not-allowed opacity-50" title="Доступно только в платной версии">
+                        <input type="checkbox" disabled className="rounded-sm" />
+                        <span>Google Scholar</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-not-allowed opacity-50" title="Требуется ключ API">
+                        <input type="checkbox" disabled className="rounded-sm" />
+                        <span>ACS (Химия)</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {validationError && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm animate-fade-in">
+                  {validationError}
                 </div>
               )}
 
@@ -205,84 +262,70 @@ export default function HomePage() {
         </div>
 
         {/* Upload Card */}
-        <div className="glass-panel p-8 rounded-3xl relative overflow-hidden group transition-all duration-500 hover:border-white/20">
-          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-plasma/10 rounded-full blur-3xl pointer-events-none group-hover:bg-plasma/20 transition-colors" />
+        <div
+          onClick={() => navigate('/upload')}
+          className="glass-panel p-10 rounded-[2.5rem] flex flex-col group cursor-pointer hover:border-plasma/30 transition-all duration-500 relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-plasma/5 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" />
 
-          <div className="relative z-10 flex flex-col h-full">
-            <div className="w-14 h-14 rounded-xl bg-plasma/10 border border-plasma/20 flex items-center justify-center mb-8 group-hover:shadow-glow-plasma transition-all">
-              <FileUp className="w-6 h-6 text-plasma-light" />
+          <div className="space-y-6 relative z-10 flex flex-col h-full">
+            <div className="p-4 w-16 h-16 rounded-2xl bg-void border border-ash/10 group-hover:border-plasma/30 group-hover:scale-110 transition-all duration-500 shadow-sm flex items-center justify-center">
+              <FileUp className="w-8 h-8 text-plasma-light" />
             </div>
 
-            <h3 className="text-2xl font-display font-bold text-steel mb-2 tracking-widest">ЗАГРУЗКА ДАННЫХ</h3>
-            <p className="text-steel-dim mb-10 text-xs tracking-wider uppercase">
-              Загрузка PDF или текстовых документов для анализа.
-            </p>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-display font-bold text-steel tracking-tighter uppercase">ЗАГРУЗКА <span className="text-plasma-light italic">DATA</span></h2>
+              <p className="text-xs font-bold text-steel-dim uppercase tracking-widest leading-relaxed">Извлечение знаний из ваших PDF, DOCX и TXT файлов</p>
+            </div>
 
-            <div className="mt-auto border-2 border-dashed border-ash/30 rounded-3xl h-48 flex flex-col items-center justify-center gap-4 group-hover:border-plasma transition-all cursor-pointer bg-void" onClick={() => navigate('/upload')}>
-              <div className="p-5 rounded-full bg-white border border-ash/10 group-hover:scale-110 group-hover:shadow-glow-plasma/20 transition-all duration-500">
-                <FileUp className="w-8 h-8 text-steel/20 group-hover:text-plasma" />
+            <div className="mt-auto pt-6 border-t border-ash/10 flex items-center justify-between text-steel-dim group-hover:text-plasma-light transition-colors">
+              <span className="text-[10px] font-bold tracking-[0.2em] uppercase">ЦЕНТР ОБРАБОТКИ</span>
+              <div className="w-10 h-10 rounded-full border border-ash/10 flex items-center justify-center group-hover:border-plasma/30 transition-colors">
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
-              <span className="text-xs font-mono text-steel-dim uppercase tracking-widest group-hover:text-steel">Перетащите файлы или кликните</span>
             </div>
-
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() => navigate('/upload')}
-              className="mt-6 w-full"
-            >
-              ОТКРЫТЬ ЗАГРУЗЧИК
-            </Button>
           </div>
         </div>
       </div>
 
       {/* Recent Activity */}
       {recentJobs.length > 0 && (
-        <div className="max-w-6xl mx-auto pt-8">
+        <div className="max-w-6xl mx-auto pt-8 pb-20">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-display font-bold text-steel tracking-widest flex items-center gap-2">
-              <Activity className="w-4 h-4 text-acid" />
-              АКТИВНОСТЬ СИСТЕМЫ
+              <Clock className="w-4 h-4 text-acid" />
+              ПОСЛЕДНИЕ ПРОЕКТЫ
             </h3>
-            <span className="text-xs font-mono text-steel-dim">{recentJobs.length} ЗАПИСЕЙ</span>
+            <button
+              onClick={() => navigate('/projects')}
+              className="text-[10px] font-bold text-steel-dim hover:text-acid transition-colors flex items-center gap-1 tracking-widest uppercase"
+            >
+              ВЕСЬ АРХИВ <ArrowRight className="w-3 h-3" />
+            </button>
           </div>
 
-          <div className="glass-panel rounded-xl overflow-hidden">
-            {recentJobs.slice(0, 5).map((job, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {recentJobs.slice(0, 3).map((job) => (
               <div
                 key={job.id}
                 onClick={() => openJob(job)}
-                className={`
-                      p-5 flex items-center justify-between cursor-pointer transition-colors relative group
-                      ${i !== recentJobs.length - 1 ? 'border-b border-white/5' : ''}
-                      hover:bg-white/5
-                   `}
+                className="glass-panel p-6 rounded-2xl cursor-pointer hover:border-acid/30 transition-all group relative overflow-hidden"
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-2 h-2 rounded-full ${job.status === 'completed' ? 'bg-acid shadow-glow-acid' : 'bg-plasma animate-pulse'}`} />
-                  <div>
-                    <h4 className="font-medium text-steel group-hover:text-acid transition-colors">{job.topic}</h4>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs font-mono text-steel-dim flex items-center gap-1">
-                        <Database className="w-3 h-3" /> {job.articlesFound} записей
-                      </span>
-                      <span className="text-xs font-mono text-steel-dim flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {new Date(job.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className={`w-2 h-2 rounded-full ${job.status === 'completed' ? 'bg-acid shadow-glow-acid' : 'bg-plasma animate-pulse'}`} />
+                    <span className="text-[10px] font-mono text-steel-dim">{new Date(job.createdAt).toLocaleDateString()}</span>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={(e) => handleDeleteJob(job.id, e)}
-                    className="p-2 text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Удалить"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                  <div className="space-y-1">
+                    <h4 className="font-display font-bold text-steel group-hover:text-acid transition-colors truncate">{job.topic}</h4>
+                    <p className="text-[10px] text-steel-dim uppercase tracking-wider">{job.articlesFound || 0} источников • {getStatusText(job.status)}</p>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between text-steel-dim group-hover:text-acid transition-colors">
+                    <span className="text-[10px] font-bold tracking-widest">ОТКРЫТЬ</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </div>
             ))}

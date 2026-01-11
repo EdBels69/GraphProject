@@ -59,9 +59,11 @@ export default function GraphAnalysisPage() {
   const [graph, setGraph] = useState<Graph | null>(null)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null)
+  const [isDemo, setIsDemo] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const graphId = searchParams.get('graphId')
-  const { data: fetchedGraph, loading, refetch: refetchGraph } = useApi<Graph>(
+  const { data: fetchedGraph, loading, error: fetchError, refetch: refetchGraph } = useApi<Graph>(
     graphId ? API_ENDPOINTS.GRAPHS.BY_ID(graphId) : '',
     null,
     !!graphId
@@ -74,8 +76,14 @@ export default function GraphAnalysisPage() {
 
   // Load graph from navigation state, URL params, or use demo
   useEffect(() => {
+    if (fetchError) {
+      setError('Не удалось загрузить граф знаний. Возможно, он был удален или еще не создан.')
+    }
+
     if (fetchedGraph) {
       setGraph(fetchedGraph)
+      setIsDemo(false)
+      setError(null)
       return
     }
 
@@ -86,7 +94,7 @@ export default function GraphAnalysisPage() {
       const nodes: GraphNode[] = stateGraph.graph?.nodes?.map((n: any) => ({
         id: n.id,
         label: n.data?.label || n.label || n.id,
-        weight: n.data?.mentions || 1,
+        weight: typeof n.data?.mentions === 'number' ? n.data.mentions : 1,
         type: n.data?.type || 'entity'
       })) || []
 
@@ -94,7 +102,7 @@ export default function GraphAnalysisPage() {
         id: e.id,
         source: e.source,
         target: e.target,
-        weight: e.data?.confidence || 1
+        weight: typeof e.data?.confidence === 'number' ? e.data.confidence : 1
       })) || []
 
       if (nodes.length > 0) {
@@ -102,14 +110,17 @@ export default function GraphAnalysisPage() {
         newGraph.nodes = nodes
         newGraph.edges = edges
         setGraph(newGraph)
+        setIsDemo(false)
         return
       }
     }
 
-    if (!graphId && !graph) {
+    // Only fallback to demo if no specific graph was requested
+    if (!graphId && !graph && !loading) {
       setGraph(DEMO_GRAPH)
+      setIsDemo(true)
     }
-  }, [fetchedGraph, location.state, graphId])
+  }, [fetchedGraph, location.state, graphId, fetchError, loading])
 
   const handleNodeSelect = (node: GraphNode) => {
     setSelectedNode(node)
@@ -142,12 +153,53 @@ export default function GraphAnalysisPage() {
     }, 500)
   }
 
-  if (!graph) {
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-void p-6">
+        <div className="max-w-md w-full glass-panel p-8 rounded-2xl border-red-500/20 text-center space-y-6">
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
+            <Info className="w-8 h-8 text-red-500" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-display font-bold text-steel">ОШИБКА ВИЗУАЛИЗАЦИИ</h2>
+            <p className="text-steel-dim text-sm leading-relaxed">{error}</p>
+          </div>
+          <Button variant="primary" onClick={() => navigate('/projects')} className="w-full">
+            ВЕРНУТЬСЯ В АРХИВ
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!graph || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-void">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-acid mx-auto" />
           <p className="text-steel font-mono tracking-widest text-xs">INITIALIZING_VISUALIZATION...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Handle empty graph state
+  if (graph.nodes.length === 0 && !isDemo) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-void p-6">
+        <div className="max-w-md w-full glass-panel p-8 rounded-2xl border-ash/20 text-center space-y-6">
+          <div className="w-16 h-16 bg-void border border-ash/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <Network className="w-8 h-8 text-steel-dim/30" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-display font-bold text-steel">ГРАФ ПУСТ</h2>
+            <p className="text-steel-dim text-sm leading-relaxed">
+              В проанализированных статьях не обнаружено значимых сущностей и связей для построения графа.
+            </p>
+          </div>
+          <Button variant="secondary" onClick={() => navigate('/projects')} className="w-full">
+            ВЕРНУТЬСЯ К ПРОЕКТАМ
+          </Button>
         </div>
       </div>
     )
@@ -164,13 +216,22 @@ export default function GraphAnalysisPage() {
             <span className="font-mono text-xs tracking-widest">BACK</span>
           </Link>
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-acid animate-pulse-slow shadow-glow-acid" />
+            <div className={`w-2 h-2 rounded-full ${isDemo ? 'bg-plasma animate-pulse shadow-glow-plasma' : 'bg-acid animate-pulse-slow shadow-glow-acid'}`} />
             <div>
-              <h1 className="text-lg font-bold font-display text-steel tracking-wide uppercase">{graph.name}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold font-display text-steel tracking-wide uppercase">{graph.name}</h1>
+                {isDemo && (
+                  <span className="px-1.5 py-0.5 rounded bg-plasma/10 border border-plasma/20 text-[8px] font-bold text-plasma uppercase tracking-widest">
+                    DEMO_VIEW
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-3 text-[10px] font-mono text-steel/60">
                 <span>NODES: {graph.nodes.length}</span>
                 <span>EDGES: {graph.edges.length}</span>
-                <span>DENSITY: {(2 * graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1)) * 100).toFixed(1)}%</span>
+                {graph.nodes.length > 1 ? (
+                  <span>DENSITY: {(2 * graph.edges.length / (graph.nodes.length * (graph.nodes.length - 1)) * 100).toFixed(1)}%</span>
+                ) : null}
               </div>
             </div>
           </div>

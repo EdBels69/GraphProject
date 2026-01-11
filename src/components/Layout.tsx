@@ -23,7 +23,7 @@ export default function Layout() {
   const navItems = [
     { path: '/', label: 'Главная', icon: Home },
     { path: '/upload', label: 'Загрузка', icon: FileText },
-    { path: '/research', label: 'Поиск', icon: BookOpen },
+    { path: '/projects', label: 'Проекты', icon: BookOpen },
     { path: '/analysis', label: 'Граф', icon: Network },
     { path: '/ai-assistant', label: 'ИИ Ассистент', icon: MessageSquare },
     { path: '/works', label: 'База знаний', icon: List },

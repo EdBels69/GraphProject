@@ -33,7 +33,7 @@ export default function SearchPage() {
     const [hasSearched, setHasSearched] = useState(false)
 
     const { data, loading: isLoading, error, trigger } = useApiLazy<SearchResult[]>((params: URLSearchParams) =>
-        `${API_ENDPOINTS.AI.BASE}/search?${params.toString()}`
+        `${API_ENDPOINTS.SEARCH.BASE}?${params.toString()}`
     )
 
     const results = data || []
@@ -45,7 +45,7 @@ export default function SearchPage() {
             q: filters.query,
             sources: filters.sources.join(','),
             sortBy: filters.sortBy,
-            maxResults: '20'
+            maxResults: '100' // Increased from 20, or remove for "unlimited" if backend supports it
         })
 
         if (filters.yearFrom) params.append('yearFrom', filters.yearFrom.toString())

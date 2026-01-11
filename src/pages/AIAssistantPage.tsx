@@ -157,9 +157,9 @@ export default function AIAssistantPage() {
 
         <div className="flex items-center gap-2">
           {/* AI Status indicator */}
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-bold ${aiStatus?.available
-            ? 'bg-green-500/10 text-green-700'
-            : 'bg-red-500/10 text-red-700'
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight border ${aiStatus?.available
+            ? 'bg-acid/10 text-steel border-acid/20'
+            : 'bg-red-500/10 text-red-700 border-red-500/20'
             }`}>
             <div className={`w-2 h-2 rounded-full ${aiStatus?.available ? 'bg-green-500 shadow-glow-green' : 'bg-red-500 shadow-glow-red'
               }`} />
@@ -188,9 +188,9 @@ export default function AIAssistantPage() {
                 </div>
               )}
 
-              <div className={`max-w-[70%] rounded-lg p-3 shadow-sm ${message.role === 'user'
-                ? 'bg-acid text-void font-bold'
-                : 'bg-white text-steel border border-ash/20'
+              <div className={`max-w-[70%] rounded-lg p-3 shadow-sm border ${message.role === 'user'
+                ? 'bg-acid text-steel font-bold border-acid'
+                : 'bg-void text-steel border-ash/30'
                 }`}>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
                 <p className={`text-[10px] mt-1 uppercase tracking-tighter font-bold ${message.role === 'user' ? 'text-void/60' : 'text-steel-dim'
@@ -212,7 +212,7 @@ export default function AIAssistantPage() {
               <div className="w-8 h-8 rounded-full bg-plasma/10 flex items-center justify-center flex-shrink-0 border border-plasma/20">
                 <Bot className="w-5 h-5 text-plasma" />
               </div>
-              <div className="bg-white border border-ash/20 rounded-lg p-3 flex items-center gap-2 shadow-sm">
+              <div className="bg-void border border-ash/30 rounded-lg p-3 flex items-center gap-2 shadow-sm">
                 <Loader2 className="w-4 h-4 animate-spin text-plasma" />
                 <span className="text-sm text-steel-dim font-bold uppercase tracking-widest text-[10px]">Thinking...</span>
               </div>
@@ -241,7 +241,7 @@ export default function AIAssistantPage() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Введите сообщение... (Enter для отправки, Shift+Enter для новой строки)"
-              className="flex-1 resize-none border border-ash/30 bg-white rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-plasma/20 focus:border-plasma transition-all text-steel"
+              className="flex-1 resize-none border border-ash/30 bg-void rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-plasma/20 focus:border-plasma transition-all text-steel"
               rows={2}
               disabled={loading}
             />

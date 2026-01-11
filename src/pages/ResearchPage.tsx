@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search, Loader2, CheckCircle, XCircle, Clock, FileText, Activity } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Search, Loader2, CheckCircle, XCircle, Clock, FileText, Activity, ArrowRight, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Card, CardHeader, CardBody } from '@/components/ui/Card'
 
 interface ResearchJob {
     id: string
@@ -11,36 +10,21 @@ interface ResearchJob {
     progress: number
     articlesFound: number
     articlesProcessed: number
-    articles?: {
-        title: string
-        doi?: string
-        authors?: string[]
-        year?: number
-        pdfUrl?: string
-        status: string
-    }[]
     graphId?: string
     reviewText?: string
     error?: string
     createdAt: string
-    completedAt?: string
 }
 
 export default function ResearchPage() {
     const navigate = useNavigate()
-    const [topic, setTopic] = useState('')
-    const [maxArticles, setMaxArticles] = useState(50)
-    const [yearFrom, setYearFrom] = useState<number>(new Date().getFullYear() - 10)
-    const [yearTo, setYearTo] = useState<number>(new Date().getFullYear())
-    const [sources, setSources] = useState<string[]>(['pubmed', 'crossref'])
-    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [filterQuery, setFilterQuery] = useState('')
     const [jobs, setJobs] = useState<ResearchJob[]>([])
-    const [error, setError] = useState<string | null>(null)
+    const [loading, setLoading] = useState(true)
 
-    // Fetch jobs on mount and periodically
     useEffect(() => {
         fetchJobs()
-        const interval = setInterval(fetchJobs, 3000)
+        const interval = setInterval(fetchJobs, 5000)
         return () => clearInterval(interval)
     }, [])
 
@@ -53,54 +37,22 @@ export default function ResearchPage() {
             }
         } catch (err) {
             console.error('Failed to fetch jobs:', err)
-        }
-    }
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!topic.trim()) return
-
-        setIsSubmitting(true)
-        setError(null)
-
-        try {
-            const response = await fetch('/api/research/jobs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    topic,
-                    maxArticles,
-                    sources,
-                    yearFrom,
-                    yearTo,
-                    generateReview: true
-                })
-            })
-
-            if (!response.ok) {
-                throw new Error('Не удалось запустить исследование')
-            }
-
-            setTopic('')
-            fetchJobs()
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Произошла ошибка')
         } finally {
-            setIsSubmitting(false)
+            setLoading(false)
         }
     }
 
     const getStatusIcon = (status: ResearchJob['status']) => {
         switch (status) {
             case 'completed':
-                return <CheckCircle className="w-5 h-5 text-green-500" />
+                return <CheckCircle className="w-5 h-5 text-acid shadow-glow-acid/20" />
             case 'failed':
             case 'cancelled':
                 return <XCircle className="w-5 h-5 text-red-500" />
             case 'pending':
-                return <Clock className="w-5 h-5 text-gray-400" />
+                return <Clock className="w-5 h-5 text-steel-dim/50" />
             default:
-                return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                return <Loader2 className="w-5 h-5 text-plasma animate-spin" />
         }
     }
 
@@ -110,264 +62,164 @@ export default function ResearchPage() {
             searching: 'Поиск статей...',
             downloading: 'Загрузка PDF...',
             analyzing: 'Анализ текстов...',
-            completed: 'Завершено',
+            completed: 'Завершен',
             failed: 'Ошибка',
-            cancelled: 'Отменено'
+            cancelled: 'Отменен'
         }
         return texts[status] || status
     }
 
+    const filteredJobs = jobs.filter(j => {
+        const query = filterQuery.toLowerCase().trim()
+        if (!query) return true
+        return (j.topic || '').toLowerCase().includes(query)
+    })
+
+    if (loading && jobs.length === 0) {
+        return (
+            <div className="h-[60vh] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-acid animate-spin" />
+            </div>
+        )
+    }
+
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center gap-4">
-                <Link to="/">
-                    <Button variant="ghost" size="sm">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Назад
-                    </Button>
-                </Link>
-                <div>
-                    <h1 className="text-3xl font-bold text-steel">Автоматический сбор литературы</h1>
-                    <p className="text-steel-dim font-bold">
-                        Введите тему — AI-агент найдет статьи, проверит доступ к PDF и построит граф знаний
+        <div className="space-y-10 animate-fade-in pb-20">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-ash/10">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-acid text-[10px] font-bold tracking-[0.3em] uppercase">
+                        <Activity className="w-3 h-3" />
+                        ЦЕНТР УПРАВЛЕНИЯ ПРОЕКТАМИ
+                    </div>
+                    <h1 className="text-4xl md:text-6xl font-display font-bold text-steel tracking-tighter">
+                        АРХИВ <span className="text-steel/40 font-light italic">CORTEX</span>
+                    </h1>
+                    <p className="text-steel-dim text-sm max-w-lg font-medium leading-relaxed">
+                        Ваша персональная библиотека исследований. Управление графами знаний и аналитическими отчетами.
                     </p>
+                </div>
+
+                <div className="relative group w-full md:w-96">
+                    <div className="absolute inset-0 bg-acid/5 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-steel-dim group-focus-within:text-acid transition-colors" />
+                    <input
+                        type="text"
+                        value={filterQuery}
+                        onChange={(e) => setFilterQuery(e.target.value)}
+                        placeholder="Поиск по названию исследования..."
+                        className="w-full pl-12 pr-4 py-4 bg-void border border-ash/20 rounded-2xl text-steel text-sm focus:outline-none focus:border-acid/50 transition-all placeholder:text-steel-dim/40 shadow-sm"
+                    />
                 </div>
             </div>
 
-            {/* New Research Form */}
-            <Card>
-                <CardHeader>
-                    <h2 className="text-lg font-semibold">Новое исследование</h2>
-                </CardHeader>
-                <CardBody>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Тема исследования
-                            </label>
-                            <input
-                                type="text"
-                                value={topic}
-                                onChange={(e) => setTopic(e.target.value)}
-                                placeholder="Например: metformin aging mechanisms"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                disabled={isSubmitting}
-                            />
+            {/* Project List */}
+            <div className="grid grid-cols-1 gap-6">
+                {filteredJobs.length === 0 ? (
+                    <div className="glass-panel rounded-[2rem] p-24 text-center space-y-6 border-dashed border-2 border-ash/10 bg-void/30">
+                        <div className="w-20 h-20 bg-void border border-ash/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                            <FileText className="w-8 h-8 text-steel-dim/30" />
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-steel-dim mb-1 uppercase tracking-tight">
-                                    Макс. статей
-                                </label>
-                                <select
-                                    value={maxArticles}
-                                    onChange={(e) => setMaxArticles(Number(e.target.value))}
-                                    className="w-full px-3 py-2 border border-ash/30 rounded-lg bg-white text-steel focus:ring-2 focus:ring-acid/20 focus:border-acid"
-                                    disabled={isSubmitting}
-                                >
-                                    <option value={20}>20 статей</option>
-                                    <option value={50}>50 статей</option>
-                                    <option value={100}>100 статей</option>
-                                    <option value={500}>500 статей</option>
-                                    <option value={1000}>1000 статей (Макс)</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-steel-dim mb-1 uppercase tracking-tight">
-                                    Период поиска
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="number"
-                                        value={yearFrom}
-                                        onChange={(e) => setYearFrom(Number(e.target.value))}
-                                        className="w-full px-3 py-2 border border-ash/30 rounded-lg bg-white text-steel focus:ring-2 focus:ring-acid/20 focus:border-acid"
-                                        placeholder="От"
-                                        disabled={isSubmitting}
-                                    />
-                                    <span className="text-steel-dim">—</span>
-                                    <input
-                                        type="number"
-                                        value={yearTo}
-                                        onChange={(e) => setYearTo(Number(e.target.value))}
-                                        className="w-full px-3 py-2 border border-ash/30 rounded-lg bg-white text-steel focus:ring-2 focus:ring-acid/20 focus:border-acid"
-                                        placeholder="До"
-                                        disabled={isSubmitting}
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-steel-dim mb-1 uppercase tracking-tight">
-                                    Источники данных
-                                </label>
-                                <div className="flex flex-wrap gap-2 pt-1">
-                                    {['pubmed', 'crossref', 'arxiv'].map(source => (
-                                        <label key={source} className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={sources.includes(source)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) setSources([...sources, source])
-                                                    else setSources(sources.filter(s => s !== source))
-                                                }}
-                                                className="rounded border-ash/30 text-acid focus:ring-acid"
-                                                disabled={isSubmitting}
-                                            />
-                                            <span className="text-xs font-bold text-steel uppercase tracking-tighter">{source}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-4 bg-void border border-ash/10 rounded-xl space-y-2">
-                            <h3 className="text-xs font-bold text-steel uppercase tracking-widest flex items-center gap-2">
-                                <Activity className="w-3 h-3 text-acid" /> Методология поиска
-                            </h3>
-                            <p className="text-[10px] text-steel-dim leading-relaxed font-medium">
-                                1. AI-агент переводит вашу тему в серию оптимизированных поисковых запросов. <br />
-                                2. Происходит параллельный поиск по выбранным базам данных (PubMed, CrossRef). <br />
-                                3. Система отсеивает дубликаты и ищет Open Access PDF через Unpaywall. <br />
-                                4. Только доступные статьи проходят через конвейер извлечения сущностей и связей.
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-display font-bold text-steel tracking-wide">АРХИВ ПУСТ</h3>
+                            <p className="text-steel-dim text-xs uppercase tracking-[0.2em] font-medium">
+                                {filterQuery ? 'Нет соответствий параметрам фильтра' : 'Начните свое первое исследование на главной'}
                             </p>
                         </div>
-
-                        <Button type="submit" disabled={!topic.trim() || isSubmitting}>
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Запуск...
-                                </>
-                            ) : (
-                                <>
-                                    <Search className="w-4 h-4 mr-2" />
-                                    Начать исследование
-                                </>
-                            )}
-                        </Button>
+                        {!filterQuery && (
+                            <Button variant="primary" size="lg" onClick={() => navigate('/')} className="px-10 shadow-glow-acid/20">
+                                <Activity className="w-4 h-4 mr-2" />
+                                ЗАПУСТИТЬ СИНТЕЗ
+                            </Button>
+                        )}
                     </div>
-
-                    {error && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                            {error}
-                        </div>
-                    )}
-                </form>
-            </CardBody>
-        </Card>
-
-            {/* Jobs List */ }
-    <Card>
-        <CardHeader>
-            <h2 className="text-lg font-semibold">История исследований</h2>
-        </CardHeader>
-        <CardBody>
-            {jobs.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Пока нет запущенных исследований</p>
-                </div>
-            ) : (
-                <div className="space-y-3">
-                    {jobs.map((job) => (
+                ) : (
+                    filteredJobs.map((job) => (
                         <div
                             key={job.id}
-                            className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                            className="glass-panel rounded-3xl p-8 hover:border-acid/40 transition-all duration-500 group relative overflow-hidden bg-void/40 backdrop-blur-xl"
                         >
-                            <div className="flex items-start gap-3">
-                                {getStatusIcon(job.status)}
-                                <div className="flex-1">
-                                    <h3 className="font-medium text-gray-900">{job.topic}</h3>
-                                    <p className="text-sm text-gray-500">
-                                        {getStatusText(job.status)}
-                                        {job.articlesFound > 0 && ` • Найдено: ${job.articlesFound}`}
-                                        {job.articlesProcessed > 0 && ` • Обработано: ${job.articlesProcessed}`}
-                                    </p>
+                            {/* Decorative element */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-acid/5 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                                    {/* Progress bar */}
-                                    {['searching', 'downloading', 'analyzing'].includes(job.status) && (
-                                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                                            <div
-                                                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                                                style={{ width: `${job.progress}%` }}
-                                            />
+                            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                                <div className="flex items-start gap-6 flex-1 min-w-0">
+                                    <div className="mt-1.5 p-3 rounded-2xl bg-void border border-ash/10 group-hover:border-acid/30 transition-colors shadow-sm">
+                                        {getStatusIcon(job.status)}
+                                    </div>
+                                    <div className="space-y-2 flex-1 min-w-0">
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-2xl font-display font-bold text-steel group-hover:text-acid transition-colors tracking-tight truncate">
+                                                {job.topic}
+                                            </h3>
+                                            {job.status === 'completed' && (
+                                                <div className="px-2 py-0.5 rounded-full bg-acid/10 border border-acid/20 text-[9px] font-bold text-acid uppercase tracking-tighter">
+                                                    READY
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
 
-                                    {job.error && (
-                                        <p className="text-sm text-red-600 mt-1">{job.error}</p>
-                                    )}
+                                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[10px] font-mono text-steel-dim uppercase tracking-[0.1em] font-bold">
+                                            <span className="flex items-center gap-2 py-1 px-3 rounded-lg bg-ash/5">
+                                                <Clock className="w-3 h-3 text-acid" />
+                                                ID: {job.id.slice(0, 8)} • {new Date(job.createdAt).toLocaleDateString('ru-RU')}
+                                            </span>
+                                            <span className="flex items-center gap-2 py-1 px-3 rounded-lg bg-ash/5">
+                                                <FileText className="w-3 h-3 text-plasma" />
+                                                {job.articlesFound || 0} ИСТОЧНИКОВ
+                                            </span>
+                                            <div className="flex items-center gap-2 text-steel">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${job.status === 'completed' ? 'bg-acid shadow-glow-acid' : 'bg-plasma animate-pulse'}`} />
+                                                {getStatusText(job.status)}
+                                            </div>
+                                        </div>
+
+                                        {job.reviewText && (
+                                            <p className="text-xs text-steel-dim/60 line-clamp-2 mt-3 font-medium leading-relaxed max-w-3xl italic">
+                                                {job.reviewText}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
 
-                                {job.status === 'completed' && job.graphId && (
+                                <div className="flex items-center gap-4 shrink-0">
                                     <Button
                                         variant="secondary"
-                                        size="sm"
-                                        onClick={() => navigate(`/analysis?graphId=${job.graphId}`)}
+                                        size="lg"
+                                        onClick={() => navigate(`/research/${job.id}/papers`)}
+                                        className="rounded-2xl border-ash/20 hover:border-steel px-6"
                                     >
-                                        <Activity className="w-4 h-4 mr-1" />
-                                        Граф
+                                        ОТКРЫТЬ
                                     </Button>
-                                )}
+
+                                    {job.status === 'completed' && job.graphId && (
+                                        <Button
+                                            variant="primary"
+                                            size="lg"
+                                            onClick={() => navigate(`/research/${job.id}/graph`)}
+                                            className="rounded-2xl shadow-glow-acid/10 px-6 group/btn"
+                                        >
+                                            <Activity className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
+                                            ГРАФ
+                                            <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Review text preview */}
-                            {job.reviewText && (
-                                <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
-                                    <p className="font-medium mb-1">Обзор литературы:</p>
-                                    <p className="line-clamp-3">{job.reviewText}</p>
-                                </div>
-                            )}
-                            {/* Articles List */}
-                            {job.articles && job.articles.length > 0 && (
-                                <div className="mt-3 border-t border-gray-100 pt-3">
-                                    <details className="group">
-                                        <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900">
-                                            <span>Показать список статей ({job.articles.length})</span>
-                                            <span className="group-open:rotate-180 transition-transform">▼</span>
-                                        </summary>
-                                        <div className="mt-2 pl-2 space-y-2 max-h-60 overflow-y-auto">
-                                            {job.articles.map((article, idx) => (
-                                                <div key={idx} className="text-sm">
-                                                    <div className="font-medium text-gray-800">
-                                                        <a
-                                                            href={article.pdfUrl || (article.doi ? `https://doi.org/${article.doi}` : '#')}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="hover:text-blue-600 hover:underline"
-                                                        >
-                                                            {article.title}
-                                                        </a>
-                                                    </div>
-                                                    <div className="text-gray-500 text-xs">
-                                                        {article.authors?.slice(0, 3).join(', ')} ({article.year})
-                                                        {article.status === 'processed' && (
-                                                            <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px]">
-                                                                Processed
-                                                            </span>
-                                                        )}
-                                                        {article.pdfUrl && (
-                                                            <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px]">
-                                                                PDF
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </details>
+                            {/* Active Progress Visualization */}
+                            {['searching', 'downloading', 'analyzing'].includes(job.status) && (
+                                <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-ash/5">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-plasma to-acid shadow-glow-plasma transition-all duration-1000 ease-out"
+                                        style={{ width: `${job.progress}%` }}
+                                    />
                                 </div>
                             )}
                         </div>
-                    ))}
-                </div>
-            )}
-        </CardBody>
-    </Card>
-        </div >
+                    ))
+                )}
+            </div>
+        </div>
     )
 }
