@@ -11,7 +11,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -19,91 +19,89 @@ model ResearchJob {
   id                String   @id
   userId            String
   topic             String
-  mode              String
-  status            String
-  progress          Int
-  error             String?
-  queries           String   // Stored as JSON string
-  articlesFound     Int
-  articlesProcessed Int
-  startTime         DateTime?
-  endTime           DateTime?
+  status            String   // pending, searching, analyzing, completed, failed, paused
+  progress          Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  articlesFound     Int      @default(0)
+  articlesProcessed Int      @default(0)
   
   // Relations
   articles          Article[]
   
-  // JSON fields for complex data
-  includedIds       String? // JSON array
-  excludedIds       String? // JSON array
-  exclusionReasons  String? // JSON object
-  reviewText        String?
-  
-  graphId           String?
+  // One-to-One with Graph (optional)
+  graphId           String? @unique
   graph             Graph?  @relation(fields: [graphId], references: [id])
-
-  @@index([userId])
 }
 
 model Article {
   id              String   @id
-  userId          String
   jobId           String
+  title           String
+  abstract        String
+  authors         String   // JSON array
+  year            Int
+  doi             String?
+  source          String   // pubmed, semantic_scholar, etc.
+  url             String?
+  citationCount   Int?
+  
+  // Screening & Processing
+  screeningStatus String   @default("pending") // pending, included, excluded
+  screeningReason String?
+  relevanceScore  Float?
+  
+  // Extracted Data
+  keywords        String?  // JSON array
+  entities        String?  // JSON array
+  methodology     String?
+  keyFindings     String?
+  
+  // File Management
+  pdfUrl          String?
+  pdfPath         String?
+  pdfStatus       String?  // pending, downloaded, failed
+  
+  // Relations
   job             ResearchJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
   
-  doi             String?
-  title           String
-  authors         String   // JSON array
-  year            Int?
-  abstract        String?
-  url             String?
-  pdfUrl          String?
-  source          String
-  status          String
-  
-  // Screening
-  screeningStatus String?
-  extractedData   String? // JSON object
-  
-  // Relations/Graph
-  entities        String? // JSON object (extracted entities)
-  relations       String? // JSON object (extracted relations)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([userId])
   @@index([jobId])
 }
 
 model Graph {
-  id          String   @id
-  userId      String
-  name        String
-  description String?
-  version     String   @default("2.0")
-  directed    Boolean  @default(false)
+  id        String   @id @default(uuid())
+  name      String
+  userId    String
+  version   String
+  directed  Boolean  @default(false)
   
-  // JSON Data
-  nodes       String   // JSON
-  edges       String   // JSON
-  metrics     String?  // JSON
-  sources     String?  // JSON
-  metadata    String?  // JSON
+  // Data (Stored as JSON text for SQLite compatibility if needed, though Postgres has JSONB)
+  nodes     String   // Large JSON
+  edges     String   // Large JSON
+  metadata  String?  // JSON
+  metrics   String?  // JSON
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([userId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   
   // Relations
-  // Relations
-  jobs        ResearchJob[]
+  job       ResearchJob?
+  snapshots GraphSnapshot[]
+  graphNodes GraphNode[]
+  graphEdges GraphEdge[]
+}
+
+model GraphSnapshot {
+  id        String   @id @default(uuid())
+  graphId   String
+  graph     Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  name      String
+  version   Int
+  data      String   // Map to Text in DB
+  metrics   String?  // JSON
+  createdAt DateTime @default(now())
   
-  // Relational Storage (New)
-  detailedNodes GraphNode[]
-  detailedEdges GraphEdge[]
+  @@index([graphId])
 }
 
 model GraphNode {
@@ -131,13 +129,4 @@ model GraphEdge {
   @@index([target])
 }
 
-model SystemConfig {
-  id        String   @id @default(uuid())
-  userId    String   @default("system")
-  key       String
-  value     String   // JSON string
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, key])
-  @@index([userId])
-}
+// ... (Other models like User, Settings etc. can be added here)

@@ -7,12 +7,7 @@ router.post('/', ArticleController.create)
 router.get('/', ArticleController.getAll)
 router.get('/:id', ArticleController.getById)
 
-router.put('/:id', async (req, res) => {
-  return res.status(501).json({ error: 'Update not fully implemented' })
-})
-
-router.delete('/:id', async (req, res) => {
-  return res.status(501).json({ error: 'Delete not implemented' })
-})
+router.put('/:id', ArticleController.update)
+router.delete('/:id', ArticleController.delete)
 
 export default router

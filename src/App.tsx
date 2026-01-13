@@ -13,6 +13,9 @@ import GraphViewPage from '@/pages/GraphViewPage'
 import AIAnalysisPage from '@/pages/AIAnalysisPage'
 import SettingsPage from '@/pages/SettingsPage'
 import CitationMapPage from '@/pages/CitationMapPage'
+import GraphMethodSelectorPage from '@/pages/GraphMethodSelectorPage'
+import ArticleTablePage from '@/pages/ArticleTablePage'
+import ResearchGapsPage from '@/pages/ResearchGapsPage'
 
 // Legacy pages (with sidebar) - kept for compatibility
 import FileUploadPage from '@/pages/FileUploadPage'
@@ -48,12 +51,14 @@ function App() {
                 }>
                   {/* Core Flows */}
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/research/:id/papers" element={<PapersPage />} />
+                  <Route path="/research/:id/papers" element={<ArticleTablePage />} />
                   <Route path="/research/:id/config" element={<AnalysisConfigPage />} />
+                  <Route path="/research/:id/build" element={<GraphMethodSelectorPage />} />
                   <Route path="/research/:id/graph" element={<GraphViewPage />} />
                   <Route path="/research/:id/citation-map" element={<CitationMapPage />} />
                   <Route path="/research/:id/ai" element={<AIAnalysisPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/research/:id/gaps" element={<ResearchGapsPage />} />
 
                   {/* Main Utilities */}
                   <Route path="/upload" element={<FileUploadPage />} />

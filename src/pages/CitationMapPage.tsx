@@ -97,26 +97,26 @@ export default function CitationMapPage() {
                     <div className="absolute right-6 top-6 w-96 bg-white/95 backdrop-blur shadow-xl rounded-xl p-6 border border-slate-100 flex flex-col gap-4 animate-in slide-in-from-right-10 fade-in duration-200">
                         <div>
                             <h3 className="text-lg font-bold text-slate-900 leading-snug">
-                                {selectedNode.data?.fullTitle || selectedNode.label}
+                                {(selectedNode.data?.metadata?.fullTitle as string) || selectedNode.label}
                             </h3>
                             <div className="flex flex-wrap gap-2 mt-2">
                                 <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded-md border border-blue-100">
-                                    {selectedNode.data?.year || 'Unknown Year'}
+                                    {(selectedNode.data?.metadata?.year as string | number) || 'Unknown Year'}
                                 </span>
                                 <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-md border border-emerald-100">
-                                    {selectedNode.data?.globalCitations || 0} Citations
+                                    {(selectedNode.data?.metadata?.globalCitations as number) || 0} Citations
                                 </span>
                             </div>
                         </div>
 
                         <div className="text-sm text-slate-600 line-clamp-4">
-                            {selectedNode.data?.authors?.join(', ') || 'Unknown Authors'}
+                            {((selectedNode.data?.metadata?.authors as string[]) || []).join(', ') || 'Unknown Authors'}
                         </div>
 
                         <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                            {selectedNode.data?.doi && (
+                            {(selectedNode.data?.metadata?.doi as string) && (
                                 <a
-                                    href={`https://doi.org/${selectedNode.data.doi}`}
+                                    href={`https://doi.org/${(selectedNode.data?.metadata as any)?.doi}`}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="flex-1 text-center py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-medium transition-colors"

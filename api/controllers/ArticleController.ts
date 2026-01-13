@@ -1,9 +1,9 @@
 import { Request, Response } from 'express'
 import { databaseManager } from '../core/Database'
 import { logger } from '../core/Logger'
+import { JOB_CONSTANTS } from '../../shared/config/constants'
 
-const UPLOADED_JOB_ID = 'uploaded-articles-job'
-const UPLOADED_JOB_TOPIC = 'Manual Uploads'
+const { UPLOADED_JOB_ID, UPLOADED_JOB_TOPIC } = JOB_CONSTANTS
 
 interface ArticleNode {
     id: string
@@ -56,9 +56,9 @@ export class ArticleController {
         }
     }
 
-    static async create(req: any, res: Response) {
+    static async create(req: Request, res: Response) {
         try {
-            const userId = req.user.id
+            const userId = (req as any).user.id
             await ArticleController.ensureUploadJob(userId)
             const { title, year, citations, category, author, abstract, keywords } = req.body
 
@@ -116,6 +116,36 @@ export class ArticleController {
         } catch (error) {
             logger.error('ArticleController', 'Failed to fetch article', { error })
             res.status(500).json({ error: 'Failed to fetch article' })
+        }
+    }
+    static async update(req: Request, res: Response) {
+        try {
+            const userId = (req as any).user.id
+            const { id } = req.params
+            const { title, year, authors, abstract } = req.body
+
+            // Simple update simulation since we don't have granular article update in basic DB manager yet
+            // In a real app, this would update the specific node in the graph or article in SQL
+            res.status(501).json({ error: 'Update not fully implemented' })
+        } catch (error) {
+            logger.error('ArticleController', 'Failed to update article', { error })
+            res.status(500).json({ error: 'Failed to update article' })
+        }
+    }
+
+    static async delete(req: Request, res: Response) {
+        try {
+            const userId = (req as any).user.id
+            const { id } = req.params
+
+            // We need to implement delete in DatabaseManager first or use a repository
+            // For now, logging intention
+            logger.info('ArticleController', `User ${userId} requested delete for article ${id}`)
+
+            res.status(501).json({ error: 'Delete not fully implemented' })
+        } catch (error) {
+            logger.error('ArticleController', 'Failed to delete article', { error })
+            res.status(500).json({ error: 'Failed to delete article' })
         }
     }
 }

@@ -30,10 +30,16 @@ import { jobManager } from './jobs/JobManager'
 import { searchOrchestrator } from './search/SearchOrchestrator'
 import { analysisService } from './analysis/AnalysisService'
 import { graphService } from './graph/GraphService'
+import { entityExtractor } from './entityExtractor'
+import globalSearch from './globalSearch'
+import { columnExtractor } from './columnExtractor'
+import GraphStorage from '../../shared/graphStorage'
+import { knowledgeGraphBuilder } from './knowledgeGraphBuilder'
+import { graphRepository } from '../repositories/GraphRepository'
 
 export class LiteratureAgent extends EventEmitter {
-    private jobs: Map<string, ResearchJob> = new Map()
     // jobLogs moved to JobLogger
+    // jobs map delegated to JobManager
 
     constructor() {
         super()
@@ -48,25 +54,10 @@ export class LiteratureAgent extends EventEmitter {
 
     /**
      * Sync jobs from database to memory on startup
+     * Delegated to JobManager
      */
     private async syncJobsWithDb(): Promise<void> {
-        try {
-            // How do we get all users? We don't easily, but we can get all jobs and iterate.
-            // Or better, add a method to DatabaseManager to get ALL jobs across all users.
-            const jobs = await databaseManager.getAllResearchJobs('system') // Fallback/placeholder or specialized method
-            // Actually, DatabaseManager should have a way to load ALL jobs if we are a singleton server agent.
-            // For now, let's assume we load them as they are requested if not in memory, 
-            // but that requires changing getJob to be async.
-
-            // ALTERNATIVE: Since we only have one user in local dev, we use 'local-admin'
-            const adminJobs = await databaseManager.getAllResearchJobs('local-admin')
-            adminJobs.forEach(job => {
-                this.jobs.set(job.id, job as any)
-            })
-            logger.info('LiteratureAgent', `Synced ${adminJobs.length} jobs from DB for local-admin`)
-        } catch (e) {
-            logger.error('LiteratureAgent', 'Job synchronization failed', { error: e })
-        }
+        // No-op, logic moved to JobManager
     }
 
     /**
@@ -136,11 +127,11 @@ export class LiteratureAgent extends EventEmitter {
     /**
      * Update screening decisions for a job
      */
-    updateScreening(jobId: string, updates: {
+    async updateScreening(jobId: string, updates: {
         includedIds: string[],
         excludedIds: string[],
         exclusionReasons?: Record<string, string>
-    }, userId: string): ResearchJob | null {
+    }, userId: string): Promise<ResearchJob | null> {
         const job = jobManager.getJob(jobId)
         if (!job || job.userId !== userId) return null
 
@@ -164,7 +155,7 @@ export class LiteratureAgent extends EventEmitter {
         }
 
         job.updatedAt = new Date().toISOString()
-        this.persistJob(job) // CRITICAL: Save screening data to DB
+        await this.persistJob(job) // CRITICAL: Save screening data to DB
         return job
     }
 
@@ -178,7 +169,7 @@ export class LiteratureAgent extends EventEmitter {
         domain?: string
         columns?: string[]
     }, userId: string): Promise<ResearchJob> {
-        const job = this.jobs.get(jobId)
+        const job = jobManager.getJob(jobId)
         if (!job || job.userId !== userId) throw new Error('Job not found')
 
         job.status = 'analyzing'
@@ -201,7 +192,7 @@ export class LiteratureAgent extends EventEmitter {
                 let processed = 0
                 for (const article of articlesToAnalyze) {
                     try {
-                        const data = await columnExtractor.extractData(article, config.domain || 'all', this.globalSearch, config.columns)
+                        const data = await columnExtractor.extractData(article, config.domain || 'all', globalSearch, config.columns)
                         article.extractedData = data
                     } catch (e) {
                         logger.error('LiteratureAgent', `Failed to extract columns for ${article.title}`, { error: e })
@@ -228,7 +219,7 @@ export class LiteratureAgent extends EventEmitter {
 
                     try {
                         this.log(jobId, 'ai', `Extracting from: ${article.title.substring(0, 50)}...`)
-                        const { entities, relations } = await this.processArticle(article, job.topic)
+                        const { entities, relations } = await analysisService.processArticle(article, job.topic)
                         if (entities.length > 0) {
                             allEntities.push(...entities)
                             allRelations.push(...relations)
@@ -243,7 +234,7 @@ export class LiteratureAgent extends EventEmitter {
                     job.updatedAt = new Date().toISOString()
                 }
 
-                const mergedEntities = this.entityExtractor.mergeEntities(allEntities)
+                const mergedEntities = entityExtractor.mergeEntities(allEntities)
                 job.extractedEntities = mergedEntities
                 job.extractedRelations = allRelations
 
@@ -252,7 +243,7 @@ export class LiteratureAgent extends EventEmitter {
                 // Build graph
                 try {
                     this.log(jobId, 'info', 'Building initial knowledge graph...')
-                    const graphRes = await this.graphBuilder.buildGraph(mergedEntities, allRelations, {
+                    const graphRes = await knowledgeGraphBuilder.buildGraph(mergedEntities, allRelations, {
                         minConfidence: 0.3,
                         includeCooccurrence: true
                     })
@@ -289,7 +280,7 @@ export class LiteratureAgent extends EventEmitter {
      * Build graph from job with user configuration
      */
     async buildGraphFromJob(jobId: string, userId: string, config?: any): Promise<string> {
-        const job = this.jobs.get(jobId)
+        const job = jobManager.getJob(jobId)
         if (!job || job.userId !== userId) {
             throw new Error('Job not found')
         }
@@ -331,7 +322,7 @@ export class LiteratureAgent extends EventEmitter {
         }
 
         // Build graph with filtered data
-        const graphRes = await this.graphBuilder.buildGraph(filteredEntities, filteredRelations, {
+        const graphRes = await knowledgeGraphBuilder.buildGraph(filteredEntities, filteredRelations, {
             minConfidence: config?.edgeMinConfidence || 0.3,
             includeCooccurrence: config?.edgeMethod !== 'ai'
         })
@@ -444,7 +435,7 @@ export class LiteratureAgent extends EventEmitter {
         if (mergedEntities.length > 0) {
             try {
                 logger.info('LiteratureAgent', `Building auto-graph for job ${job.id}`)
-                const graphRes = await (null as any).buildGraph(mergedEntities, relations, {
+                const graphRes = await knowledgeGraphBuilder.buildGraph(mergedEntities, relations, {
                     minConfidence: 0.3,
                     includeCooccurrence: true
                 })

@@ -18,7 +18,11 @@ export class CitationGraphBuilder {
                 nodes: [],
                 edges: [],
                 createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
+                version: '1.0',
+                sources: [],
+                directed: true,
+
             }
         }
 
@@ -37,11 +41,21 @@ export class CitationGraphBuilder {
                 label: article.title.slice(0, 30) + (article.title.length > 30 ? '...' : ''),
                 type: 'paper',
                 data: {
-                    fullTitle: article.title,
-                    doi: article.doi,
-                    year: article.year,
-                    authors: article.authors,
-                    globalCitations: article.citations
+                    id: nodeId,
+                    name: article.title.slice(0, 30),
+                    type: 'paper',
+                    confidence: 1,
+                    evidence: [],
+                    mentions: 1,
+                    source: 'citation-graph',
+                    position: 0,
+                    metadata: {
+                        fullTitle: article.title,
+                        doi: article.doi,
+                        year: article.year,
+                        authors: article.authors,
+                        globalCitations: article.citations
+                    }
                 },
                 size: Math.min(size, 40) // cap size
             })
@@ -62,8 +76,15 @@ export class CitationGraphBuilder {
                         id: `${sourceId}-${targetId}`,
                         source: sourceId,
                         target: targetId,
-                        label: 'CITES',
-                        weight: 1
+                        weight: 1,
+                        data: {
+                            id: `${sourceId}-${targetId}`,
+                            source: sourceId,
+                            target: targetId,
+                            type: 'cites' as any,
+                            confidence: 1,
+                            evidence: []
+                        }
                     })
                 }
             })
@@ -75,7 +96,11 @@ export class CitationGraphBuilder {
             nodes,
             edges,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            version: '1.0',
+            sources: [],
+            directed: true,
+
         }
     }
 }

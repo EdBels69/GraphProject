@@ -1,4 +1,5 @@
-import { Graph, GraphNode, GraphEdge, CentralityResult } from '../../shared/types'
+import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
+import { CentralityResult } from '../../shared/contracts/analysis'
 
 export interface CentralityOptions {
   directed?: boolean
@@ -33,7 +34,7 @@ export class GraphCentrality {
    * Degree Centrality: Number of connections per node
    */
   calculateDegreeCentrality(graph: Graph, options: CentralityOptions = {}): CentralityResult[] {
-    const { directed = graph.directed, normalized = true } = options
+    const { directed = !!graph.directed, normalized = true } = options
     const results: CentralityResult[] = []
 
     // Build adjacency list
@@ -61,10 +62,14 @@ export class GraphCentrality {
 
       results.push({
         nodeId,
+        nodeName: node.label || node.id,
+        nodeType: node.data?.type || 'unknown',
         degree: normalizedDegree,
         betweenness: 0,
         closeness: 0,
-        eigenvector: 0
+        eigenvector: 0,
+        pagerank: 0,
+        rank: 0
       })
     }
 
@@ -75,7 +80,7 @@ export class GraphCentrality {
    * Betweenness Centrality: Nodes on shortest paths
    */
   calculateBetweennessCentrality(graph: Graph, options: CentralityOptions = {}): CentralityResult[] {
-    const { directed = graph.directed, normalized = true } = options
+    const { directed = !!graph.directed, normalized = true } = options
     const results: CentralityResult[] = []
     const betweenness = new Map<string, number>()
 
@@ -160,10 +165,14 @@ export class GraphCentrality {
       const value = betweenness.get(node.id) || 0
       results.push({
         nodeId: node.id,
+        nodeName: node.label || node.id,
+        nodeType: node.data?.type || 'unknown',
         degree: 0,
         betweenness: value * normalizationFactor,
         closeness: 0,
-        eigenvector: 0
+        eigenvector: 0,
+        pagerank: 0,
+        rank: 0
       })
     }
 
@@ -174,7 +183,7 @@ export class GraphCentrality {
    * Closeness Centrality: Average distance to all other nodes
    */
   calculateClosenessCentrality(graph: Graph, options: CentralityOptions = {}): CentralityResult[] {
-    const { directed = graph.directed, normalized = true } = options
+    const { directed = !!graph.directed, normalized = true } = options
     const results: CentralityResult[] = []
     const adjacency = this.buildAdjacencyList(graph, directed)
 
@@ -201,10 +210,14 @@ export class GraphCentrality {
 
       results.push({
         nodeId: sourceNode.id,
+        nodeName: sourceNode.label || sourceNode.id,
+        nodeType: sourceNode.data?.type || 'unknown',
         degree: 0,
         betweenness: 0,
         closeness: normalizedCloseness,
-        eigenvector: 0
+        eigenvector: 0,
+        pagerank: 0,
+        rank: 0
       })
     }
 
@@ -216,7 +229,7 @@ export class GraphCentrality {
    * Uses power iteration method
    */
   calculateEigenvectorCentrality(graph: Graph, options: CentralityOptions = {}): CentralityResult[] {
-    const { directed = graph.directed, maxIterations = 100, tolerance = 1e-6 } = options
+    const { directed = !!graph.directed, maxIterations = 100, tolerance = 1e-6 } = options
     const results: CentralityResult[] = []
     const adjacency = this.buildAdjacencyList(graph, directed)
 
@@ -263,12 +276,20 @@ export class GraphCentrality {
     }
 
     for (const node of graph.nodes) {
+      const nodeId = node.id
+      const nodeLabel = node.label || node.id
+      const nodeType = node.data?.type || 'unknown'
+
       results.push({
         nodeId: node.id,
+        nodeName: nodeLabel,
+        nodeType: nodeType,
         degree: 0,
         betweenness: 0,
         closeness: 0,
-        eigenvector: eigenvector.get(node.id) || 0
+        eigenvector: eigenvector.get(node.id) || 0,
+        pagerank: 0,
+        rank: 0
       })
     }
 
@@ -279,7 +300,7 @@ export class GraphCentrality {
    * PageRank: Importance based on link structure
    */
   calculatePageRank(graph: Graph, options: CentralityOptions = {}): CentralityResult[] {
-    const { directed = graph.directed, maxIterations = 100, tolerance = 1e-6 } = options
+    const { directed = !!graph.directed, maxIterations = 100, tolerance = 1e-6 } = options
     const results: CentralityResult[] = []
     const adjacency = this.buildAdjacencyList(graph, directed)
 
@@ -326,10 +347,14 @@ export class GraphCentrality {
     for (const node of graph.nodes) {
       results.push({
         nodeId: node.id,
+        nodeName: node.label || node.id,
+        nodeType: node.data?.type || 'unknown',
         degree: 0,
         betweenness: 0,
         closeness: 0,
-        eigenvector: pagerank.get(node.id) || 0
+        eigenvector: 0,
+        pagerank: pagerank.get(node.id) || 0,
+        rank: 0
       })
     }
 
@@ -362,12 +387,13 @@ export class GraphCentrality {
 
     // Add edges
     for (const edge of graph.edges) {
-      if (directed || !edge.directed) {
+      if (directed) {
         adjacency.get(edge.source)?.add(edge.target)
-      }
-      if (!directed) {
+      } else {
+        adjacency.get(edge.source)?.add(edge.target)
         adjacency.get(edge.target)?.add(edge.source)
       }
+
     }
 
     return adjacency

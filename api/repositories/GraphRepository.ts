@@ -13,10 +13,10 @@ export class GraphRepository extends BaseRepository {
             data: {
                 id: graph.id,
                 name: graph.name || 'Untitled Graph',
-                type: graph.type || 'relational',
+                // type: 'relational', // Removed as not in schema
                 metadata: JSON.stringify(graph.metadata || {}),
                 createdAt: new Date(graph.createdAt || Date.now()),
-                userId: (graph as any).userId, // Assuming userId is attached
+                userId: (graph as any).userId || 'system',
                 // Nodes and edges are usually large, often stored in JSON or separate tables.
                 // If using SQLite for graph structure, it might be heavy. 
                 // Previous logic likely stored structure in JSON locally or in a "content" field.

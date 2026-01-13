@@ -1,6 +1,27 @@
 import express from 'express'
 
+import { ProjectExporter } from '../modules/export/exporters/ProjectExporter'
+
 const router = express.Router()
+const projectExporter = new ProjectExporter()
+
+router.get('/jobs/:id/project', async (req: any, res) => {
+  try {
+    const { id } = req.params
+    const userId = req.user.id
+
+    const { filePath, filename } = await projectExporter.exportProject(id, userId)
+
+    res.download(filePath, filename, (err) => {
+      if (err) console.error('Download error:', err)
+      // Cleanup temp file
+      // fs.unlinkSync(filePath) 
+    })
+  } catch (error) {
+    console.error('Export error:', error)
+    res.status(500).json({ error: 'Export failed' })
+  }
+})
 
 router.post('/generate', (req, res) => {
   const { format, dataType, includeMetadata } = req.body

@@ -7,11 +7,16 @@ import { socketService } from '../SocketService'
 import fs from 'fs'
 import path from 'path'
 
+/**
+ * Manages the lifecycle of Research Jobs.
+ * Handles creation, status updates, persistence, and efficient in-memory tracking.
+ */
 export class JobManager {
     private jobs: Map<string, ResearchJob> = new Map()
 
     /**
-     * Initialize - load jobs from DB
+     * Initialize JobManager by synchronizing with the persistent database.
+     * Loads active jobs into memory for quick access.
      */
     async initialize(): Promise<void> {
         await this.syncJobsWithDb().catch(err => {
@@ -20,13 +25,16 @@ export class JobManager {
     }
 
     /**
-     * Sync jobs from database to memory
+     * Internal sync mechanism to load jobs from SQLite via Repository.
+     * Currently loads jobs for the default 'local-admin' user.
      */
     private async syncJobsWithDb(): Promise<void> {
         try {
-            // Loading jobs for local admin for now, mirroring original behavior
-            const adminJobs = await jobRepository.findAllByUserId('local-admin')
-            adminJobs.forEach(record => {
+            // Load ALL active jobs for restoration, regardless of user
+            // This ensures background agents can continue processing
+            const activeJobs = await jobRepository.findAllActive()
+
+            activeJobs.forEach(record => {
                 // Map record to ResearchJob - simplified mapping, real app might need more
                 const job: ResearchJob = {
                     id: record.id,
@@ -35,7 +43,7 @@ export class JobManager {
                     mode: (record.mode as any) || 'research',
                     status: record.status as any,
                     progress: record.progress,
-                    queries: typeof record.queries === 'string' ? JSON.parse(record.queries) : (record.queries || []),
+                    queries: typeof record.queries === 'string' ? JSON.parse(record.queries) : (record.queries || []) as string[],
                     articlesFound: record.articlesFound,
                     articlesProcessed: record.articlesProcessed || 0,
                     createdAt: record.createdAt.toISOString(),
@@ -45,14 +53,18 @@ export class JobManager {
                 }
                 this.jobs.set(job.id, job)
             })
-            logger.info('JobManager', `Synced ${adminJobs.length} jobs from DB`)
+            logger.info('JobManager', `Synced ${activeJobs.length} active jobs from DB`)
         } catch (e) {
             logger.error('JobManager', 'Job synchronization failed', { error: e })
         }
     }
 
     /**
-     * Create and register a new job
+     * Create a new Research Job.
+     * 
+     * @param request - The job creation request containing topic and mode
+     * @param userId - The ID of the user requesting the job
+     * @returns The newly created ResearchJob object
      */
     createJob(request: ResearchJobRequest, userId: string): ResearchJob {
         const jobId = `research-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -80,14 +92,34 @@ export class JobManager {
         return job
     }
 
+    /**
+     * Retrieve a job by ID from memory.
+     * 
+     * @param jobId - Unique job identifier
+     * @returns The ResearchJob if defined, otherwise undefined
+     */
     getJob(jobId: string): ResearchJob | undefined {
         return this.jobs.get(jobId)
     }
 
+    /**
+     * Retrieve all jobs for a specific user.
+     * 
+     * @param userId - The user ID
+     * @returns Array of ResearchJob objects
+     */
     getAllJobs(userId: string): ResearchJob[] {
         return Array.from(this.jobs.values()).filter(j => j.userId === userId)
     }
 
+    /**
+     * Update the status of a job and notify clients via Socket.IO.
+     * Persists the change to the database.
+     * 
+     * @param jobId - The job ID
+     * @param status - New status string
+     * @param error - Optional error message if status is 'failed'
+     */
     async updateJobStatus(jobId: string, status: ResearchJobStatus, error?: string): Promise<void> {
         const job = this.jobs.get(jobId)
         if (!job) return
@@ -103,6 +135,13 @@ export class JobManager {
         socketService.emitJobProgress(jobId, job.progress, undefined, status)
     }
 
+    /**
+     * Update the numeric progress of a job and notify clients.
+     * 
+     * @param jobId - The job ID
+     * @param progress - Progress percentage (0-100)
+     * @param message - Optional log message
+     */
     async updateProgress(jobId: string, progress: number, message?: string): Promise<void> {
         const job = this.jobs.get(jobId)
         if (!job) return
@@ -117,51 +156,27 @@ export class JobManager {
         socketService.emitJobProgress(jobId, progress, message, job.status)
     }
 
+    /**
+     * Persist job state to Database using Transactional Repository.
+     * Ensures both Job and its Articles are saved atomically.
+     * 
+     * @param job - The ResearchJob to save
+     */
     async persistJob(job: ResearchJob): Promise<void> {
         try {
-            // Check if exists using findById logic or create/update separation could be better
-            // Ideally repository handles upsert, or we check first.
-            // For now, let's use a simpler approach if possible or assume upsert logic in repository
-            // But Prisma's upsert needs id.
-
-            // Actually, we can just try to update, if fails, create? 
-            // Or better: JobRepository.save() method that handles upsert.
-            // But since I implemented create/update/findById separately:
-
-            // Checking existence is costly if we do it every time.
-            // But JobManager holds memory state, so we know if it's new (via this.jobs.has() logic in createJob) theoretically.
-            // But createJob already adds it to map.
-
-            // Let's rely on standard upsert if I add it, or check for now.
-            // However, jobRepository.update throws if ID not found usually? Or returns null?
-            // Prisma update throws.
-
-            // Let's implement upsert in repository or check here.
-            // Checking here:
-            const exists = await jobRepository.findById(job.id)
-            if (exists) {
-                await jobRepository.update(job.id, {
-                    status: job.status,
-                    progress: job.progress,
-                    articlesFound: job.articlesFound,
-                    queries: JSON.stringify(job.queries),
-                    updatedAt: new Date(),
-                    error: job.error,
-                    graphId: job.graphId
-                })
-            } else {
-                await jobRepository.create(job)
-            }
-
-            if (job.articles && job.articles.length > 0) {
-                await articleRepository.saveJobArticles(job.id, job.userId, job.articles)
-            }
-
+            await jobRepository.saveWithArticles(job)
         } catch (e) {
             logger.warn('JobManager', `Failed to persist job ${job.id}`, { error: e })
         }
     }
 
+    /**
+     * Delete a job and clean up associated resources (Files, DB, Memory).
+     * 
+     * @param jobId - ID of the job to delete
+     * @param userId - ID of the checking user
+     * @returns True if deleted, false if not found or unauthorized
+     */
     async deleteJob(jobId: string, userId: string): Promise<boolean> {
         const job = this.jobs.get(jobId)
         if (job && job.userId !== userId) return false
@@ -195,7 +210,10 @@ export class JobManager {
         return true
     }
 
-    log(jobId: string, type: 'info' | 'search' | 'ai' | 'error' | 'success', message: string): void {
+    /**
+     * Log a message to the job-specific log system.
+     */
+    log(jobId: string, type: 'info' | 'search' | 'ai' | 'error' | 'success' | 'warn', message: string): void {
         jobLogger.log(jobId, type, message)
     }
 }

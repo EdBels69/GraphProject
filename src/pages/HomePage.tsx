@@ -89,11 +89,11 @@ export default function HomePage() {
     if (!topic.trim()) return
 
     // Date Validation
-    if (options.fromDate > options.toDate) {
+    if (options.fromDate && options.toDate && options.fromDate > options.toDate) {
       setValidationError(t('home.error_date_range') || 'Start date cannot be after end date')
       return
     }
-    if (options.fromDate > today || options.toDate > today) {
+    if ((options.fromDate && options.fromDate > today) || (options.toDate && options.toDate > today)) {
       setValidationError(t('home.error_future_date') || 'Dates cannot be in the future')
       return
     }

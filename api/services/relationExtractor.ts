@@ -1,5 +1,7 @@
 import { Entity } from './entityExtractor'
-import { RelationType, EvidenceType } from '../../shared/types'
+import { RelationType } from '../../shared/contracts/entities'
+
+export type EvidenceType = 'text_mining' | 'cooccurrence' | 'manual' | 'database'
 
 export interface Relation {
   id: string

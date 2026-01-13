@@ -286,14 +286,60 @@ export async function checkAIHealth(): Promise<{ available: boolean; model?: str
     }
 }
 
-// 7. Streaming Chat (placeholder - not fully implemented)
+// 7. Full Research Report Generation
+export async function generateReport(
+    topic: string,
+    articles: any[],
+    graph: any,
+    gaps: any[]
+): Promise<string> {
+    const articleSummary = articles.slice(0, 10).map(a => `- ${a.title} (${a.year})`).join('\n')
+    const gapSummary = gaps.slice(0, 5).map(g => `- ${g.reason} (Score: ${g.score.toFixed(2)})`).join('\n')
+
+    const systemPrompt = `You are a Senior Research Analyst. Generate a comprehensive research report in Markdown format based on the provided data.
+    
+    Structure the report as follows:
+    # Executive Summary
+    # Key Concepts & Trends
+    # Structural Analysis (Graph based)
+    # Identified Research Gaps (Crucial Section)
+    # Recommendations for Future Work
+    # Conclusion`
+
+    const userContent = `Topic: ${topic}
+    
+    Selected Articles (Top 10 of ${articles.length}):
+    ${articleSummary}
+    
+    Graph Metrics:
+    - Nodes: ${graph.nodes.length}
+    - Edges: ${graph.edges.length}
+    - Density: ${graph.metrics?.density || 'N/A'}
+    
+    Identified Structural Gaps:
+    ${gapSummary}
+    
+    Please synthesize this information into a cohesive strategic report.`
+
+    try {
+        const response = await chatCompletion([
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent }
+        ], { temperature: 0.7, maxTokens: 4000 })
+
+        return response.content
+    } catch (error) {
+        logger.error('aiService', 'Report generation failed', { error })
+        return '# Report Generation Failed\nAn error occurred while generating the report.'
+    }
+}
+
+// 8. Streaming Chat (placeholder)
 export async function chatCompletionStream(
     messages: AIMessage[],
     options: AICompletionOptions,
     onChunk: (chunk: string) => void
 ): Promise<void> {
-    // For now, just get the full response and emit it as one chunk
-    // Real streaming would require SSE support in llmProvider
     const response = await chatCompletion(messages, options)
     onChunk(response.content)
 }

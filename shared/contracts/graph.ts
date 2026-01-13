@@ -1,237 +1,122 @@
-/**
- * Graph Contracts - Graph data structures
- * @version 2.0
- */
+// Universal Graph Contract
+export interface UniversalGraph {
+    id: string
+    version: '3.0'
 
-import { Entity, Relation, EntityType } from './entities'
+    metadata: GraphMetadata
+    nodes: GraphNode[]
+    edges: GraphEdge[]
 
-// =============================================================================
-// GRAPH NODE
-// =============================================================================
+    // Computed properties
+    metrics: GraphMetrics
+    directed: boolean
+    updatedAt?: string
+}
+
+export type Graph = UniversalGraph
+
+export interface GraphMetadata {
+    name: string
+    description?: string
+    method: string  // ID of GraphMethod used
+    source: 'literature' | 'manual' | 'imported'
+    domain: string  // 'biochemistry', 'clinical', etc.
+    createdAt: string
+    createdBy: string
+
+    // Provenance
+    sourceData: {
+        articleCount: number
+        dateRange?: { from: string; to: string }
+    }
+}
 
 export interface GraphNode {
     id: string
     label: string
-    type: EntityType
+    type: string  // 'keyword', 'protein', 'author', 'pathway', etc.
 
-    /** Visual properties */
-    size?: number
-    weight?: number
-    color?: string
-    x?: number
-    y?: number
+    // Universal properties
+    properties: {
+        frequency?: number
+        source?: string[]
+        [key: string]: any
+    }
 
-    /** Entity data */
-    data: Entity
-
-    /** Computed metrics (filled by analysis) */
-    metrics?: {
-        degree?: number
-        betweenness?: number
-        closeness?: number
-        pagerank?: number
-        clustering?: number
-        community?: number
+    // Visual properties (optional, for UI)
+    visual?: {
+        x?: number
+        y?: number
+        color?: string
+        size?: number
     }
 }
-
-// =============================================================================
-// GRAPH EDGE
-// =============================================================================
 
 export interface GraphEdge {
     id: string
     source: string
     target: string
+    type: string  // 'co-occurs', 'interacts', 'cites', etc.
 
-    /** Edge weight/strength */
-    weight: number
-
-    /** Relation data */
-    data: Relation
-
-    /** Visual properties */
-    color?: string
-    width?: number
-    style?: 'solid' | 'dashed' | 'dotted'
+    properties: {
+        weight: number
+        confidence?: number
+        evidence: string[]  // Article IDs
+        [key: string]: any
+    }
 }
-
-// =============================================================================
-// GRAPH STRUCTURE
-// =============================================================================
-
-export interface Graph {
-    /** Schema version for migration */
-    version: '1.0' | '1.1' | '2.0'
-
-    /** Graph metadata */
-    id: string
-    name: string
-    description?: string
-    createdAt: string
-    updatedAt: string
-
-    /** Whether edges are directed (default: false) */
-    directed?: boolean
-
-    /** Graph data */
-    nodes: GraphNode[]
-    edges: GraphEdge[]
-
-    /** Graph-level metrics */
-    metrics?: GraphMetrics
-
-    /** Source information */
-    sources: Array<{
-        id: string
-        type: 'pubmed' | 'word' | 'manual'
-        title?: string
-    }>
-
-    /** Extensible metadata */
-    metadata?: Record<string, unknown>
-}
-
-// =============================================================================
-// GRAPH METRICS
-// =============================================================================
 
 export interface GraphMetrics {
-    /** Basic stats */
     nodeCount: number
     edgeCount: number
     density: number
-
-    /** Connectivity */
-    isConnected: boolean
-    componentCount: number
-    largestComponentSize: number
-
-    /** Centrality stats */
-    averageDegree: number
-    maxDegree: number
-    averageClustering: number
-
-    /** Path stats */
-    diameter?: number
-    averagePathLength?: number
-
-    /** Community detection */
-    communityCount?: number
-    modularity?: number
+    avgDegree: number
+    clusteringCoefficient?: number
+    components: number
 }
 
-// =============================================================================
-// GRAPH OPERATIONS
-// =============================================================================
-
-export interface GraphFilter {
-    /** Filter by entity types */
-    entityTypes?: EntityType[]
-
-    /** Filter by min confidence */
-    minConfidence?: number
-
-    /** Filter by min mentions */
-    minMentions?: number
-
-    /** Filter by relation types */
-    relationTypes?: string[]
-
-    /** Filter by node IDs */
-    nodeIds?: string[]
-
-    /** Subgraph around specific node */
-    focusNode?: {
-        id: string
-        depth: number
-    }
-}
-
-export interface GraphLayout {
-    type: 'force' | 'circular' | 'hierarchical' | 'grid' | 'concentric'
-    options?: Record<string, unknown>
-}
-
-// =============================================================================
-// TYPE GUARDS
-// =============================================================================
-
-export function isGraphNode(obj: unknown): obj is GraphNode {
-    if (typeof obj !== 'object' || obj === null) return false
-    const n = obj as Record<string, unknown>
-    return (
-        typeof n.id === 'string' &&
-        typeof n.label === 'string' &&
-        typeof n.type === 'string'
-    )
-}
-
-export function isGraph(obj: unknown): obj is Graph {
-    if (typeof obj !== 'object' || obj === null) return false
-    const g = obj as Record<string, unknown>
-    return (
-        typeof g.id === 'string' &&
-        typeof g.name === 'string' &&
-        Array.isArray(g.nodes) &&
-        Array.isArray(g.edges)
-    )
-}
-
-// =============================================================================
-// FACTORY FUNCTIONS
-// =============================================================================
-
-export function createGraph(
-    name: string,
-    directed: boolean = false
-): Graph {
+export function createGraph(name: string, directed: boolean = false): UniversalGraph {
     return {
-        id: `graph-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name,
-        description: '',
-        version: '2.0',
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+        version: '3.0',
         directed,
+        metadata: {
+            name,
+            method: 'merged',
+            source: 'manual',
+            domain: 'general',
+            createdAt: new Date().toISOString(),
+            createdBy: 'system',
+            sourceData: { articleCount: 0 }
+        },
         nodes: [],
         edges: [],
-        metrics: undefined,
-        sources: [],
-        metadata: {},
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        metrics: {
+            nodeCount: 0,
+            edgeCount: 0,
+            density: 0,
+            avgDegree: 0,
+            components: 0
+        }
     }
 }
 
-export function createNode(
-    id: string,
-    label: string,
-    type: string = 'concept',
-    data: any = {},
-    weight: number = 1
-): GraphNode {
+export function createNode(id: string, label: string, type: string = 'keyword'): GraphNode {
     return {
         id,
         label,
-        type: type as any,
-        data,
-        weight,
-        x: 0,
-        y: 0
+        type,
+        properties: { frequency: 1 },
+        visual: { size: 5, color: '#3b82f6' }
     }
 }
 
-export function createEdge(
-    id: string,
-    source: string,
-    target: string,
-    weight: number = 1,
-    data: any = {}
-): GraphEdge {
+export function createEdge(source: string, target: string, type: string = 'related', weight: number = 1): GraphEdge {
     return {
-        id,
+        id: `${source}-${target}`,
         source,
         target,
-        weight,
-        data
+        type,
+        properties: { weight, evidence: [] }
     }
 }

@@ -17,40 +17,57 @@ import {
   Graph,
   GraphNode,
   GraphEdge,
-  createGraph
+  createGraph,
+  createNode,
+  createEdge
 } from '../../shared/contracts/graph'
 
 // Demo graph data for testing
 const DEMO_GRAPH: Graph = createGraph('DEMO_SEQUENCE_ALPHA', false)
-DEMO_GRAPH.nodes = [
-  { id: 'p53', label: 'TP53', weight: 10, type: 'protein', data: { id: 'p53', name: 'TP53', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'mdm2', label: 'MDM2', weight: 8, type: 'protein', data: { id: 'mdm2', name: 'MDM2', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'bax', label: 'BAX', weight: 6, type: 'protein', data: { id: 'bax', name: 'BAX', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'bcl2', label: 'BCL-2', weight: 5, type: 'protein', data: { id: 'bcl2', name: 'BCL-2', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'casp3', label: 'CASP3', weight: 7, type: 'protein', data: { id: 'casp3', name: 'Caspase-3', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'casp9', label: 'CASP9', weight: 5, type: 'protein', data: { id: 'casp9', name: 'Caspase-9', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'cyto_c', label: 'CYCS', weight: 6, type: 'protein', data: { id: 'cyto_c', name: 'Cyto C', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'apaf1', label: 'APAF1', weight: 4, type: 'protein', data: { id: 'apaf1', name: 'APAF-1', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'p21', label: 'CDKN1A', weight: 6, type: 'protein', data: { id: 'p21', name: 'p21', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'cdk2', label: 'CDK2', weight: 5, type: 'protein', data: { id: 'cdk2', name: 'CDK2', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'cycline', label: 'CCNE1', weight: 4, type: 'protein', data: { id: 'cycline', name: 'Cyclin E', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
-  { id: 'rb', label: 'RB1', weight: 5, type: 'protein', data: { id: 'rb', name: 'RB1', type: 'protein', confidence: 1, evidence: [], mentions: 0, source: 'manual', position: 0 } },
+DEMO_GRAPH.metadata.name = 'DEMO_SEQUENCE_ALPHA'
+
+const demoNodesData = [
+  { id: 'p53', label: 'TP53', weight: 10, type: 'protein' },
+  { id: 'mdm2', label: 'MDM2', weight: 8, type: 'protein' },
+  { id: 'bax', label: 'BAX', weight: 6, type: 'protein' },
+  { id: 'bcl2', label: 'BCL-2', weight: 5, type: 'protein' },
+  { id: 'casp3', label: 'CASP3', weight: 7, type: 'protein' },
+  { id: 'casp9', label: 'CASP9', weight: 5, type: 'protein' },
+  { id: 'cyto_c', label: 'CYCS', weight: 6, type: 'protein' },
+  { id: 'apaf1', label: 'APAF1', weight: 4, type: 'protein' },
+  { id: 'p21', label: 'CDKN1A', weight: 6, type: 'protein' },
+  { id: 'cdk2', label: 'CDK2', weight: 5, type: 'protein' },
+  { id: 'cycline', label: 'CCNE1', weight: 4, type: 'protein' },
+  { id: 'rb', label: 'RB1', weight: 5, type: 'protein' }
 ]
-DEMO_GRAPH.edges = [
-  { id: 'e1', source: 'p53', target: 'mdm2', weight: 9, data: { id: 'e1', source: 'p53', target: 'mdm2', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e2', source: 'mdm2', target: 'p53', weight: 8, data: { id: 'e2', source: 'mdm2', target: 'p53', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e3', source: 'p53', target: 'bax', weight: 7, data: { id: 'e3', source: 'p53', target: 'bax', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e4', source: 'bax', target: 'bcl2', weight: 5, data: { id: 'e4', source: 'bax', target: 'bcl2', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e5', source: 'bax', target: 'cyto_c', weight: 6, data: { id: 'e5', source: 'bax', target: 'cyto_c', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e6', source: 'cyto_c', target: 'apaf1', weight: 5, data: { id: 'e6', source: 'cyto_c', target: 'apaf1', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e7', source: 'apaf1', target: 'casp9', weight: 6, data: { id: 'e7', source: 'apaf1', target: 'casp9', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e8', source: 'casp9', target: 'casp3', weight: 7, data: { id: 'e8', source: 'casp9', target: 'casp3', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e9', source: 'p53', target: 'p21', weight: 8, data: { id: 'e9', source: 'p53', target: 'p21', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e10', source: 'p21', target: 'cdk2', weight: 6, data: { id: 'e10', source: 'p21', target: 'cdk2', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e11', source: 'cdk2', target: 'cycline', weight: 5, data: { id: 'e11', source: 'cdk2', target: 'cycline', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e12', source: 'cdk2', target: 'rb', weight: 5, data: { id: 'e12', source: 'cdk2', target: 'rb', type: 'interacts_with', confidence: 1, evidence: [] } },
-  { id: 'e13', source: 'bcl2', target: 'casp3', weight: 4, data: { id: 'e13', source: 'bcl2', target: 'casp3', type: 'interacts_with', confidence: 1, evidence: [] } },
+
+DEMO_GRAPH.nodes = demoNodesData.map(d => {
+  const node = createNode(d.id, d.label, d.type)
+  node.properties.weight = d.weight
+  return node
+})
+
+const demoEdgesData = [
+  { source: 'p53', target: 'mdm2', weight: 9 },
+  { source: 'mdm2', target: 'p53', weight: 8 },
+  { source: 'p53', target: 'bax', weight: 7 },
+  { source: 'bax', target: 'bcl2', weight: 5 },
+  { source: 'bax', target: 'cyto_c', weight: 6 },
+  { source: 'cyto_c', target: 'apaf1', weight: 5 },
+  { source: 'apaf1', target: 'casp9', weight: 6 },
+  { source: 'casp9', target: 'casp3', weight: 7 },
+  { source: 'p53', target: 'p21', weight: 8 },
+  { source: 'p21', target: 'cdk2', weight: 6 },
+  { source: 'cdk2', target: 'cycline', weight: 5 },
+  { source: 'cdk2', target: 'rb', weight: 5 },
+  { source: 'bcl2', target: 'casp3', weight: 4 }
 ]
+
+DEMO_GRAPH.edges = demoEdgesData.map((d, i) => {
+  const edge = createEdge(d.source, d.target, 'interacts_with', d.weight)
+  edge.id = `e${i + 1}`
+  return edge
+})
 
 
 export default function GraphAnalysisPage() {
@@ -95,7 +112,10 @@ export default function GraphAnalysisPage() {
       const nodes: GraphNode[] = stateGraph.graph?.nodes?.map((n: any) => ({
         id: n.id,
         label: n.data?.label || n.label || n.id,
-        weight: typeof n.data?.mentions === 'number' ? n.data.mentions : 1,
+        properties: {
+          weight: typeof n.data?.mentions === 'number' ? n.data.mentions : 1,
+          frequency: 1
+        },
         type: n.data?.type || 'entity'
       })) || []
 
@@ -103,7 +123,10 @@ export default function GraphAnalysisPage() {
         id: e.id,
         source: e.source,
         target: e.target,
-        weight: typeof e.data?.confidence === 'number' ? e.data.confidence : 1
+        type: 'related',
+        properties: {
+          weight: typeof e.data?.confidence === 'number' ? e.data.confidence : 1
+        }
       })) || []
 
       if (nodes.length > 0) {
@@ -141,7 +164,7 @@ export default function GraphAnalysisPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${graph.name}.json`
+    a.download = `${graph.metadata.name}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -220,7 +243,7 @@ export default function GraphAnalysisPage() {
             <div className={`w-3 h-3 rounded-full ${isDemo ? 'bg-plasma' : 'bg-acid'}`} />
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold text-steel">{graph.name}</h1>
+                <h1 className="text-xl font-semibold text-steel">{graph.metadata.name}</h1>
                 {isDemo && (
                   <span className="px-3 py-1 rounded-lg bg-zinc-100 border border-ash/40 text-[10px] font-semibold text-steel">
                     DEMO_VIEW
@@ -250,7 +273,7 @@ export default function GraphAnalysisPage() {
             <button title="Export Docx" onClick={async () => {
               if (!graph) return
               const blob = await exportToWord(graph)
-              downloadBlob(blob, `${graph.name}.docx`)
+              downloadBlob(blob, `${graph.metadata.name}.docx`)
             }} className="p-2 hover:bg-steel/10 rounded text-steel hover:text-black transition-colors">
               <FileText className="w-4 h-4" />
             </button>

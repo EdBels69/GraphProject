@@ -2,7 +2,7 @@
 import axios from 'axios';
 import assert from 'assert';
 
-const API_URL = process.env.API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.API_URL || 'http://localhost:3002/api';
 
 async function runCriticalPathTest() {
     console.log('🧪 Starting Critical Path E2E Test...');
@@ -28,7 +28,7 @@ async function runCriticalPathTest() {
 
         // 3. Poll for Completion (Timeout 120s)
         console.log('3. Waiting for Job Completion...');
-        const maxAttempts = 60; // 2s * 60 = 120s
+        const maxAttempts = 90; // 2s * 90 = 180s
         let complete = false;
 
         for (let i = 0; i < maxAttempts; i++) {

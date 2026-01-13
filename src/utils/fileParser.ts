@@ -1,4 +1,4 @@
-import { Graph, Article } from '@/shared/types';
+import { Article } from '@/shared/types';
 
 export interface ParsedData {
   articles: Article[];
@@ -31,7 +31,7 @@ function readFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = (e) => reject(new Error('Error reading file'));
+    reader.onerror = () => reject(new Error('Error reading file'));
     reader.readAsText(file);
   });
 }
@@ -186,7 +186,7 @@ function parseBibTeX(content: string): ParsedData {
       keywords: parseArrayField(fields.keywords || ''),
       citations: [],
       doi: fields.doi || '',
-      url: fields.url || fields.url || '',
+      url: fields.url || '',
       published: true
     };
 
@@ -223,6 +223,10 @@ function parseBibTeXFields(entry: string): Record<string, string> {
   return fields;
 }
 
+/**
+ * Parses BibTeX author string into an array.
+ * @param authorString The author field from BibTeX
+ */
 function parseBibTeXAuthors(authorString: string): string[] {
   if (!authorString) return [];
 
@@ -232,32 +236,52 @@ function parseBibTeXAuthors(authorString: string): string[] {
     .filter(author => author);
 }
 
+/**
+ * Converts parsed data into a Graph structure.
+ * @param data The parsed articles and citations
+ */
+import { createGraph, createNode, createEdge, Graph } from '../../shared/contracts/graph';
+
+// ... (keep exports and parse functions)
+
 export function buildGraphFromParsedData(data: ParsedData): Graph {
-  const nodes = data.articles.map((article, index) => ({
-    id: article.id || `article_${index}`,
-    label: article.title.substring(0, 50) + (article.title.length > 50 ? '...' : ''),
-    group: article.id.startsWith('article') ? 'Imported' : 'PubMed',
-    attributes: {
-      title: article.title,
+  const graph = createGraph('Imported Graph', true);
+
+  graph.metadata.source = 'imported';
+  graph.metadata.sourceData.articleCount = data.articles.length;
+
+  graph.nodes = data.articles.map((article, index) => {
+    const node = createNode(
+      article.id || `article_${index}`,
+      article.title.substring(0, 50) + (article.title.length > 50 ? '...' : ''),
+      'paper'
+    );
+
+    node.properties = {
+      ...node.properties,
+      fullTitle: article.title,
       authors: article.authors,
       year: article.year,
-      citations: article.citations?.length || 0
-    }
-  }));
+      citations: article.citations?.length || 0,
+      weight: 1
+    };
 
-  const edges = data.citations.map((citation, index) => ({
-    id: `edge_${index}`,
-    source: citation.from,
-    target: citation.to
-  }));
+    return node;
+  });
 
-  return {
-    id: `graph_${Date.now()}`,
-    name: 'Imported Graph',
-    nodes,
-    edges,
-    directed: true,
-    createdAt: new Date(),
-    updatedAt: new Date()
+  graph.edges = data.citations.map((citation, index) => {
+    const edge = createEdge(citation.from, citation.to, 'cites', 1);
+    edge.id = `edge_${index}`; // Override ID if needed, or stick to standard
+    return edge;
+  });
+
+  graph.metrics = {
+    nodeCount: graph.nodes.length,
+    edgeCount: graph.edges.length,
+    density: 0,
+    avgDegree: 0,
+    components: 0
   };
+
+  return graph;
 }

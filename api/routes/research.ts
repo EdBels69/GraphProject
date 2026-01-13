@@ -7,22 +7,23 @@ import fs from 'fs'
 import path from 'path'
 import { literatureAgent } from '../services/literatureAgent'
 import { ResearchJobRequest } from '../../shared/contracts/research'
+import { logger } from '../core/Logger'
 
 const router = express.Router()
+
+import { validate } from '../middleware/validate';
+import { CreateJobSchema, CreateJobInput, ScreeningUpdateSchema, RefinementRequestSchema, AnalysisConfigSchema } from '../schemas/research';
 
 /**
  * POST /api/research/jobs
  * Start a new research job
  */
-router.post('/jobs', async (req: any, res) => {
+router.post('/jobs', validate(CreateJobSchema), async (req: any, res) => {
     try {
         const userId = req.user.id
-        const request: ResearchJobRequest = req.body
+        const request: CreateJobInput = req.body
 
-        if (!request.topic || typeof request.topic !== 'string') {
-            return res.status(400).json({ error: 'Topic is required' })
-        }
-
+        // Validation handled by middleware
         const job = await literatureAgent.startJob(request, userId)
 
         res.status(201).json({
@@ -30,7 +31,7 @@ router.post('/jobs', async (req: any, res) => {
             message: 'Research job started successfully'
         })
     } catch (error) {
-        console.error('Error starting research job:', error)
+        logger.error('ResearchAPI', 'Error processing request', { error })
         res.status(500).json({
             error: 'Failed to start research job',
             details: error instanceof Error ? error.message : String(error)
@@ -122,15 +123,11 @@ router.get('/jobs/:id/logs', async (req: any, res) => {
  * PATCH /api/research/jobs/:id/screening
  * Update screening decisions (include/exclude papers)
  */
-router.patch('/jobs/:id/screening', async (req: any, res) => {
+router.patch('/jobs/:id/screening', validate(ScreeningUpdateSchema), async (req: any, res) => {
     try {
         const { id } = req.params
         const userId = req.user.id
         const { includedIds, excludedIds, exclusionReasons } = req.body
-
-        if (!Array.isArray(includedIds) || !Array.isArray(excludedIds)) {
-            return res.status(400).json({ error: 'includedIds and excludedIds must be arrays' })
-        }
 
         const updatedJob = literatureAgent.updateScreening(id, {
             includedIds,
@@ -178,7 +175,7 @@ router.get('/schema', async (req, res) => {
  * POST /api/research/jobs/:id/analyze
  * Trigger detailed analysis on selected papers
  */
-router.post('/jobs/:id/analyze', async (req: any, res) => {
+router.post('/jobs/:id/analyze', validate(AnalysisConfigSchema), async (req: any, res) => {
     try {
         const { id } = req.params
         const userId = req.user.id
@@ -300,6 +297,52 @@ router.post('/jobs/:id/build-graph', async (req: any, res) => {
         }
 
         // Build graph using literature agent
+        // If methodId is provided, use the new GraphMethodRegistry
+        if (req.body.methodId) {
+            const { methodId, config } = req.body
+            const { graphMethodRegistry } = require('../modules/graph/GraphMethodRegistry')
+            const { databaseManager } = require('../core/Database')
+
+            const method = graphMethodRegistry.get(methodId)
+            if (!method) {
+                return res.status(404).json({ error: `Method ${methodId} not found` })
+            }
+
+            // Map Prisma articles to Contract articles
+            // TODO: Move to a proper mapper service
+            const articles = job.articles.map((a: any) => ({
+                id: a.id,
+                title: a.title,
+                authors: JSON.parse(a.authors || '[]'),
+                year: a.year,
+                abstract: a.abstract,
+                keywords: JSON.parse(a.authors || '[]'), // TODO: Fix keywords mapping
+                source: a.source,
+                doi: a.doi,
+                metadata: {}
+            }))
+
+            const graph = await method.build(articles, config || {})
+
+            // Save graph to DB via DatabaseManager (need to extend it to support UniversalGraph)
+            // For now, mapping UniversalGraph to Prisma Graph model structure
+            const savedGraphId = await databaseManager.saveGraph(userId, {
+                name: graph.metadata.name,
+                nodes: graph.nodes,
+                edges: graph.edges,
+                metadata: graph.metadata
+            })
+
+            // Link graph to job
+            await databaseManager.updateJob(id, userId, { graphId: savedGraphId })
+
+            return res.json({
+                graphId: savedGraphId,
+                message: 'Graph built successfully using new method registry'
+            })
+        }
+
+        // Fallback to legacy builder
         const graphId = await literatureAgent.buildGraphFromJob(id, userId, config)
 
         res.json({
@@ -463,92 +506,6 @@ router.get('/jobs/:id/export/parquet', async (req: any, res) => {
     }
 })
 
-/**
- * GET /api/research/jobs/:id/export/csv
- * Export job articles as CSV
- */
-router.get('/jobs/:id/export/csv', async (req: any, res) => {
-    try {
-        const { id } = req.params
-        const userId = req.user.id
 
-        const job = literatureAgent.getJob(id, userId)
-        if (!job) return res.status(404).json({ error: 'Job not found' })
-
-        const articles = job.articles || []
-
-        // CSV Header
-        const header = ['ID', 'Title', 'Authors', 'Year', 'Journal', 'DOI', 'URL', 'Source', 'Status', 'Screening Status'].join(',')
-
-        // CSV Rows
-        const rows = articles.map(a => {
-            const escape = (text: string | undefined) => {
-                if (!text) return ''
-                return `"${text.replace(/"/g, '""')}"` // Escape double quotes
-            }
-            return [
-                escape(a.id),
-                escape(a.title),
-                escape(a.authors?.join('; ')),
-                a.year || '',
-                escape(a.journal),
-                escape(a.doi),
-                escape(a.url),
-                escape(a.source),
-                escape(a.status),
-                escape(a.screeningStatus)
-            ].join(',')
-        })
-
-        const csvContent = [header, ...rows].join('\n')
-
-        res.setHeader('Content-Type', 'text/csv')
-        res.setHeader('Content-Disposition', `attachment; filename="research-${id}.csv"`)
-        res.send(csvContent)
-    } catch (error) {
-        console.error('Error exporting CSV:', error)
-        res.status(500).json({ error: 'Failed to export CSV' })
-    }
-})
-
-/**
- * GET /api/research/jobs/:id/export/bibtex
- * Export job articles as BibTeX
- */
-router.get('/jobs/:id/export/bibtex', async (req: any, res) => {
-    try {
-        const { id } = req.params
-        const userId = req.user.id
-
-        const job = literatureAgent.getJob(id, userId)
-        if (!job) return res.status(404).json({ error: 'Job not found' })
-
-        const articles = job.articles || []
-
-        const bibtexEntries = articles.map(a => {
-            const entryId = a.doi ? a.doi.replace(/[^a-zA-Z0-9]/g, '_') : `article_${a.id}`
-            const authors = a.authors?.join(' and ') || 'Unknown'
-
-            return `@article{${entryId},
-  title = {${a.title}},
-  author = {${authors}},
-  year = {${a.year || ''}},
-  journal = {${a.journal || 'Unknown'}},
-  doi = {${a.doi || ''}},
-  url = {${a.url || ''}},
-  source = {${a.source}}
-}`
-        })
-
-        const bibtexContent = bibtexEntries.join('\n\n')
-
-        res.setHeader('Content-Type', 'application/x-bibtex')
-        res.setHeader('Content-Disposition', `attachment; filename="research-${id}.bib"`)
-        res.send(bibtexContent)
-    } catch (error) {
-        console.error('Error exporting BibTeX:', error)
-        res.status(500).json({ error: 'Failed to export BibTeX' })
-    }
-})
 
 export default router

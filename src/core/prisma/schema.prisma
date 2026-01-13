@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider   = "prisma-client-js"
+  output     = "../src/core/prisma"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ResearchJob {
+  id                String   @id
+  userId            String
+  topic             String
+  status            String // pending, searching, analyzing, completed, failed, paused
+  progress          Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  articlesFound     Int      @default(0)
+  articlesProcessed Int      @default(0)
+
+  // Relations
+  articles Article[]
+
+  // One-to-One with Graph (optional)
+  graphId String? @unique
+  graph   Graph?  @relation(fields: [graphId], references: [id])
+}
+
+model Article {
+  id            String  @id
+  jobId         String
+  title         String
+  abstract      String
+  authors       String // JSON array
+  year          Int
+  doi           String?
+  source        String // pubmed, semantic_scholar, etc.
+  url           String?
+  citationCount Int?
+
+  // Screening & Processing
+  screeningStatus String  @default("pending") // pending, included, excluded
+  screeningReason String?
+  relevanceScore  Float?
+
+  // Extracted Data
+  keywords    String? // JSON array
+  entities    String? // JSON array
+  methodology String?
+  keyFindings String?
+
+  // File Management
+  pdfUrl    String?
+  pdfPath   String?
+  pdfStatus String? // pending, downloaded, failed
+
+  // Relations
+  job ResearchJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+model Graph {
+  id       String  @id @default(uuid())
+  name     String
+  userId   String
+  version  String
+  directed Boolean @default(false)
+
+  // Data (Stored as JSON text for SQLite compatibility if needed, though Postgres has JSONB)
+  nodes    String // Large JSON
+  edges    String // Large JSON
+  metadata String? // JSON
+  metrics  String? // JSON
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  job        ResearchJob?
+  snapshots  GraphSnapshot[]
+  graphNodes GraphNode[]
+  graphEdges GraphEdge[]
+}
+
+model GraphSnapshot {
+  id        String   @id @default(uuid())
+  graphId   String
+  graph     Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  name      String
+  version   Int
+  data      String // Map to Text in DB
+  metrics   String? // JSON
+  createdAt DateTime @default(now())
+
+  @@index([graphId])
+}
+
+model GraphNode {
+  id      String @id @default(uuid())
+  graphId String
+  graph   Graph  @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  label   String
+  name    String
+  data    String // JSON props
+
+  @@index([graphId])
+}
+
+model GraphEdge {
+  id       String @id @default(uuid())
+  graphId  String
+  graph    Graph  @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  source   String
+  target   String
+  relation String
+  data     String // JSON props
+
+  @@index([graphId])
+  @@index([source])
+  @@index([target])
+}
+
+// ... (Other models like User, Settings etc. can be added here)

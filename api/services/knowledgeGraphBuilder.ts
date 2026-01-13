@@ -1,6 +1,6 @@
 import { Entity, ExtractedEntities } from './entityExtractor'
 import { Relation, ExtractedRelations } from './relationExtractor'
-import { Graph, GraphNode, GraphEdge, NodeType, RelationType, EvidenceType } from '../../shared/types'
+import { Graph, GraphNode, GraphEdge, createGraph, createNode, createEdge } from '../../shared/contracts/graph'
 
 export interface KnowledgeGraph {
   graph: Graph
@@ -31,7 +31,7 @@ export class KnowledgeGraphBuilder {
     const {
       minConfidence = 0.3,
       minMentions = 1,
-      includeCooccurrence = true,  // CHANGED: Enable by default for better connectivity
+      includeCooccurrence = true,
       maxNodes = Infinity
     } = options
 
@@ -43,7 +43,7 @@ export class KnowledgeGraphBuilder {
     // Filter relations by confidence and type
     const filteredRelations = relations.filter(
       r => r.confidence >= minConfidence &&
-        (includeCooccurrence || r.type !== 'cooccurs_with')  // FIXED: match new type name
+        (includeCooccurrence || r.type !== 'cooccurs_with')
     )
 
     console.info(`[KnowledgeGraphBuilder] Input: ${entities.length} entities, ${relations.length} relations`)
@@ -55,86 +55,55 @@ export class KnowledgeGraphBuilder {
       .slice(0, maxNodes)
 
     // Create nodes from entities with proper type
-    const nodes: GraphNode[] = sortedEntities.map(entity => ({
-      id: entity.id,
-      label: entity.name,
-      type: this.mapEntityTypeToNodeType(entity.type),  // NEW: top-level type
-      weight: entity.confidence,
-      data: {
-        type: entity.type,
+    const nodes: GraphNode[] = sortedEntities.map(entity => {
+      const node = createNode(entity.id, entity.name, entity.type)
+      node.properties = {
+        weight: entity.confidence,
         confidence: entity.confidence,
         mentions: entity.mentions,
         evidence: entity.evidence,
         source: entity.source
       }
-    }))
+      return node
+    })
 
     // Create edges from relations with proper typing
     const nodeIds = new Set(sortedEntities.map(e => e.id))
     const edges: GraphEdge[] = filteredRelations
       .filter(r => nodeIds.has(r.source) && nodeIds.has(r.target))
-      .map(relation => ({
-        id: relation.id,
-        source: relation.source,
-        target: relation.target,
-        relation: relation.type as RelationType,  // NEW: top-level relation
-        evidenceType: relation.evidenceType || 'text_mining',  // NEW: evidence type
-        confidence: relation.confidence,  // NEW: top-level confidence
-        weight: relation.confidence,
-        directed: true,
-        data: {
-          label: relation.type,
-          type: relation.type,
+      .map(relation => {
+        const edge = createEdge(relation.source, relation.target, relation.type, relation.confidence)
+        edge.id = relation.id
+        edge.properties = {
+          weight: relation.confidence,
           confidence: relation.confidence,
-          evidence: relation.evidence,
+          evidence: relation.evidence || [],
           sourceText: relation.sourceText
         }
-      }))
+        return edge
+      })
 
     // Get unique sources
-    const sources = [...new Set(sortedEntities.map(e => e.source))]
+    const sources = [...new Set(sortedEntities.map(e => e.source))].map(s => ({
+      id: s,
+      type: 'manual' as const
+    }))
+
+    const graph = createGraph(`Knowledge Graph ${new Date().toISOString()}`, true)
+    graph.nodes = nodes
+    graph.edges = edges
+    graph.metadata.sources = sources
+    graph.updatedAt = new Date().toISOString()
 
     return {
-      graph: {
-        id: `kg_${Date.now()}`,
-        name: `Knowledge Graph ${new Date().toISOString()}`,
-        nodes,
-        edges,
-        directed: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
+      graph,
       metadata: {
         entities: nodes.length,
         relations: edges.length,
-        sources,
+        sources: sources.map(s => s.id),
         createdAt: new Date()
       }
     }
-  }
-
-  /**
-   * Map entity type string to NodeType enum
-   */
-  private mapEntityTypeToNodeType(entityType: string): NodeType {
-    const typeMap: Record<string, NodeType> = {
-      'gene': 'Gene',
-      'protein': 'Protein',
-      'metabolite': 'Metabolite',
-      'chemical': 'Metabolite',
-      'compound': 'Metabolite',
-      'disease': 'Disease',
-      'disorder': 'Disease',
-      'pathway': 'Pathway',
-      'drug': 'Drug',
-      'symptom': 'Symptom',
-      'anatomy': 'Anatomy',
-      'tissue': 'Anatomy',
-      'organ': 'Anatomy'
-    }
-
-    const normalized = entityType.toLowerCase()
-    return typeMap[normalized] || 'Concept'
   }
 
   /**
@@ -150,24 +119,21 @@ export class KnowledgeGraphBuilder {
       for (const node of kg.graph.nodes) {
         const existing = mergedNodes.get(node.id)
         if (existing) {
-          // Merge node data
-          if (node.data && existing.data) {
-            existing.weight = Math.max(existing.weight || 0, node.weight || 0)
-            existing.data.confidence = Math.max(
-              existing.data.confidence || 0,
-              node.data.confidence || 0
-            )
-            existing.data.mentions = (existing.data.mentions || 0) + (node.data.mentions || 0)
-            if (existing.data.evidence && node.data.evidence) {
-              existing.data.evidence.push(...node.data.evidence)
-              existing.data.evidence = [...new Set(existing.data.evidence)]
-            }
-          }
+          // Merge node properties
+          existing.properties.weight = Math.max(existing.properties.weight || 0, node.properties.weight || 0)
+          existing.properties.confidence = Math.max(
+            (existing.properties.confidence as number) || 0,
+            (node.properties.confidence as number) || 0
+          )
+          const existingMentions = (existing.properties.mentions as number) || 0
+          const nodeMentions = (node.properties.mentions as number) || 0
+          existing.properties.mentions = existingMentions + nodeMentions
         } else {
-          mergedNodes.set(node.id, node)
+          mergedNodes.set(node.id, JSON.parse(JSON.stringify(node))) // Deep clone
         }
-        if (node.data?.source) {
-          allSources.add(node.data.source)
+
+        if (node.properties.source) {
+          allSources.add(node.properties.source as string)
         }
       }
 
@@ -175,33 +141,21 @@ export class KnowledgeGraphBuilder {
       for (const edge of kg.graph.edges) {
         const existing = mergedEdges.get(edge.id)
         if (existing) {
-          if (edge.data && existing.data) {
-            existing.weight = Math.max(existing.weight || 0, edge.weight || 0)
-            existing.data.confidence = Math.max(
-              existing.data.confidence || 0,
-              edge.data.confidence || 0
-            )
-            if (existing.data.evidence && edge.data.evidence) {
-              existing.data.evidence.push(...edge.data.evidence)
-              existing.data.evidence = [...new Set(existing.data.evidence)]
-            }
-          }
+          existing.properties.weight = Math.max(existing.properties.weight || 0, edge.properties.weight || 0)
         } else {
-          mergedEdges.set(edge.id, edge)
+          mergedEdges.set(edge.id, JSON.parse(JSON.stringify(edge)))
         }
       }
     }
 
+    const mergedGraph = createGraph(`Merged Knowledge Graph ${new Date().toISOString()}`, true)
+    mergedGraph.nodes = Array.from(mergedNodes.values())
+    mergedGraph.edges = Array.from(mergedEdges.values())
+    mergedGraph.metadata.sources = Array.from(allSources).map(s => ({ id: s, type: 'manual' as const }))
+    mergedGraph.updatedAt = new Date().toISOString()
+
     return {
-      graph: {
-        id: `merged_kg_${Date.now()}`,
-        name: `Merged Knowledge Graph ${new Date().toISOString()}`,
-        nodes: Array.from(mergedNodes.values()),
-        edges: Array.from(mergedEdges.values()),
-        directed: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
+      graph: mergedGraph,
       metadata: {
         entities: mergedNodes.size,
         relations: mergedEdges.size,
@@ -216,19 +170,19 @@ export class KnowledgeGraphBuilder {
    */
   filterByType(graph: KnowledgeGraph, types: string[]): KnowledgeGraph {
     const filteredNodes = graph.graph.nodes.filter(n =>
-      n.data?.type && types.includes(n.data.type)
+      n.type && types.includes(n.type)
     )
     const nodeIds = new Set(filteredNodes.map(n => n.id))
     const filteredEdges = graph.graph.edges.filter(e =>
       nodeIds.has(e.source) && nodeIds.has(e.target)
     )
 
+    const newGraph = JSON.parse(JSON.stringify(graph.graph)) as Graph
+    newGraph.nodes = filteredNodes
+    newGraph.edges = filteredEdges
+
     return {
-      graph: {
-        ...graph.graph,
-        nodes: filteredNodes,
-        edges: filteredEdges
-      },
+      graph: newGraph,
       metadata: {
         ...graph.metadata,
         entities: filteredNodes.length,
@@ -271,12 +225,12 @@ export class KnowledgeGraphBuilder {
       includedNodeIds.has(e.source) && includedNodeIds.has(e.target)
     )
 
+    const newGraph = JSON.parse(JSON.stringify(graph.graph)) as Graph
+    newGraph.nodes = filteredNodes
+    newGraph.edges = filteredEdges
+
     return {
-      graph: {
-        ...graph.graph,
-        nodes: filteredNodes,
-        edges: filteredEdges
-      },
+      graph: newGraph,
       metadata: {
         ...graph.metadata,
         entities: filteredNodes.length,
@@ -330,12 +284,12 @@ export class KnowledgeGraphBuilder {
 
         const pathNodes = graph.graph.nodes.filter(n => pathNodeIds.includes(n.id))
 
+        const newGraph = JSON.parse(JSON.stringify(graph.graph)) as Graph
+        newGraph.nodes = pathNodes
+        newGraph.edges = pathEdges
+
         return {
-          graph: {
-            ...graph.graph,
-            nodes: pathNodes,
-            edges: pathEdges
-          },
+          graph: newGraph,
           metadata: {
             ...graph.metadata,
             entities: pathNodes.length,
@@ -372,15 +326,15 @@ export class KnowledgeGraphBuilder {
   exportToGraphology(graph: KnowledgeGraph): any {
     return {
       attributes: {
-        name: graph.graph.name,
-        createdAt: graph.graph.createdAt
+        name: graph.graph.metadata.name,
+        createdAt: graph.graph.metadata.created
       },
       nodes: graph.graph.nodes.map(n => ({
         key: n.id,
         attributes: {
           label: n.label,
-          weight: n.weight,
-          ...n.data
+          weight: n.properties.weight,
+          ...n.properties
         }
       })),
       edges: graph.graph.edges.map(e => ({
@@ -388,9 +342,9 @@ export class KnowledgeGraphBuilder {
         source: e.source,
         target: e.target,
         attributes: {
-          weight: e.weight,
-          directed: e.directed,
-          ...e.data
+          weight: e.properties.weight,
+          directed: true,
+          ...e.properties
         }
       }))
     }
@@ -403,18 +357,18 @@ export class KnowledgeGraphBuilder {
     const nodesXML = graph.graph.nodes.map(n =>
       `    <node id="${n.id}" label="${n.label}">
         <attvalues>
-          <attvalue for="type" value="${n.data?.type || 'unknown'}"/>
-          <attvalue for="confidence" value="${n.data?.confidence || 0}"/>
-          <attvalue for="mentions" value="${n.data?.mentions || 0}"/>
+          <attvalue for="type" value="${n.type || 'unknown'}"/>
+          <attvalue for="confidence" value="${n.properties.confidence || 0}"/>
+          <attvalue for="mentions" value="${n.properties.mentions || 0}"/>
         </attvalues>
       </node>`
     ).join('\n')
 
     const edgesXML = graph.graph.edges.map(e =>
-      `    <edge id="${e.id}" source="${e.source}" target="${e.target}" label="${e.data?.label || ''}">
+      `    <edge id="${e.id}" source="${e.source}" target="${e.target}" label="${(e.properties.type as any) || ''}">
         <attvalues>
-          <attvalue for="type" value="${e.data?.type || 'unknown'}"/>
-          <attvalue for="confidence" value="${e.data?.confidence || 0}"/>
+          <attvalue for="type" value="${e.properties?._type || 'unknown'}"/>
+          <attvalue for="confidence" value="${e.properties.confidence || 0}"/>
         </attvalues>
       </edge>`
     ).join('\n')

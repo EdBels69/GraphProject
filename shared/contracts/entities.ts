@@ -30,7 +30,10 @@ export type EntityType =
     | 'symptom'
     | 'treatment'
     | 'biomarker'
+    | 'biomarker'
     | 'clinical_trial'
+    // v2.1 - Research
+    | 'paper'
 
 /**
  * Entity type metadata for UI and validation
@@ -56,6 +59,7 @@ export const ENTITY_TYPE_META: Record<EntityType, {
     treatment: { label: 'Treatment', color: '#7C3AED', icon: 'stethoscope', ontologies: ['NCI Thesaurus'], addedInVersion: '2.0' },
     biomarker: { label: 'Biomarker', color: '#0891B2', icon: 'activity', ontologies: ['LOINC'], addedInVersion: '2.0' },
     clinical_trial: { label: 'Clinical Trial', color: '#4F46E5', icon: 'clipboard', ontologies: ['ClinicalTrials.gov'], addedInVersion: '2.0' },
+    paper: { label: 'Paper', color: '#64748B', icon: 'file-text', ontologies: ['DOI'], addedInVersion: '2.1' },
 }
 
 // =============================================================================

@@ -6,7 +6,7 @@
 
 export interface LogEntry {
     timestamp: string
-    type: 'info' | 'search' | 'ai' | 'error' | 'success'
+    type: 'info' | 'search' | 'ai' | 'error' | 'success' | 'warn'
     message: string
 }
 

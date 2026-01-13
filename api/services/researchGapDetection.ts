@@ -1,4 +1,4 @@
-import { Graph, GraphNode, GraphEdge } from '../../shared/types'
+import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
 
 export interface GapResult {
   id: string
@@ -70,7 +70,7 @@ export class ResearchGapDetection {
     // Find disconnected nodes
     for (const node of graph.nodes) {
       const neighbors = adjacency.get(node.id) || new Set()
-      
+
       // Nodes with no connections
       if (neighbors.size === 0) {
         gaps.push({
@@ -114,7 +114,7 @@ export class ResearchGapDetection {
             const entity1 = entities[i]
             const entity2 = entities[j]
             const neighbors1 = adjacency.get(entity1.id) || new Set()
-            
+
             if (!neighbors1.has(entity2.id)) {
               gaps.push({
                 id: `gap-similar-${entity1.id}-${entity2.id}`,
@@ -142,10 +142,10 @@ export class ResearchGapDetection {
    */
   detectTemporalGaps(graph: Graph): GapResult[] {
     const gaps: GapResult[] = []
-    
+
     // Extract temporal information from node metadata
-    const nodesWithTime = graph.nodes.filter(n => 
-      n.data?.year || n.data?.date || n.data?.timestamp
+    const nodesWithTime = graph.nodes.filter(n =>
+      (n.properties.year as number) || (n.properties.date as string) || (n.properties.timestamp as string)
     )
 
     if (nodesWithTime.length < 2) {
@@ -194,7 +194,7 @@ export class ResearchGapDetection {
       if (appearances.length > 1) {
         const maxPeriod = Math.max(...appearances)
         const lastPeriod = parseInt(timePeriods[timePeriods.length - 1])
-        
+
         if (maxPeriod < lastPeriod - 1) {
           const node = graph.nodes.find(n => n.id === entityId)
           if (node) {
@@ -208,7 +208,7 @@ export class ResearchGapDetection {
               suggestions: [
                 `Investigate why ${node.label} is no longer mentioned`,
                 `Search for recent literature about ${node.label}`,
-                `Consider if this is a research trend change`
+                `Consider if ${node.properties.type} trend changed`
               ]
             })
           }
@@ -229,14 +229,14 @@ export class ResearchGapDetection {
 
     // Collect all entity and relation types
     for (const node of graph.nodes) {
-      if (node.data?.type) {
-        entityTypes.add(node.data.type)
+      if (node.type) {
+        entityTypes.add(node.type)
       }
     }
 
     for (const edge of graph.edges) {
-      if (edge.data?.type) {
-        relationTypes.add(edge.data.type)
+      if (edge.type) {
+        relationTypes.add(edge.type)
       }
     }
 
@@ -283,7 +283,7 @@ export class ResearchGapDetection {
     // Check for imbalanced entity type distribution
     const typeCounts: Record<string, number> = {}
     for (const node of graph.nodes) {
-      const type = node.data?.type || 'unknown'
+      const type = node.type || 'unknown'
       typeCounts[type] = (typeCounts[type] || 0) + 1
     }
 
@@ -294,7 +294,7 @@ export class ResearchGapDetection {
           id: `gap-imbalanced-${type}`,
           type: 'content',
           description: `Underrepresented entity type: ${type} (${count} entities)`,
-          entities: graph.nodes.filter(n => n.data?.type === type).map(n => n.id),
+          entities: graph.nodes.filter(n => n.type === type).map(n => n.id),
           confidence: 0.5,
           priority: 'low',
           suggestions: [
@@ -316,8 +316,8 @@ export class ResearchGapDetection {
 
     // Find low-confidence entities
     for (const node of graph.nodes) {
-      const confidence = node.data?.confidence || node.weight || 1
-      
+      const confidence = (node.properties.confidence as number) || node.properties.weight || 1
+
       if (confidence < 0.5) {
         gaps.push({
           id: `gap-confidence-entity-${node.id}`,
@@ -337,13 +337,13 @@ export class ResearchGapDetection {
 
     // Find low-confidence relations
     for (const edge of graph.edges) {
-      const confidence = edge.data?.confidence || edge.weight || 1
-      
+      const confidence = (edge.properties.confidence as number) || edge.properties.weight || 1
+
       if (confidence < 0.5) {
         gaps.push({
           id: `gap-confidence-relation-${edge.id}`,
           type: 'confidence',
-          description: `Low confidence relation: ${edge.data?.label || edge.id} (confidence: ${confidence.toFixed(2)})`,
+          description: `Low confidence relation: ${(edge.properties.type as string) || edge.id} (confidence: ${confidence.toFixed(2)})`,
           entities: [edge.source, edge.target],
           confidence: 0.7,
           priority: 'medium',
@@ -358,8 +358,8 @@ export class ResearchGapDetection {
 
     // Find entities with few evidence sources
     for (const node of graph.nodes) {
-      const evidence = node.data?.evidence || []
-      
+      const evidence = (node.properties.evidence as any[]) || []
+
       if (evidence.length < 2) {
         gaps.push({
           id: `gap-evidence-${node.id}`,
@@ -427,7 +427,7 @@ export class ResearchGapDetection {
     const groups: Record<string, GraphNode[]> = {}
 
     for (const node of graph.nodes) {
-      const type = node.data?.type || 'unknown'
+      const type = node.type || 'unknown'
       if (!groups[type]) {
         groups[type] = []
       }
@@ -444,7 +444,7 @@ export class ResearchGapDetection {
     const groups: Record<string, GraphNode[]> = {}
 
     for (const node of nodes) {
-      const year = node.data?.year
+      const year = (node.properties.year as number) || (node.properties.metadata as any)?.year
       if (year) {
         const period = Math.floor(year / 5) * 5 // 5-year periods
         const key = `${period}-${period + 4}`

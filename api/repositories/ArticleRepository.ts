@@ -7,50 +7,53 @@ export class ArticleRepository extends BaseRepository {
     async saveJobArticles(jobId: string, userId: string, articles: ArticleSource[]) {
         if (!articles.length) return
 
-        // We need to implement batch saving. 
-        // Assuming databaseManager.saveJobArticles just saved them to the DB linked to the job.
-        // Let's implement this using Prisma.
+        const operations = this.getUpsertOperations(jobId, userId, articles)
+        await this.prisma.$transaction(operations)
+    }
 
-        // This effectively replaces databaseManager.saveJobArticles
-        const operations = articles.map(article => {
+    getUpsertOperations(jobId: string, userId: string, articles: ArticleSource[]) {
+        return articles.map(article => {
             return this.prisma.article.upsert({
                 where: { id: article.id } as any,
                 update: {
                     title: article.title,
-                    // Map other fields as needed... database schema dependent
+                    doi: article.doi,
+                    authors: JSON.stringify(article.authors || []),
+                    year: article.year,
+                    abstract: article.abstract,
+                    url: article.url,
+                    pdfUrl: article.pdfUrl,
+                    source: article.source,
+                    status: article.status,
+                    screeningStatus: article.screeningStatus,
+                    extractedData: article.extractedData ? JSON.stringify(article.extractedData) : undefined,
+                    entities: article.entities ? JSON.stringify(article.entities) : undefined,
+                    relations: article.relations ? JSON.stringify(article.relations) : undefined,
+                    updatedAt: new Date()
                 } as any,
                 create: {
                     id: article.id,
-                    title: article.title,
-                    content: article.abstract || '',
-                    status: 'completed',
-                    uploadedAt: new Date(),
                     userId: userId,
+                    jobId: jobId,
+                    title: article.title,
+                    doi: article.doi,
+                    authors: JSON.stringify(article.authors || []),
+                    year: article.year,
+                    abstract: article.abstract,
                     url: article.url,
-                    metadata: JSON.stringify({
-                        authors: article.authors,
-                        year: article.year,
-                        doi: article.doi,
-                        source: article.source,
-                        relevanceScore: article.relevanceScore,
-                        journal: article.journal
-                    })
+                    pdfUrl: article.pdfUrl,
+                    source: article.source,
+                    status: article.status,
+                    screeningStatus: article.screeningStatus,
+                    extractedData: article.extractedData ? JSON.stringify(article.extractedData) : undefined,
+                    entities: article.entities ? JSON.stringify(article.entities) : undefined,
+                    relations: article.relations ? JSON.stringify(article.relations) : undefined
                 } as any
             })
         })
-
-        // Also need to link to job? 
-        // databaseManager.saveJobArticles logic usually does this.
-        // If Article is independent, we need a refined schema.
-        // For now, let's assume we just upsert articles. 
-        // If there's a join table or array in Job, it's more complex.
-
-        // In Database.ts, ResearchJobRecord has `articles` which was ANY[].
-        // If it's a relation, we need to connect.
-        // Assuming standard behavior: strict Repository pattern usually separates entities.
-
-        await this.prisma.$transaction(operations)
     }
+
+
 }
 
 export const articleRepository = new ArticleRepository()

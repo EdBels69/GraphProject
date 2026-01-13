@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { logger } from '../core/Logger'
 import cacheManager from './cacheManager'
 import { journalMetricService } from './journalMetricService'
@@ -39,6 +40,9 @@ export interface SearchResults {
   executionTime: number
 }
 
+import { ArxivSource } from './search/sources/ArxivSource'
+import { BioRxivSource } from './search/sources/BioRxivSource'
+
 export class GlobalSearch {
   private sources: Map<string, ISearchSource>
 
@@ -55,9 +59,11 @@ export class GlobalSearch {
     const crossref = new CrossrefSource()
     this.sources.set(crossref.name, crossref)
 
-    // TODO: Migrate ArXiv and Google Scholar to ISearchSource
-    // For now, we keep them disabled or we handle them in a legacy way if needed
-    // But based on previous analysis, only PubMed and Crossref are actively used/reliable in this context.
+    const arxiv = new ArxivSource()
+    this.sources.set(arxiv.name, arxiv)
+
+    const biorxiv = new BioRxivSource()
+    this.sources.set(biorxiv.name, biorxiv)
   }
 
   /**

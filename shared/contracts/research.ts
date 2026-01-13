@@ -201,6 +201,15 @@ export interface ArticleSource {
 
     /** SJR Quartile */
     sjrQuartile?: 'Q1' | 'Q2' | 'Q3' | 'Q4'
+
+    /** Global citation count */
+    citations?: number
+
+    /** Extracted entities (from analysis) */
+    entities?: any[]
+
+    /** Extracted relations (from analysis) */
+    relations?: any[]
 }
 
 // =============================================================================

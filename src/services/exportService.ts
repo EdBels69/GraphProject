@@ -3,7 +3,9 @@
  * Exports graph data to Word (DOCX) and PDF formats
  */
 
-import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
+import { Graph } from '../../shared/contracts/graph'
+import { Packer, Document, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, WidthType } from 'docx'
+import jsPDF from 'jspdf'
 
 interface ExportOptions {
     includeStatistics?: boolean
@@ -28,8 +30,10 @@ function calculateStats(graph: Graph) {
     const nodeDegrees = new Map<string, number>()
     graph.nodes.forEach(n => nodeDegrees.set(n.id, 0))
     graph.edges.forEach(e => {
-        nodeDegrees.set(e.source, (nodeDegrees.get(e.source) || 0) + 1)
-        nodeDegrees.set(e.target, (nodeDegrees.get(e.target) || 0) + 1)
+        const source = nodeDegrees.get(e.source) || 0
+        const target = nodeDegrees.get(e.target) || 0
+        nodeDegrees.set(e.source, source + 1)
+        nodeDegrees.set(e.target, target + 1)
     })
 
     return {
@@ -55,14 +59,14 @@ export function exportToCSV(graph: Graph): { nodes: string; edges: string } {
     // Nodes CSV
     const nodesHeader = 'id,label,weight'
     const nodesRows = graph.nodes.map(n =>
-        `"${n.id}","${n.label}",${n.weight || 0}`
+        `"${n.id}","${n.label}",${n.properties.weight || 0}`
     )
     const nodesCSV = [nodesHeader, ...nodesRows].join('\n')
 
     // Edges CSV
     const edgesHeader = 'id,source,target,weight'
     const edgesRows = graph.edges.map(e =>
-        `"${e.id}","${e.source}","${e.target}",${e.weight || 0}`
+        `"${e.id}","${e.source}","${e.target}",${e.properties.weight || 0}`
     )
     const edgesCSV = [edgesHeader, ...edgesRows].join('\n')
 
@@ -84,16 +88,13 @@ export async function exportToWord(
         includeEdgesList = true
     } = options
 
-    // Dynamic import to avoid SSR issues
-    const { Document, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, WidthType, Packer } = await import('docx')
-
     const stats = calculateStats(graph)
     const children: any[] = []
 
     // Title
     children.push(
         new Paragraph({
-            text: `GRAPH_ANALYSIS_REPORT: ${graph.name}`,
+            text: `GRAPH_ANALYSIS_REPORT: ${graph.metadata.name}`,
             heading: HeadingLevel.HEADING_1,
         }),
         new Paragraph({
@@ -141,7 +142,7 @@ export async function exportToWord(
     if (includeTopNodes) {
         const topNodes = graph.nodes
             .slice()
-            .sort((a, b) => (b.weight || 0) - (a.weight || 0))
+            .sort((a, b) => (b.properties.weight || 0) - (a.properties.weight || 0))
             .slice(0, topNodesCount)
 
         children.push(
@@ -167,7 +168,7 @@ export async function exportToWord(
                                 new TableCell({ children: [new Paragraph(String(i + 1))] }),
                                 new TableCell({ children: [new Paragraph(node.id)] }),
                                 new TableCell({ children: [new Paragraph(node.label)] }),
-                                new TableCell({ children: [new Paragraph(String(node.weight || 0))] }),
+                                new TableCell({ children: [new Paragraph(String(node.properties.weight || 0))] }),
                                 new TableCell({ children: [new Paragraph(String(stats.nodeDegrees.get(node.id) || 0))] }),
                             ],
                         })
@@ -201,7 +202,7 @@ export async function exportToWord(
                             children: [
                                 new TableCell({ children: [new Paragraph(edge.source)] }),
                                 new TableCell({ children: [new Paragraph(edge.target)] }),
-                                new TableCell({ children: [new Paragraph(String(edge.weight || 0))] }),
+                                new TableCell({ children: [new Paragraph(String(edge.properties.weight || 0))] }),
                             ],
                         })
                     ),
@@ -242,16 +243,13 @@ export async function exportToPDF(
         topNodesCount = 10,
     } = options
 
-    // Dynamic import
-    const { jsPDF } = await import('jspdf')
-
     const doc = new jsPDF()
     const stats = calculateStats(graph)
     let y = 20
 
     // Title
     doc.setFontSize(18)
-    doc.text(`GRAPH_ANALYSIS_REPORT: ${graph.name}`, 20, y)
+    doc.text(`GRAPH_ANALYSIS_REPORT: ${graph.metadata.name}`, 20, y)
     y += 10
 
     doc.setFontSize(10)
@@ -279,7 +277,7 @@ export async function exportToPDF(
     if (includeTopNodes) {
         const topNodes = graph.nodes
             .slice()
-            .sort((a, b) => (b.weight || 0) - (a.weight || 0))
+            .sort((a, b) => (b.properties.weight || 0) - (a.properties.weight || 0))
             .slice(0, topNodesCount)
 
         doc.setFontSize(14)
@@ -292,7 +290,7 @@ export async function exportToPDF(
                 doc.addPage()
                 y = 20
             }
-            doc.text(`${i + 1}. ${node.label} (weight: ${node.weight || 0})`, 25, y)
+            doc.text(`${i + 1}. ${node.label} (weight: ${node.properties.weight || 0})`, 25, y)
             y += 5
         })
     }
@@ -331,7 +329,7 @@ export function exportToGEXF(graph: Graph): string {
 <gexf xmlns="http://www.gexf.net/1.3" version="1.3">
   <meta lastmodifieddate="${now.split('T')[0]}">
     <creator>Graph Analyser</creator>
-    <description>${escapeXML(graph.name)}</description>
+    <description>${escapeXML(graph.metadata.name)}</description>
   </meta>
   <graph mode="static" defaultedgetype="${graph.directed ? 'directed' : 'undirected'}">
     <attributes class="node">
@@ -344,8 +342,8 @@ export function exportToGEXF(graph: Graph): string {
     graph.nodes.forEach(node => {
         gexf += `      <node id="${escapeXML(node.id)}" label="${escapeXML(node.label)}">
         <attvalues>
-          <attvalue for="0" value="${node.weight || 0}"/>
-          <attvalue for="1" value="${escapeXML(((node.data as any)?.group as string) || '')}"/>
+          <attvalue for="0" value="${node.properties.weight || 0}"/>
+          <attvalue for="1" value="${escapeXML((node.properties.group as string) || '')}"/>
         </attvalues>
       </node>\n`
     })
@@ -355,7 +353,7 @@ export function exportToGEXF(graph: Graph): string {
 `
 
     graph.edges.forEach((edge, i) => {
-        gexf += `      <edge id="${i}" source="${escapeXML(edge.source)}" target="${escapeXML(edge.target)}" weight="${edge.weight || 1}"/>\n`
+        gexf += `      <edge id="${i}" source="${escapeXML(edge.source)}" target="${escapeXML(edge.target)}" weight="${edge.properties.weight || 1}"/>\n`
     })
 
     gexf += `    </edges>
@@ -387,14 +385,14 @@ export function exportToGraphML(graph: Graph): string {
     graph.nodes.forEach(node => {
         graphml += `    <node id="${escapeXML(node.id)}">
       <data key="label">${escapeXML(node.label)}</data>
-      <data key="weight">${node.weight || 0}</data>
-      <data key="group">${escapeXML(((node.data as any)?.group as string) || '')}</data>
+      <data key="weight">${node.properties.weight || 0}</data>
+      <data key="group">${escapeXML((node.properties.group as string) || '')}</data>
     </node>\n`
     })
 
     graph.edges.forEach((edge, i) => {
         graphml += `    <edge id="e${i}" source="${escapeXML(edge.source)}" target="${escapeXML(edge.target)}">
-      <data key="edgeweight">${edge.weight || 1}</data>
+      <data key="edgeweight">${edge.properties.weight || 1}</data>
     </edge>\n`
     })
 

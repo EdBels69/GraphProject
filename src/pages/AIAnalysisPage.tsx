@@ -3,16 +3,9 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Graph } from '../../shared/contracts/graph'
 import { useApi, useApiPost } from '@/hooks/useApi'
 import { API_ENDPOINTS } from '@/api/endpoints'
-
-type AnalysisMode = 'graph' | 'edge' | 'metrics'
-
-interface Message {
-    id: string
-    role: 'user' | 'assistant'
-    content: string
-    mode?: AnalysisMode
-    timestamp: Date
-}
+import { AnalysisMode, Message } from '@/components/analysis/types'
+import { AnalysisSidebar } from '@/components/analysis/AnalysisSidebar'
+import { AnalysisChat } from '@/components/analysis/AnalysisChat'
 
 export default function AIAnalysisPage() {
     const { id } = useParams<{ id: string }>()
@@ -110,26 +103,7 @@ export default function AIAnalysisPage() {
         }
     }
 
-    const modeConfig = {
-        graph: {
-            emoji: '🕸️',
-            label: 'По графу',
-            description: 'Анализ всей структуры графа',
-            prompts: ['Опиши структуру графа', 'Какие основные кластеры?', 'Найди ключевые узлы']
-        },
-        edge: {
-            emoji: '🔗',
-            label: 'По связям',
-            description: 'Объяснение конкретных связей',
-            prompts: ['Почему эти узлы связаны?', 'Какой тип связи между X и Y?', 'Найди путь между A и B']
-        },
-        metrics: {
-            emoji: '📈',
-            label: 'По метрикам',
-            description: 'Интерпретация централизации и кластеров',
-            prompts: ['Какой узел самый важный?', 'Объясни PageRank', 'Сколько сообществ в графе?']
-        }
-    }
+
 
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
@@ -163,176 +137,22 @@ export default function AIAnalysisPage() {
             </header>
 
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                {/* Sidebar - Mode Selection */}
-                <aside style={{
-                    width: 280,
-                    background: '#fff',
-                    borderRight: '1px solid #e2e8f0',
-                    padding: 20,
-                    flexShrink: 0,
-                    overflowY: 'auto'
-                }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 600, color: '#64748b', marginBottom: 16 }}>Режим анализа</h3>
+                <AnalysisSidebar
+                    mode={mode}
+                    setMode={setMode}
+                    setInputValue={setInputValue}
+                    graph={graph}
+                />
 
-                    {(Object.keys(modeConfig) as AnalysisMode[]).map(m => (
-                        <button
-                            key={m}
-                            onClick={() => setMode(m)}
-                            style={{
-                                width: '100%',
-                                display: 'flex',
-                                alignItems: 'flex-start',
-                                gap: 12,
-                                padding: '14px 16px',
-                                marginBottom: 8,
-                                borderRadius: 12,
-                                border: mode === m ? '2px solid #8b5cf6' : '2px solid transparent',
-                                background: mode === m ? '#f5f3ff' : '#f8fafc',
-                                cursor: 'pointer',
-                                textAlign: 'left'
-                            }}
-                        >
-                            <span style={{ fontSize: 24 }}>{modeConfig[m].emoji}</span>
-                            <div>
-                                <div style={{ fontWeight: 600, color: mode === m ? '#5b21b6' : '#1e293b', fontSize: 14 }}>
-                                    {modeConfig[m].label}
-                                </div>
-                                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                                    {modeConfig[m].description}
-                                </div>
-                            </div>
-                        </button>
-                    ))}
-
-                    <div style={{ marginTop: 24 }}>
-                        <h4 style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 12 }}>Примеры запросов</h4>
-                        {modeConfig[mode].prompts.map((prompt, i) => (
-                            <button
-                                key={i}
-                                onClick={() => setInputValue(prompt)}
-                                style={{
-                                    display: 'block',
-                                    width: '100%',
-                                    padding: '10px 12px',
-                                    marginBottom: 6,
-                                    borderRadius: 8,
-                                    border: '1px solid #e2e8f0',
-                                    background: '#fff',
-                                    fontSize: 13,
-                                    color: '#475569',
-                                    cursor: 'pointer',
-                                    textAlign: 'left'
-                                }}
-                            >
-                                {prompt}
-                            </button>
-                        ))}
-                    </div>
-
-                    {graph && (
-                        <div style={{ marginTop: 24, padding: 16, background: '#f8fafc', borderRadius: 12 }}>
-                            <h4 style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>📊 Контекст</h4>
-                            <div style={{ fontSize: 13, color: '#475569' }}>
-                                {graph.nodes.length} узлов<br />
-                                {graph.edges.length} связей
-                            </div>
-                        </div>
-                    )}
-                </aside>
-
-                {/* Chat Area */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    {/* Messages */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
-                        {messages.length === 0 && (
-                            <div style={{ textAlign: 'center', marginTop: 80 }}>
-                                <div style={{ fontSize: 64, marginBottom: 16 }}>{modeConfig[mode].emoji}</div>
-                                <h2 style={{ fontSize: 24, fontWeight: 600, color: '#1e293b', marginBottom: 8 }}>
-                                    Анализ: {modeConfig[mode].label}
-                                </h2>
-                                <p style={{ color: '#64748b', maxWidth: 400, margin: '0 auto' }}>
-                                    {modeConfig[mode].description}. Задайте вопрос или выберите пример слева.
-                                </p>
-                            </div>
-                        )}
-
-                        {messages.map(message => (
-                            <div
-                                key={message.id}
-                                style={{
-                                    marginBottom: 20,
-                                    display: 'flex',
-                                    justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start'
-                                }}
-                            >
-                                <div style={{
-                                    maxWidth: '70%',
-                                    padding: '14px 18px',
-                                    borderRadius: message.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                                    background: message.role === 'user' ? '#8b5cf6' : '#fff',
-                                    color: message.role === 'user' ? '#fff' : '#1e293b',
-                                    boxShadow: message.role === 'assistant' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'
-                                }}>
-                                    <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{message.content}</div>
-                                </div>
-                            </div>
-                        ))}
-
-                        {isLoading && (
-                            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 20 }}>
-                                <div style={{
-                                    padding: '14px 18px',
-                                    borderRadius: '18px 18px 18px 4px',
-                                    background: '#fff',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                                }}>
-                                    <span>⏳ Анализирую...</span>
-                                </div>
-                            </div>
-                        )}
-                        <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* Input */}
-                    <div style={{
-                        padding: '16px 32px 24px',
-                        background: '#fff',
-                        borderTop: '1px solid #e2e8f0'
-                    }}>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                            <input
-                                type="text"
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                                placeholder="Спросите о графе..."
-                                style={{
-                                    flex: 1,
-                                    padding: '14px 18px',
-                                    borderRadius: 12,
-                                    border: '1px solid #e2e8f0',
-                                    fontSize: 15,
-                                    outline: 'none'
-                                }}
-                            />
-                            <button
-                                onClick={handleSend}
-                                disabled={isLoading || !inputValue.trim()}
-                                style={{
-                                    padding: '14px 24px',
-                                    background: isLoading || !inputValue.trim() ? '#94a3b8' : '#8b5cf6',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: 12,
-                                    fontWeight: 500,
-                                    cursor: isLoading || !inputValue.trim() ? 'not-allowed' : 'pointer'
-                                }}
-                            >
-                                Отправить
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <AnalysisChat
+                    mode={mode}
+                    messages={messages}
+                    inputValue={inputValue}
+                    setInputValue={setInputValue}
+                    handleSend={handleSend}
+                    isLoading={isLoading}
+                    messagesEndRef={messagesEndRef}
+                />
             </div>
         </div>
     )

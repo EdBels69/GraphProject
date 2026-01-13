@@ -1,16 +1,18 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import GraphViewer from '@/components/GraphViewer'
+import { GraphExportMenu } from '@/components/GraphExportMenu'
 import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
 import { useApi } from '@/hooks/useApi'
 import { API_ENDPOINTS } from '@/api/endpoints'
 import { Loader2 } from 'lucide-react'
 
-type ViewMode = 'split' | 'graph' | 'table'
+type ViewMode = 'graph' | 'split' | 'list'
 
 export default function GraphViewPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+
     const [viewMode, setViewMode] = useState<ViewMode>('split')
     const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
@@ -61,15 +63,14 @@ export default function GraphViewPage() {
 
     if (!graph) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-                    <div style={{ color: '#64748b', marginBottom: 24 }}>Граф не найден</div>
+            <div className="min-h-screen bg-void flex items-center justify-center">
+                <div className="text-center space-y-4">
+                    <p className="text-steel">Graph not found or not yet built.</p>
                     <button
-                        onClick={() => navigate(`/research/${id}/config`)}
-                        style={{ padding: '12px 24px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}
+                        onClick={() => navigate(`/research/${id}/build`)}
+                        className="text-acid hover:underline"
                     >
-                        Построить граф
+                        Build Graph
                     </button>
                 </div>
             </div>
@@ -77,46 +78,31 @@ export default function GraphViewPage() {
     }
 
     return (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+        <div className="flex flex-col h-screen bg-void text-steel-light">
             {/* Header */}
-            <header style={{
-                background: '#fff',
-                borderBottom: '1px solid #e2e8f0',
-                padding: '12px 24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexShrink: 0
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <button
-                        onClick={() => navigate(`/research/${id}/config`)}
-                        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 14 }}
-                    >
-                        ← Настройки
-                    </button>
-                    <h1 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b', margin: 0 }}>
-                        {graph.name}
+            <header className="h-14 border-b border-ash/10 flex items-center justify-between px-6 bg-void/50 backdrop-blur z-10">
+                <div className="flex items-center gap-4">
+                    <h1 className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-plasma to-acid">
+                        {graph.metadata?.name || 'Knowledge Graph'}
                     </h1>
-                    <span style={{ fontSize: 13, color: '#94a3b8' }}>
-                        {graph.nodes.length} узлов • {graph.edges.length} связей
-                    </span>
+                    <div className="flex items-center gap-2 text-sm text-steel-dim border-l border-ash/10 pl-4">
+                        <span>{graph.nodes.length} nodes</span>
+                        <span>•</span>
+                        <span>{graph.edges.length} edges</span>
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {/* View Mode Toggle */}
-                    <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 2 }}>
-                        {(['split', 'graph', 'table'] as ViewMode[]).map(mode => (
+                <div className="flex items-center gap-3">
+                    {/* View Controls */}
+                    <div className="flex bg-ash/10 p-1 rounded-lg">
+                        {(['graph', 'split', 'list'] as ViewMode[]).map(mode => (
                             <button
                                 key={mode}
                                 onClick={() => setViewMode(mode)}
                                 style={{
-                                    padding: '6px 12px',
+                                    padding: '4px 8px',
                                     borderRadius: 6,
-                                    border: 'none',
                                     background: viewMode === mode ? '#fff' : 'transparent',
-                                    boxShadow: viewMode === mode ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                                    cursor: 'pointer',
                                     fontSize: 13,
                                     color: viewMode === mode ? '#1e293b' : '#64748b'
                                 }}
@@ -134,11 +120,18 @@ export default function GraphViewPage() {
                         🤖 AI Анализ
                     </button>
                     <button
+                        onClick={() => navigate(`/research/${id}/gaps`)}
+                        style={{ padding: '8px 16px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}
+                    >
+                        🕳️ Gaps
+                    </button>
+                    <button
                         onClick={() => navigate(`/research/${id}/report`)}
                         style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}
                     >
                         📝 Отчёт
                     </button>
+                    <GraphExportMenu graphId={graph.id} />
                 </div>
             </header>
 
@@ -156,153 +149,89 @@ export default function GraphViewPage() {
                             onNodeSelect={handleNodeSelect}
                             selectedNodeId={selectedNode?.id}
                         />
-
-                        {/* Zoom Controls */}
-                        <div style={{
-                            position: 'absolute',
-                            bottom: 16,
-                            left: 16,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 4,
-                            background: '#fff',
-                            borderRadius: 8,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                            overflow: 'hidden'
-                        }}>
-                            <button style={{ width: 36, height: 36, border: 'none', background: '#fff', cursor: 'pointer', fontSize: 16 }}>+</button>
-                            <button style={{ width: 36, height: 36, border: 'none', background: '#fff', cursor: 'pointer', fontSize: 16, borderTop: '1px solid #e2e8f0' }}>−</button>
-                            <button style={{ width: 36, height: 36, border: 'none', background: '#fff', cursor: 'pointer', fontSize: 14, borderTop: '1px solid #e2e8f0' }}>⟳</button>
-                        </div>
                     </div>
                 )}
 
-                {/* Table View */}
-                {(viewMode === 'split' || viewMode === 'table') && (
-                    <div style={{
-                        flex: viewMode === 'split' ? '0 0 40%' : 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        background: '#fff'
-                    }}>
-                        {/* Table Header */}
-                        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 12 }}>
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Поиск..."
-                                style={{ flex: 1, padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13 }}
-                            />
-                            <select
-                                value={typeFilter}
-                                onChange={(e) => setTypeFilter(e.target.value)}
-                                style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13 }}
-                            >
-                                {nodeTypes.map(type => (
-                                    <option key={type} value={type}>{type === 'all' ? 'Все типы' : type}</option>
-                                ))}
-                            </select>
-                        </div>
+                {/* Data View */}
+                {(viewMode === 'split' || viewMode === 'list') && (
+                    <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
+                        <div className="max-w-2xl mx-auto space-y-6">
+                            {/* Selected Node Details */}
+                            {selectedNode && (
+                                <div className="glass-panel p-6 rounded-xl border border-acid/20">
+                                    <h3 className="text-xl font-bold text-white mb-2">{selectedNode.label}</h3>
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span className="text-steel-dim block mb-1">Type</span>
+                                            <span className="text-steel">{selectedNode.type}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-steel-dim block mb-1">Connections</span>
+                                            <span className="text-steel">
+                                                {graph.edges.filter(e => e.source === selectedNode.id || e.target === selectedNode.id).length}
+                                            </span>
+                                        </div>
+                                        {/* Dynamic Props */}
+                                        {Object.entries(selectedNode.properties || {}).map(([key, val]) => (
+                                            <div key={key}>
+                                                <span className="text-steel-dim block mb-1 capitalize">{key}</span>
+                                                <span className="text-steel">{String(val)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
-                        {/* Table */}
-                        <div style={{ flex: 1, overflow: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                                <thead>
-                                    <tr style={{ background: '#f8fafc', position: 'sticky', top: 0 }}>
-                                        <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#475569' }}>Сущность</th>
-                                        <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: '#475569' }}>Тип</th>
-                                        <th style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 600, color: '#475569' }}>Связи</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredNodes.map(node => {
-                                        const connectionCount = graph.edges.filter(e => e.source === node.id || e.target === node.id).length
-                                        return (
-                                            <tr
-                                                key={node.id}
-                                                onClick={() => handleNodeSelect(node)}
-                                                style={{
-                                                    cursor: 'pointer',
-                                                    background: selectedNode?.id === node.id ? '#eff6ff' : '#fff',
-                                                    borderBottom: '1px solid #f1f5f9'
-                                                }}
-                                            >
-                                                <td style={{ padding: '12px 16px', fontWeight: 500 }}>{node.label}</td>
-                                                <td style={{ padding: '12px 16px' }}>
-                                                    <span style={{
-                                                        padding: '2px 8px',
-                                                        borderRadius: 4,
-                                                        fontSize: 11,
-                                                        background: getTypeColor(node.type || 'Concept').bg,
-                                                        color: getTypeColor(node.type || 'Concept').text
-                                                    }}>
-                                                        {node.type || 'Concept'}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '12px 16px', textAlign: 'right', color: '#64748b' }}>{connectionCount}</td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
+                            {/* Filters */}
+                            <div>
+                                <h4 className="font-semibold mb-2">Filters</h4>
+                                <div className="flex gap-2 mb-4">
+                                    {nodeTypes.map(type => (
+                                        <button
+                                            key={type}
+                                            onClick={() => setTypeFilter(type)}
+                                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${typeFilter === type
+                                                    ? 'bg-acid text-void'
+                                                    : 'bg-ash/20 text-steel hover:bg-ash/30'
+                                                }`}
+                                        >
+                                            {type}
+                                        </button>
+                                    ))}
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Search nodes..."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="w-full bg-ash/10 border border-ash/20 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-acid/50"
+                                />
+                            </div>
+
+                            {/* Node List */}
+                            <div className="space-y-2">
+                                {filteredNodes.map(node => (
+                                    <div
+                                        key={node.id}
+                                        onClick={() => handleNodeSelect(node)}
+                                        className={`p-3 rounded-lg cursor-pointer flex items-center justify-between group transition-all ${selectedNode?.id === node.id
+                                                ? 'bg-acid/10 border border-acid/30'
+                                                : 'bg-ash/5 border border-transparent hover:bg-ash/10'
+                                            }`}
+                                    >
+                                        <span className={selectedNode?.id === node.id ? 'text-acid' : 'text-steel'}>
+                                            {node.label}
+                                        </span>
+                                        <span className="text-xs text-steel-dim px-2 py-1 rounded bg-black/20">
+                                            {node.type}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
-
-            {/* Selected Node Panel */}
-            {selectedNode && (
-                <div style={{
-                    position: 'fixed',
-                    bottom: 24,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#fff',
-                    borderRadius: 12,
-                    boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
-                    padding: '16px 24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 16,
-                    zIndex: 100
-                }}>
-                    <div>
-                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{selectedNode.label}</div>
-                        <div style={{ fontSize: 13, color: '#64748b' }}>{selectedNode.type || 'Concept'}</div>
-                    </div>
-                    <button
-                        onClick={() => navigate(`/research/${id}/ai?node=${selectedNode.id}`)}
-                        style={{ padding: '8px 16px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}
-                    >
-                        🤖 Спросить AI
-                    </button>
-                    <button
-                        onClick={() => setSelectedNode(null)}
-                        style={{ padding: '8px 12px', background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}
-                    >
-                        ✕
-                    </button>
-                </div>
-            )}
         </div>
     )
-}
-
-function getTypeColor(type: string): { bg: string; text: string } {
-    // lowercase keys for EntityType
-    const colors: Record<string, { bg: string; text: string }> = {
-        gene: { bg: '#dbeafe', text: '#1e40af' },
-        protein: { bg: '#fce7f3', text: '#9d174d' },
-        metabolite: { bg: '#d1fae5', text: '#065f46' },
-        disease: { bg: '#fee2e2', text: '#991b1b' },
-        drug: { bg: '#fef3c7', text: '#92400e' },
-        pathway: { bg: '#e0e7ff', text: '#3730a3' },
-        concept: { bg: '#f1f5f9', text: '#475569' },
-        // Add new v2.0 types
-        symptom: { bg: '#fee2e2', text: '#991b1b' },
-        treatment: { bg: '#e0e7ff', text: '#3730a3' },
-        mouse: { bg: '#f1f5f9', text: '#475569' } // fallback/extra
-    }
-    return colors[type.toLowerCase()] || colors.concept
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Graph, GraphNode, GraphEdge } from '../../shared/contracts/graph'
-import { ZoomIn, ZoomOut, Maximize, RefreshCw, Eye, EyeOff, Move } from 'lucide-react'
+import { ZoomIn, ZoomOut, Maximize, RefreshCw, Eye, EyeOff } from 'lucide-react'
 
 interface GraphViewerProps {
   graph: Graph
@@ -225,7 +225,7 @@ export default function GraphViewer({
 
   const getNodeColor = (node: GraphNode, isSelected: boolean) => {
     if (isSelected) return '#FFFFFF' // Selected = White
-    return getTypeColor(node.data?.type || node.type)
+    return getTypeColor(node.type)
   }
 
   const getEdgeColor = (edge: GraphEdge, isSelected: boolean) => {
@@ -235,13 +235,15 @@ export default function GraphViewer({
 
   const getNodeSize = (node: GraphNode) => {
     const baseSize = 30
-    const weightMultiplier = node.weight ? Math.min(2, 1 + node.weight / 5) : 1
+    const weight = node.properties.weight || node.properties.frequency || 1
+    const weightMultiplier = Math.min(2, 1 + weight / 5)
     return baseSize * weightMultiplier
   }
 
   const getEdgeWidth = (edge: GraphEdge) => {
     const baseWidth = 1
-    const weightMultiplier = edge.weight ? Math.min(3, 1 + edge.weight / 5) : 1
+    const weight = edge.properties.weight || 1
+    const weightMultiplier = Math.min(3, 1 + weight / 5)
     return baseWidth * weightMultiplier
   }
 
@@ -357,7 +359,7 @@ export default function GraphViewer({
                     opacity: isSelected ? 1 : 0.4
                   }}
                 />
-                {edge.weight !== undefined && edge.weight > 0 && showLabels && (
+                {edge.properties.weight !== undefined && edge.properties.weight > 0 && showLabels && (
                   <text
                     x={(sourcePos.x + targetPos.x) / 2}
                     y={(sourcePos.y + targetPos.y) / 2 - 10}
@@ -366,7 +368,7 @@ export default function GraphViewer({
                     fill="#64748B"
                     className="pointer-events-none font-mono"
                   >
-                    {edge.weight}
+                    {edge.properties.weight}
                   </text>
                 )}
               </g>
@@ -475,12 +477,12 @@ export default function GraphViewer({
             </div>
             <div className="flex justify-between gap-8 border-b border-white/5 pb-1">
               <span>TYPE</span>
-              <span className="text-acid uppercase">{selectedNode.data?.type || 'ENTITY'}</span>
+              <span className="text-acid uppercase">{selectedNode.type}</span>
             </div>
-            {selectedNode.weight !== undefined && (
+            {selectedNode.properties.weight !== undefined && (
               <div className="flex justify-between gap-8 pt-1">
                 <span>WEIGHT</span>
-                <span className="text-white">{selectedNode.weight}</span>
+                <span className="text-white">{selectedNode.properties.weight}</span>
               </div>
             )}
           </div>

@@ -1,6 +1,0 @@
-
-> graph-analyser@1.0.0 typecheck
-> tsc --noEmit
-
-src/core/integration.test.ts(364,1): error TS1128: Declaration or statement expected.
-src/core/integration.test.ts(364,2): error TS1128: Declaration or statement expected.

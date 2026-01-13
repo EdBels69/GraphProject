@@ -20,7 +20,7 @@
 
 ### Требования
 
-- Node.js 18+ 
+- Node.js 18+
 - npm 9+
 - TypeScript 5+
 - Windows/macOS/Linux
@@ -50,8 +50,9 @@ npm run dev
 ```
 
 Приложение запустится на:
-- Frontend: http://localhost:3000
-- Backend: http://localhost:3001
+
+- Frontend: <http://localhost:3000>
+- Backend: <http://localhost:3001>
 
 ### Режим продакшена
 
@@ -164,7 +165,9 @@ graph-analyser/
 |-----------|-----------|-------------|
 | Express | 4.21.2 | Web сервер |
 | TypeScript | 5.x | Типизация |
-| Better-Sqlite3 | 11.8.1 | База данных |
+| Prisma | 5.22.0 | ORM & Database |
+| Better-Sqlite3 | 11.8.1 | База данных (через Prisma) |
+| Socket.IO | 4.8.3 | Real-time обновления |
 | CORS | 2.8.5 | Cross-origin requests |
 | Multer | Latest | Загрузка файлов |
 
@@ -173,6 +176,9 @@ graph-analyser/
 | API | Назначение |
 |-----|-----------|
 | PubMed E-utilities | PubMed поиск и детали статей |
+| Crossref | Метаданные и ссылки |
+| ArXiv | Поиск препринтов |
+| Unpaywall | Поиск открытых PDF |
 
 ---
 
@@ -242,17 +248,20 @@ graph-analyser/
 ### 1. Загрузка файлов
 
 **Поддерживаемые форматы:**
+
 - **CSV** - файлы с разделителями запятыми
 - **JSON** - массивы объектов статей
 - **BibTeX** - библиографические записи
 
 **Формат CSV:**
+
 ```csv
 id,title,authors,year,abstract,keywords,citations
 article-1,"Test Article","Author 1; Author 2",2023,"Abstract","keyword1;keyword2","article-2"
 ```
 
 **Формат JSON:**
+
 ```json
 {
   "articles": [
@@ -270,6 +279,7 @@ article-1,"Test Article","Author 1; Author 2",2023,"Abstract","keyword1;keyword2
 ```
 
 **Формат BibTeX:**
+
 ```bibtex
 @article{article1,
   title = {Test Article},
@@ -283,11 +293,13 @@ article-1,"Test Article","Author 1; Author 2",2023,"Abstract","keyword1;keyword2
 ### 2. Интеграция с PubMed
 
 **Поиск статей:**
+
 ```bash
 GET /pubmed/search?q=cancer&maxResults=20&year=2023
 ```
 
 **Создание сети цитирований:**
+
 ```bash
 POST /pubmed/network
 {
@@ -299,6 +311,7 @@ POST /pubmed/network
 ```
 
 **Получение деталей статьи:**
+
 ```bash
 GET /pubmed/article/12345678
 ```
@@ -324,6 +337,18 @@ GET /pubmed/article/12345678
 - Поддержка кастомных ошибок
 - Подробные сообщения об ошибках
 
+### 6. Расширенный поиск литературы
+
+- **ArXiv & BioRxiv**: Поиск препринтов (в дополнение к PubMed/Crossref)
+- **Умное скачивание**: Retry logic с экспоненциальной задержкой для PDF
+- **Resilience**: Обработка 429/5xx ошибок внешних API
+
+### 7. Real-time Обновления
+
+- **Socket.IO**: Мгновенное обновление прогресса (нет polling)
+- **Optimistic UI**: Мгновенная реакция интерфейса на действия пользователя
+- **Предотвращение потери данных**: Блокировка закрытия вкладки при несохраненных изменениях
+
 ---
 
 ## 💻 Разработка
@@ -346,7 +371,7 @@ export default function NewPage() {
 }
 ```
 
-2. Добавить роут в `src/App.tsx`:
+1. Добавить роут в `src/App.tsx`:
 
 ```tsx
 import NewPage from '@/pages/NewPage'
@@ -468,12 +493,19 @@ npm run test:coverage
 ```env
 # API URL
 API_BASE_URL=http://localhost:3001
-
-# PubMed API Key (опционально)
-PUBMED_API_KEY=your_key_here
-
-# Порт сервера
 PORT=3001
+
+# Database
+DATABASE_URL="file:./dev.db"
+
+# LLM Configuration (Optional)
+LLM_PROVIDER=local # local (Ollama) | openai | anthropic
+OLLAMA_HOST=http://localhost:11434
+# OPENAI_API_KEY=sk-...
+# ANTHROPIC_API_KEY=sk-ant-...
+
+# External APIs (Optional)
+PUBMED_API_KEY=your_key_here
 ```
 
 ---
@@ -538,6 +570,7 @@ Graph Analyser Team
 ## 🤝 Контрибьюции
 
 Вклад в проект приветствуется! Пожалуйста:
+
 1. Форкните репозиторий
 2. Создайте ветку для вашего фичи: `git checkout -b feature/my-feature`
 3. Внесите изменения

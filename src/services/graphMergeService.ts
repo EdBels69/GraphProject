@@ -23,16 +23,22 @@ export class GraphMergeService {
                 if (nodeMap.has(normalizedLabel)) {
                     // Update existing node
                     const existing = nodeMap.get(normalizedLabel)!
-                    existing.weight = (existing.weight || 1) + (node.weight || 1)
+                    const existingWeight = existing.properties.weight || existing.properties.frequency || 1
+                    const newWeight = node.properties.weight || node.properties.frequency || 1
+
+                    existing.properties = {
+                        ...existing.properties,
+                        weight: existingWeight + newWeight,
+                        frequency: existingWeight + newWeight
+                    }
                     // Merge metadata/data if needed
                     // For now, keep the first one's type/data but accumulate weight
                 } else {
                     // Add new node (clone to avoid reference issues)
                     nodeMap.set(normalizedLabel, {
                         ...node,
-                        id: node.id, // We might need to regenerate IDs to avoid conflicts, but keeping original might be useful if they come from same source. 
-                        // Valid strategy: distinct IDs -> keep. Same label -> merge.
-                        // Strategy here: Normalized Label IS the key.
+                        id: node.id,
+                        properties: { ...node.properties }
                     })
                 }
             })
@@ -76,13 +82,17 @@ export class GraphMergeService {
 
                 if (edgeMap.has(key)) {
                     const existing = edgeMap.get(key)!
-                    existing.weight = (existing.weight || 1) + (edge.weight || 1)
+                    const existingWeight = existing.properties.weight || 1
+                    const newWeight = edge.properties.weight || 1
+
+                    existing.properties.weight = existingWeight + newWeight
                 } else {
                     edgeMap.set(key, {
                         ...edge,
                         id: `merged-edge-${key}`,
                         source: newSourceId,
-                        target: newTargetId
+                        target: newTargetId,
+                        properties: { ...edge.properties }
                     })
                 }
             })

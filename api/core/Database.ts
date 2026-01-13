@@ -110,9 +110,7 @@ export class DatabaseManager {
     }
   }
 
-  getClient() {
-    return this.prisma;
-  }
+
 
   private ensureInitialized(): void {
     if (!this.isInitialized) {

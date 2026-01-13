@@ -1,4 +1,5 @@
-import { Graph, PathResult } from '../../shared/types'
+import { Graph } from '../../shared/contracts/graph'
+import { PathResult } from '../../shared/contracts/analysis'
 
 export interface PathOptions {
   source?: string
@@ -90,6 +91,8 @@ export class PathAnalysis {
 
     return allPaths.map(path => ({
       path,
+      source: sourceId,
+      target: targetId,
       totalWeight: path.length - 1,
       length: path.length
     }))
@@ -150,6 +153,8 @@ export class PathAnalysis {
           const fullPath = [...rootPath, ...spurPath.path.slice(1)]
           spurPaths.push({
             path: fullPath,
+            source: sourceId,
+            target: targetId,
             totalWeight: fullPath.length - 1,
             length: fullPath.length
           })
@@ -307,6 +312,8 @@ export class PathAnalysis {
 
     return {
       path,
+      source: sourceId,
+      target: targetId,
       totalWeight: distances.get(targetId) || 0,
       length: path.length
     }

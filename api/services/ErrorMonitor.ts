@@ -1,5 +1,5 @@
 
-import { logger } from '../../core/Logger'
+import { logger } from '../core/Logger'
 
 export class ErrorMonitor {
     private static instance: ErrorMonitor

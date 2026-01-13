@@ -1,6 +1,6 @@
 
 import axios from 'axios'
-import { ResearchJob, ResearchJobRequest } from '../../../shared/contracts/research'
+import { ResearchJob, ResearchJobRequest, ArticleSource } from '../../../shared/contracts/research'
 import { logger } from '../../core/Logger'
 import { jobManager } from '../jobs/JobManager'
 import { unpaywallService } from '../unpaywallService'
@@ -13,10 +13,24 @@ import GraphStorage from '../../../shared/graphStorage'
 import { chatCompletion } from '../aiService'
 import { isFeatureEnabled } from '../../../shared/config/features'
 
+/**
+ * Orchestrates the analysis phase of the research pipeline.
+ * Responsibilities:
+ * - PDF Discovery (Unpaywall, etc)
+ * - Content Downloading (with retry)
+ * - Text Parsing & Chunking
+ * - Entity & Relation Extraction
+ * - AI Review Generation
+ */
 export class AnalysisService {
 
     /**
-     * Execute PDF Discovery Phase
+     * Execute PDF Discovery Phase.
+     * Attempts to find Open Access PDF URLs for the given articles.
+     * 
+     * @param job - The current research job
+     * @param articles - List of articles to check
+     * @returns Updated list of articles with PDF URLs populated where found
      */
     async executePdfDiscoveryPhase(job: ResearchJob, articles: ArticleSource[]): Promise<ArticleSource[]> {
         await jobManager.updateJobStatus(job.id, 'downloading', 'Finding Open Access PDFs...')
@@ -34,7 +48,14 @@ export class AnalysisService {
     }
 
     /**
-     * Execute Analysis Phase
+     * Execute Analysis Phase.
+     * Downloads, parses, and extracts entities/relations from articles.
+     * Processes in batches to manage concurrency and memory.
+     * 
+     * @param job - The current research job
+     * @param articles - Articles to analyze
+     * @param request - Original request config (e.g. maxArticles)
+     * @returns Aggregated entities and relations found
      */
     async executeAnalysisPhase(job: ResearchJob, articles: ArticleSource[], request: ResearchJobRequest): Promise<{ entities: any[], relations: any[] }> {
         const maxArticles = request.maxArticles || 100
@@ -104,6 +125,9 @@ export class AnalysisService {
 
     /**
      * Process a single article (Download -> Parse -> Extract)
+     * 
+     * @param article - The article source object
+     * @param topic - Research topic context for extraction
      */
     async processArticle(article: ArticleSource, topic: string): Promise<{
         entities: any[]
@@ -133,12 +157,8 @@ export class AnalysisService {
         }
 
         try {
-            // Download PDF
-            const response = await axios.get(article.pdfUrl, {
-                responseType: 'arraybuffer',
-                timeout: 30000,
-                headers: { 'User-Agent': 'GraphAnalyser/1.0' }
-            })
+            // Download PDF with retry
+            const response = await this.downloadWithRetry(article.pdfUrl)
             const buffer = Buffer.from(response.data)
 
             // Save to local storage
@@ -188,6 +208,11 @@ export class AnalysisService {
 
     /**
      * Generate literature review using AI
+     * 
+     * @param topic - Research topic
+     * @param entities - Extracted entities
+     * @param articles - Processed articles
+     * @returns Generated review text
      */
     async generateReview(
         topic: string,
@@ -223,6 +248,30 @@ export class AnalysisService {
         } catch (error) {
             logger.warn('AnalysisService', 'Failed to generate review', { error })
             return 'Literature review generation failed.'
+        }
+    }
+
+    /**
+     * Download with exponential backoff retry.
+     * Retries failed 3 times with increasing delay.
+     * 
+     * @param url - URL to download
+     * @param retries - Number of retries (default 3)
+     */
+    private async downloadWithRetry(url: string, retries = 3): Promise<any> {
+        for (let i = 0; i < retries; i++) {
+            try {
+                return await axios.get(url, {
+                    responseType: 'arraybuffer',
+                    timeout: 30000,
+                    headers: { 'User-Agent': 'GraphAnalyser/1.0' }
+                })
+            } catch (error) {
+                if (i === retries - 1) throw error
+                const delay = Math.pow(2, i) * 1000
+                await new Promise(resolve => setTimeout(resolve, delay))
+                logger.warn('AnalysisService', `Retry ${i + 1}/${retries} for PDF download: ${url}`)
+            }
         }
     }
 }
