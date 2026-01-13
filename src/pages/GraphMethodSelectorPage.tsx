@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Play } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { GraphMethodSelector } from '@/components/GraphMethodSelector'
 import { api } from '@/services/api' // Assuming api wrapper exists, if not we use fetch
-import { Layout } from '@/components/Layout' // Check if Layout exists
+import Layout from '@/components/Layout' // Check if Layout exists
 
 export default function GraphMethodSelectorPage() {
     const { id } = useParams<{ id: string }>()

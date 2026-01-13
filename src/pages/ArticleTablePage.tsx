@@ -283,10 +283,10 @@ export default function ArticleTablePage() {
                                         </span>
                                     </td>
                                     <td className="p-4 flex gap-2">
-                                        <Button variant="ghost" size="icon" className="hover:text-plasma">
+                                        <Button variant="ghost" size="sm" onClick={() => handleDelete(article.id)}>
                                             <Trash2 size={18} onClick={() => handleDelete(article.id)} />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="hover:text-acid">
+                                        <Button variant="ghost" size="sm" className="hover:text-acid">
                                             <Edit2 size={18} />
                                         </Button>
                                     </td>

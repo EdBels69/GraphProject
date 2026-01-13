@@ -43,9 +43,13 @@ router.get('/graphs/:graphId/:formatId', async (req: any, res) => {
 
         // 2. Fetch Job Articles (for Obsidian context)
         let articles: any[] = []
-        if (graphRecord.jobId) {
-            const job = await databaseManager.getJob(graphRecord.jobId, userId)
-            if (job) articles = job.articles
+        // Fix: Graph model doesn't have jobId, ResearchJob has graphId
+        const job = await databaseManager.getClient().researchJob.findFirst({
+            where: { graphId: graphRecord.id }
+        })
+        if (job) {
+            const jobWithArticles = await databaseManager.getJob(job.id, userId)
+            if (jobWithArticles) articles = jobWithArticles.articles
         }
 
         // 3. Convert to Universal Graph

@@ -26,13 +26,12 @@ export type {
     GraphEdge,
     Graph,
     GraphMetrics,
-    GraphFilter,
-    GraphLayout,
 } from './graph'
 
 export {
-    isGraphNode,
-    isGraph,
+    createGraph,
+    createNode,
+    createEdge,
 } from './graph'
 
 // Analysis results

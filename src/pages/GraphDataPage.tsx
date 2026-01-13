@@ -50,11 +50,11 @@ export default function GraphDataPage() {
             id: edge.id,
             sourceId: edge.source,
             sourceLabel: sourceNode?.label || edge.source,
-            sourceType: sourceNode?.data?.type || 'Entity',
+            sourceType: sourceNode?.type || 'Entity',
             targetId: edge.target,
             targetLabel: targetNode?.label || edge.target,
-            targetType: targetNode?.data?.type || 'Category',
-            weight: edge.weight || 1
+            targetType: targetNode?.type || 'Category',
+            weight: edge.properties.weight || 1
         }
     }).filter(row =>
         row.sourceLabel.toLowerCase().includes(search.toLowerCase()) ||

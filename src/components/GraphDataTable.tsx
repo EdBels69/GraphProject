@@ -16,8 +16,15 @@ export default function GraphDataTable({ graph, onNodeSelect }: GraphDataTablePr
     const filteredNodes = graph.nodes
         .filter(n => n.label.toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => {
-            const valA = a[sortField as keyof GraphNode] || 0
-            const valB = b[sortField as keyof GraphNode] || 0
+            let valA = 0;
+            let valB = 0;
+            if (sortField === 'weight') {
+                valA = a.properties.weight || 0;
+                valB = b.properties.weight || 0;
+            } else {
+                valA = a[sortField as keyof GraphNode] as any || 0
+                valB = b[sortField as keyof GraphNode] as any || 0
+            }
             return sortAsc ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1)
         })
 
@@ -27,8 +34,8 @@ export default function GraphDataTable({ graph, onNodeSelect }: GraphDataTablePr
             e.target.toLowerCase().includes(search.toLowerCase())
         )
         .sort((a, b) => {
-            const valA = a.weight || 0
-            const valB = b.weight || 0
+            const valA = a.properties.weight || 0
+            const valB = b.properties.weight || 0
             return sortAsc ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1)
         })
 
@@ -114,7 +121,7 @@ export default function GraphDataTable({ graph, onNodeSelect }: GraphDataTablePr
                                     `}
                                 >
                                     <td className="px-6 py-3 whitespace-nowrap text-xs font-mono font-medium text-steel group-hover:text-acid transition-colors">{node.label}</td>
-                                    <td className="px-6 py-3 whitespace-nowrap text-xs text-steel-dim group-hover:text-steel">{node.weight}</td>
+                                    <td className="px-6 py-3 whitespace-nowrap text-xs text-steel-dim group-hover:text-steel">{node.properties.weight}</td>
                                     <td className="px-6 py-3 whitespace-nowrap text-xs">
                                         <span className="bg-steel/10 text-steel-dim px-2 py-0.5 rounded text-[10px] uppercase font-bold">{node.type || 'ENTITY'}</span>
                                     </td>
@@ -131,7 +138,7 @@ export default function GraphDataTable({ graph, onNodeSelect }: GraphDataTablePr
                                 >
                                     <td className="px-6 py-3 whitespace-nowrap text-xs font-mono text-steel-dim">{edge.source}</td>
                                     <td className="px-6 py-3 whitespace-nowrap text-xs font-mono text-steel-dim">{edge.target}</td>
-                                    <td className="px-6 py-3 whitespace-nowrap text-xs text-plasma font-bold">{edge.weight}</td>
+                                    <td className="px-6 py-3 whitespace-nowrap text-xs text-plasma font-bold">{edge.properties.weight}</td>
                                 </tr>
                             ))
                         )}

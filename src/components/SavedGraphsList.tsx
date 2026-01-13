@@ -228,8 +228,8 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
                         )}
 
                         <div className="flex justify-between items-start mb-3 pr-6">
-                            <h4 className={`font-bold text-sm truncate pr-2 flex-1 ${currentGraphId === graph.id ? 'text-acid' : 'text-steel'}`} title={graph.name}>
-                                {graph.name}
+                            <h4 className={`font-bold text-sm truncate pr-2 flex-1 ${currentGraphId === graph.id ? 'text-acid' : 'text-steel'}`} title={graph.metadata.name}>
+                                {graph.metadata.name}
                             </h4>
 
                             {!isSelectionMode && (
@@ -239,7 +239,7 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             setRenameId(graph.id)
-                                            setNewName(graph.name)
+                                            setNewName(graph.metadata.name)
                                         }}
                                         title="Rename"
                                     >
@@ -273,7 +273,7 @@ export default function SavedGraphsList({ currentGraphId, onLoadGraph }: SavedGr
                         <div className="flex justify-between items-center pt-3 border-t border-ash/10">
                             <div className="flex items-center text-[10px] text-steel-dim/50 font-display tracking-widest uppercase">
                                 <Calendar className="w-3 h-3 mr-1.5" />
-                                {new Date(graph.updatedAt || graph.createdAt).toLocaleDateString()}
+                                {new Date(graph.updatedAt || graph.metadata.createdAt).toLocaleDateString()}
                             </div>
 
                             {!isSelectionMode && (

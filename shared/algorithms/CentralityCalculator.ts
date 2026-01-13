@@ -36,7 +36,7 @@ export class CentralityCalculator {
         this.graph.edges.forEach(edge => {
             const sourceMap = adjacency.get(edge.source)
             if (sourceMap) {
-                sourceMap.set(edge.target, edge.weight || 1)
+                sourceMap.set(edge.target, edge.properties.weight || 1)
             }
         })
 
@@ -44,7 +44,7 @@ export class CentralityCalculator {
             this.graph.edges.forEach(edge => {
                 const targetMap = adjacency.get(edge.target)
                 if (targetMap) {
-                    targetMap.set(edge.source, edge.weight || 1)
+                    targetMap.set(edge.source, edge.properties.weight || 1)
                 }
             })
         }

@@ -6,12 +6,12 @@ describe('Graph Contracts', () => {
     it('should create a valid graph', () => {
         const graph = createGraph('Test Graph', true)
 
-        expect(graph.name).toBe('Test Graph')
+        expect(graph.metadata.name).toBe('Test Graph')
         expect(graph.directed).toBe(true)
-        expect(graph.version).toBe('2.0')
+        expect(graph.version).toBe('3.0')
         expect(graph.nodes).toEqual([])
         expect(graph.edges).toEqual([])
-        expect(graph.createdAt).toBeDefined()
+        expect(graph.metadata.createdAt).toBeDefined()
     })
 
     it('should create a valid node', () => {
@@ -20,8 +20,8 @@ describe('Graph Contracts', () => {
         expect(node.id).toBe('n1')
         expect(node.label).toBe('Node 1')
         expect(node.type).toBe('protein')
-        expect(node.data.confidence).toBe(0.9)
-        expect(node.data.type).toBe('protein') // Factory should set this? Check factory logic.
+        expect(node.properties.confidence).toBe(0.9)
+        expect(node.properties.type).toBe('protein') // Factory should set this? Check factory logic.
     })
 
     it('should create a valid edge', () => {
@@ -30,6 +30,6 @@ describe('Graph Contracts', () => {
         expect(edge.id).toBe('e1')
         expect(edge.source).toBe('n1')
         expect(edge.target).toBe('n2')
-        expect(edge.weight).toBe(0.5)
+        expect(edge.properties.weight).toBe(0.5)
     })
 })

@@ -27,7 +27,7 @@ export default function GraphViewerWebGL({
     // Transform graph data to match ForceGraph expected format (it mutates objects, so we copy)
     const graphData = useMemo(() => {
         return {
-            nodes: graph.nodes.map(n => ({ ...n, id: n.id, val: n.weight || 1 })),
+            nodes: graph.nodes.map(n => ({ ...n, id: n.id, val: n.properties.weight || 1 })),
             links: graph.edges.map(e => ({ ...e, source: e.source, target: e.target }))
         }
     }, [graph])
@@ -78,7 +78,7 @@ export default function GraphViewerWebGL({
         const isNeighbor = neighbors.has(node.id)
         const hasFocus = !!selectedNode || !!hoverNode
 
-        const size = Math.sqrt(node.weight || 1) * 3
+        const size = Math.sqrt(node.properties.weight || 1) * 3
         const fontSize = 12 / globalScale
 
         // Dimming effect
@@ -133,7 +133,7 @@ export default function GraphViewerWebGL({
                 // Node Rendering
                 nodeCanvasObject={paintNode}
                 nodePointerAreaPaint={(node: any, color, ctx) => {
-                    const size = Math.sqrt(node.weight || 1) * 3 + 2
+                    const size = Math.sqrt(node.properties.weight || 1) * 3 + 2
                     ctx.fillStyle = color
                     ctx.beginPath()
                     ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false)

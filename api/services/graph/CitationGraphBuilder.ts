@@ -40,15 +40,10 @@ export class CitationGraphBuilder {
                 id: nodeId,
                 label: article.title.slice(0, 30) + (article.title.length > 30 ? '...' : ''),
                 type: 'paper',
-                data: {
-                    id: nodeId,
-                    name: article.title.slice(0, 30),
-                    type: 'paper',
+                properties: {
                     confidence: 1,
-                    evidence: [],
                     mentions: 1,
                     source: 'citation-graph',
-                    position: 0,
                     metadata: {
                         fullTitle: article.title,
                         doi: article.doi,
@@ -57,7 +52,10 @@ export class CitationGraphBuilder {
                         globalCitations: article.citations
                     }
                 },
-                size: Math.min(size, 40) // cap size
+                visual: {
+                    size: Math.min(size, 40),
+                    color: '#3b82f6'
+                }
             })
         })
 
@@ -76,12 +74,9 @@ export class CitationGraphBuilder {
                         id: `${sourceId}-${targetId}`,
                         source: sourceId,
                         target: targetId,
-                        weight: 1,
-                        data: {
-                            id: `${sourceId}-${targetId}`,
-                            source: sourceId,
-                            target: targetId,
-                            type: 'cites' as any,
+                        properties: {
+                            weight: 1,
+                            type: 'cites',
                             confidence: 1,
                             evidence: []
                         }

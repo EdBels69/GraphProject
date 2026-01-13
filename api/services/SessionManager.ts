@@ -1,6 +1,6 @@
 import { databaseManager } from '../core/Database'
 import { v4 as uuidv4 } from 'uuid'
-import { GraphMethodRegistry } from '../modules/graph/GraphMethodRegistry'
+import { graphMethodRegistry } from '../modules/graph/GraphMethodRegistry'
 
 export class SessionManager {
     /**
